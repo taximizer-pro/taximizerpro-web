@@ -2,8 +2,7 @@
   "type": "object",
   "properties": {
     "user_id": {
-      "type": "string",
-      "description": "Base44 user ID"
+      "type": "string"
     },
     "email": {
       "type": "string"
@@ -17,7 +16,8 @@
         "super_admin",
         "admin",
         "manager",
-        "agent"
+        "agent",
+        "client"
       ]
     },
     "status": {
@@ -42,12 +42,38 @@
       }
     },
     "last_seen": {
-      "type": "string",
-      "description": "ISO timestamp of last activity"
+      "type": "string"
     },
     "is_online": {
       "type": "boolean",
       "default": false
+    },
+    "permissions": {
+      "type": "object",
+      "description": "Granular feature flags",
+      "properties": {
+        "can_view_clients": {
+          "type": "boolean"
+        },
+        "can_edit_clients": {
+          "type": "boolean"
+        },
+        "can_generate_forms": {
+          "type": "boolean"
+        },
+        "can_view_financials": {
+          "type": "boolean"
+        },
+        "can_approve_milestones": {
+          "type": "boolean"
+        },
+        "can_message": {
+          "type": "boolean"
+        },
+        "can_view_team": {
+          "type": "boolean"
+        }
+      }
     }
   },
   "required": [],
