@@ -10,27 +10,62 @@
     "sender_role": {
       "type": "string"
     },
-    "channel": {
-      "type": "string",
-      "description": "general, announcements, or dm:[email]"
+    "recipient_email": {
+      "type": "string"
+    },
+    "recipient_name": {
+      "type": "string"
+    },
+    "subject": {
+      "type": "string"
     },
     "body": {
       "type": "string"
+    },
+    "thread_id": {
+      "type": "string",
+      "description": "Groups messages into a conversation thread"
+    },
+    "channel": {
+      "type": "string",
+      "description": "team:general | team:announcements | client:[clientId]"
+    },
+    "message_type": {
+      "type": "string",
+      "enum": [
+        "team",
+        "client_direct"
+      ],
+      "description": "team = internal staff | client_direct = staff<->client"
     },
     "read_by": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Array of emails who have read this"
+      }
     },
     "is_pinned": {
       "type": "boolean",
       "default": false
     },
     "reply_to": {
+      "type": "string"
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "File URLs"
+    },
+    "status": {
       "type": "string",
-      "description": "Message ID this replies to"
+      "enum": [
+        "sent",
+        "delivered",
+        "read"
+      ],
+      "default": "sent"
     }
   },
   "required": [],
