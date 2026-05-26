@@ -1,0 +1,55 @@
+{
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Base44 user ID"
+    },
+    "email": {
+      "type": "string"
+    },
+    "full_name": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "super_admin",
+        "admin",
+        "manager",
+        "agent"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "pending"
+      ],
+      "default": "pending"
+    },
+    "invited_by": {
+      "type": "string"
+    },
+    "avatar_color": {
+      "type": "string"
+    },
+    "assigned_client_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "last_seen": {
+      "type": "string",
+      "description": "ISO timestamp of last activity"
+    },
+    "is_online": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [],
+  "name": "StaffMember"
+}

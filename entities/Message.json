@@ -1,0 +1,38 @@
+{
+  "type": "object",
+  "properties": {
+    "sender_email": {
+      "type": "string"
+    },
+    "sender_name": {
+      "type": "string"
+    },
+    "sender_role": {
+      "type": "string"
+    },
+    "channel": {
+      "type": "string",
+      "description": "general, announcements, or dm:[email]"
+    },
+    "body": {
+      "type": "string"
+    },
+    "read_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of emails who have read this"
+    },
+    "is_pinned": {
+      "type": "boolean",
+      "default": false
+    },
+    "reply_to": {
+      "type": "string",
+      "description": "Message ID this replies to"
+    }
+  },
+  "required": [],
+  "name": "Message"
+}

@@ -1,0 +1,57 @@
+{
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string"
+    },
+    "client_name": {
+      "type": "string"
+    },
+    "tax_return_id": {
+      "type": "string"
+    },
+    "tax_year": {
+      "type": "number"
+    },
+    "milestone": {
+      "type": "string",
+      "enum": [
+        "intake",
+        "documents_collected",
+        "data_entry",
+        "review",
+        "client_approval",
+        "filed",
+        "refund_received"
+      ],
+      "description": "Current milestone stage"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Staff member who approved this milestone"
+    },
+    "approved_at": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending"
+    },
+    "assigned_agent": {
+      "type": "string"
+    },
+    "assigned_manager": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "name": "ClientMilestone"
+}

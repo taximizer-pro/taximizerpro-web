@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string"
+    },
+    "user_name": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string"
+    },
+    "last_ping": {
+      "type": "string",
+      "description": "ISO timestamp \u2014 updated every 30s while online"
+    },
+    "current_page": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "name": "Presence"
+}

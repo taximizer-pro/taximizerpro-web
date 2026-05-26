@@ -1,0 +1,41 @@
+{
+  "type": "object",
+  "properties": {
+    "recipient_email": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "milestone_approval",
+        "new_message",
+        "staff_online",
+        "client_assigned",
+        "milestone_rejected",
+        "new_client"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string"
+    },
+    "link": {
+      "type": "string",
+      "description": "Page to navigate to"
+    },
+    "read": {
+      "type": "boolean",
+      "default": false
+    },
+    "actor_name": {
+      "type": "string"
+    },
+    "actor_email": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "name": "Notification"
+}
