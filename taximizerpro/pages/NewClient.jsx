@@ -1,49 +1,44 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Client } from "@/api/entities";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
 const STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 
-// Google Places address autocomplete hook
-function useGooglePlaces(inputRef, onSelect) {
+// ── Free address autocomplete via Nominatim (OpenStreetMap) — no key required ──
+function useAddressSearch(query, setForm) {
+  const [suggestions, setSuggestions] = useState([]);
+  const [open, setOpen] = useState(false);
+  const debounceRef = useRef(null);
+
   useEffect(() => {
-    const PLACES_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY || window.__GOOGLE_PLACES_KEY__;
-    if (!PLACES_KEY || !inputRef.current) return;
+    if (!query || query.length < 5) { setSuggestions([]); setOpen(false); return; }
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=us&limit=6&q=${encodeURIComponent(query)}`;
+        const res = await fetch(url, { headers: { "Accept-Language": "en", "User-Agent": "TaximizerPro/1.0" } });
+        const data = await res.json();
+        setSuggestions(data.filter(d => d.address?.road));
+        setOpen(true);
+      } catch { setSuggestions([]); }
+    }, 400);
+    return () => clearTimeout(debounceRef.current);
+  }, [query]);
 
-    const scriptId = "google-places-script";
-    if (!document.getElementById(scriptId)) {
-      const script = document.createElement("script");
-      script.id = scriptId;
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${PLACES_KEY}&libraries=places`;
-      script.async = true;
-      script.onload = () => initAutocomplete();
-      document.head.appendChild(script);
-    } else if (window.google?.maps?.places) {
-      initAutocomplete();
-    }
+  function pick(item) {
+    const a = item.address;
+    const houseNum = a.house_number || "";
+    const road = a.road || "";
+    const city = a.city || a.town || a.village || a.county || "";
+    const state = a.state_code?.toUpperCase() || a.state?.slice(0,2).toUpperCase() || "";
+    const zip = a.postcode?.split("-")[0] || "";
+    setForm(f => ({ ...f, address: `${houseNum} ${road}`.trim(), city, state, zip }));
+    setSuggestions([]);
+    setOpen(false);
+  }
 
-    function initAutocomplete() {
-      if (!inputRef.current || !window.google) return;
-      const ac = new window.google.maps.places.Autocomplete(inputRef.current, {
-        types: ["address"],
-        componentRestrictions: { country: "us" },
-        fields: ["address_components", "formatted_address"],
-      });
-      ac.addListener("place_changed", () => {
-        const place = ac.getPlace();
-        if (!place.address_components) return;
-        const get = (type) => place.address_components.find(c => c.types.includes(type))?.long_name || "";
-        const getShort = (type) => place.address_components.find(c => c.types.includes(type))?.short_name || "";
-        onSelect({
-          address: `${get("street_number")} ${get("route")}`.trim(),
-          city: get("locality") || get("sublocality_level_1"),
-          state: getShort("administrative_area_level_1"),
-          zip: get("postal_code"),
-        });
-      });
-    }
-  }, []);
+  return { suggestions, open, setOpen, pick };
 }
 
 function Field({ label, required, hint, children }) {
@@ -58,19 +53,18 @@ function Field({ label, required, hint, children }) {
   );
 }
 
-function Input({ name, value, onChange, type = "text", placeholder, className = "", ...rest }) {
+function Input({ name, value, onChange, type = "text", placeholder, ...rest }) {
   return (
     <input
       type={type} name={name} value={value} onChange={onChange}
       placeholder={placeholder} {...rest}
-      className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-400/60 transition-all ${className}`}
+      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-400/60 transition-all"
     />
   );
 }
 
 export default function NewClient() {
   const navigate = useNavigate();
-  const addressRef = useRef(null);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
@@ -83,12 +77,8 @@ export default function NewClient() {
 
   const set = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
-  // Wire Google Places to address field
-  useGooglePlaces(addressRef, ({ address, city, state, zip }) => {
-    setForm(f => ({ ...f, address, city, state, zip }));
-  });
+  const { suggestions, open, setOpen, pick } = useAddressSearch(form.address, setForm);
 
-  // Format SSN as user types
   function handleSSN(e) {
     let v = e.target.value.replace(/\D/g, "").slice(0, 9);
     if (v.length > 5) v = `${v.slice(0,3)}-${v.slice(3,5)}-${v.slice(5)}`;
@@ -103,7 +93,7 @@ export default function NewClient() {
       const client = await Client.create(form);
       navigate(createPageUrl("ClientDetail") + `?id=${client.id}`);
     } catch (err) {
-      alert("Error: " + err.message);
+      alert("Error saving client: " + err.message);
       setSaving(false);
     }
   }
@@ -115,14 +105,13 @@ export default function NewClient() {
   ];
 
   const canProceed = {
-    1: form.first_name && form.last_name && form.ssn,
+    1: form.first_name && form.last_name && form.ssn?.length >= 9,
     2: form.address && form.city && form.state && form.zip,
     3: true,
   };
 
   return (
     <div className="min-h-screen bg-[#0A1628] text-white">
-      {/* Header */}
       <div className="border-b border-white/10 bg-[#0D1F3C]">
         <div className="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
           <Link to={createPageUrl("Clients")} className="text-slate-500 hover:text-white transition-colors">
@@ -142,13 +131,15 @@ export default function NewClient() {
         <div className="flex items-center gap-2 mb-8">
           {steps.map((s, i) => (
             <div key={s.n} className="flex items-center gap-2 flex-1">
-              <button onClick={() => step > s.n && setStep(s.n)}
+              <button
+                type="button"
+                onClick={() => step > s.n && setStep(s.n)}
                 className={`w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   step === s.n ? "bg-amber-400 text-[#0A1628]"
                   : step > s.n ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-pointer"
                   : "bg-white/5 text-slate-500 border border-white/10 cursor-default"
                 }`}>
-                <span className="w-5 h-5 rounded-full bg-current/20 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{background:'rgba(255,255,255,0.1)'}}>
                   {step > s.n ? "✓" : s.n}
                 </span>
                 {s.label}
@@ -160,7 +151,8 @@ export default function NewClient() {
 
         <form onSubmit={handleSubmit}>
           <div className="bg-[#0D1F3C] border border-white/10 rounded-2xl p-6 space-y-5">
-            {/* Step 1 — Personal */}
+
+            {/* ── STEP 1: PERSONAL ── */}
             {step === 1 && (
               <>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Personal Information</p>
@@ -181,7 +173,6 @@ export default function NewClient() {
                     </Field>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <Field label="SSN" required hint="Auto-formats as you type">
                     <Input name="ssn" value={form.ssn} onChange={handleSSN} placeholder="123-45-6789" required />
@@ -190,7 +181,6 @@ export default function NewClient() {
                     <Input name="dob" value={form.dob} onChange={set} type="date" />
                   </Field>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <Field label="Email">
                     <Input name="email" value={form.email} onChange={set} type="email" placeholder="client@email.com" />
@@ -199,7 +189,6 @@ export default function NewClient() {
                     <Input name="phone" value={form.phone} onChange={set} placeholder="(305) 000-0000" />
                   </Field>
                 </div>
-
                 <Field label="Filing Status">
                   <select name="filing_status" value={form.filing_status} onChange={set}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400/60 transition-all">
@@ -213,46 +202,64 @@ export default function NewClient() {
               </>
             )}
 
-            {/* Step 2 — Address */}
+            {/* ── STEP 2: ADDRESS ── */}
             {step === 2 && (
               <>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Address — USPS Verified</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Address</p>
                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 flex gap-2 items-start">
-                  <svg className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <p className="text-xs text-blue-300">Start typing a street address — Google will suggest verified USPS addresses and auto-fill city, state, and ZIP.</p>
+                  <span className="text-blue-400 mt-0.5">📍</span>
+                  <p className="text-xs text-blue-300">Start typing a street address — suggestions will appear automatically. Free, no login required.</p>
+                </div>
+
+                {/* Address field with dropdown */}
+                <div className="relative">
+                  <Field label="Street Address" required>
+                    <input
+                      name="address"
+                      value={form.address}
+                      onChange={e => { set(e); }}
+                      onFocus={() => suggestions.length > 0 && setOpen(true)}
+                      placeholder="123 Main St"
+                      autoComplete="off"
+                      required
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-400/60 transition-all"
+                    />
+                  </Field>
+                  {open && suggestions.length > 0 && (
+                    <div className="absolute z-50 left-0 right-0 mt-1 bg-[#112040] border border-white/15 rounded-xl overflow-hidden shadow-2xl">
+                      {suggestions.map((s, i) => {
+                        const a = s.address;
+                        const line1 = `${a.house_number || ""} ${a.road || ""}`.trim();
+                        const line2 = [a.city || a.town || a.village, a.state_code?.toUpperCase(), a.postcode?.split("-")[0]].filter(Boolean).join(", ");
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onMouseDown={() => pick(s)}
+                            className="w-full text-left px-4 py-3 hover:bg-amber-400/10 border-b border-white/5 last:border-0 transition-colors">
+                            <div className="text-sm text-white">{line1}</div>
+                            <div className="text-xs text-slate-400">{line2}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-4 gap-4">
-                  <div className="col-span-3">
-                    <Field label="Street Address" required>
-                      <input
-                        ref={addressRef}
-                        name="address"
-                        value={form.address}
-                        onChange={set}
-                        placeholder="123 Main St"
-                        required
-                        autoComplete="off"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-400/60 transition-all"
-                      />
-                    </Field>
-                  </div>
                   <div className="col-span-1">
                     <Field label="Apt / Unit">
                       <Input name="apt" value={form.apt} onChange={set} placeholder="4B" />
                     </Field>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-5 gap-4">
-                  <div className="col-span-2">
+                  <div className="col-span-3">
                     <Field label="City" required>
                       <Input name="city" value={form.city} onChange={set} placeholder="Miami" required />
                     </Field>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
                   <div className="col-span-1">
                     <Field label="State" required>
                       <select name="state" value={form.state} onChange={set}
@@ -270,21 +277,17 @@ export default function NewClient() {
               </>
             )}
 
-            {/* Step 3 — Banking */}
+            {/* ── STEP 3: BANKING ── */}
             {step === 3 && (
               <>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Banking — Direct Deposit</p>
                 <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl p-4 flex gap-3">
-                  <svg className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
+                  <span className="text-xl flex-shrink-0">🔒</span>
                   <p className="text-sm text-amber-200/80">Used for IRS refund direct deposit. Stored securely and never shared.</p>
                 </div>
-
                 <Field label="Routing Number" hint="9-digit number at the bottom left of a check">
                   <Input name="bank_routing" value={form.bank_routing} onChange={set} placeholder="021000021" maxLength={9} />
                 </Field>
-
                 <Field label="Account Number">
                   <Input name="bank_account" value={form.bank_account} onChange={set} placeholder="Account number" />
                 </Field>
@@ -292,7 +295,7 @@ export default function NewClient() {
             )}
           </div>
 
-          {/* Navigation */}
+          {/* Nav buttons */}
           <div className="flex justify-between mt-6">
             <button type="button" onClick={() => setStep(s => Math.max(1, s - 1))}
               className={`px-6 py-2.5 rounded-xl border border-white/10 text-sm font-medium text-slate-400 hover:text-white hover:border-white/20 transition-all ${step === 1 ? "invisible" : ""}`}>
