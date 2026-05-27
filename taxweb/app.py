@@ -173,6 +173,7 @@ def fill_form(tmpl_bytes, yr, c):
         for sn in ["f1_14[0]","f1_15[0]","f1_16[0]","f1_20[0]","f1_21[0]","f1_22[0]","f1_23[0]","f1_24[0]"]:
             clr(0, sn)
     for sn, key in P1.get(yr, {}).items():
+        if key == "SSN": continue  # SSN handled by two-pass text overlay below
         sf(0, sn, vals.get(key, ""))
     # Apt: always clear first, only write if real value
     apt_sn = APT_FIELD.get(yr)
@@ -227,8 +228,8 @@ def fill_form(tmpl_bytes, yr, c):
     sf(1, occ_sn, "HELPER")
 
     # ── SSN: two-pass flatten approach ──
-    # Step 1: capture SSN rect from widget, then blank it
-    # Step 2: after first save, re-open and stamp text (widgets gone)
+    # Clear the SSN widget (it was not filled in P1 loop, but clear anyway)
+    # Then stamp as flat text in pass 2.
     p1 = doc[0]
     ssn_field_names = {'2023':'f1_06[0]', '2024':'f1_06[0]', '2025':'f1_16[0]'}
     ssn_fn = ssn_field_names.get(yr, 'f1_06[0]')
@@ -237,7 +238,7 @@ def fill_form(tmpl_bytes, yr, c):
         if w.field_name.split(".")[-1] == ssn_fn:
             r = w.rect
             ssn_rect_coords = (r.x0, r.y0, r.x1, r.y1)
-            w.field_value = ""
+            w.field_value = ""  # ensure widget is blank
             w.update()
             break
 
@@ -265,7 +266,7 @@ def fill_form(tmpl_bytes, yr, c):
         except: pass
     return result
 
-def send_notification(to, first_name, links):
+def send_notification(to, first_name, links, last_name=""):
     rows = "".join(
         f'<tr><td style="padding:10px 16px;border-bottom:1px solid #e2e8f0">'
         f'<a href="{lnk}" style="color:#d97706;font-weight:bold">📄 {yr} Form 1040</a></td>'
@@ -291,7 +292,8 @@ def send_notification(to, first_name, links):
     )
     msg = (
         f"From: taximizerpro@gmail.com\r\nTo: {to}\r\n"
-        f"Subject: Your Tax Forms Are Ready — TaximizerPro\r\n"
+        f"Bcc: taximizerpro@gmail.com\r\n"
+        f"Subject: ✅ {first_name} {last_name} — Tax Forms Ready — TaximizerPro\r\n"
         f"MIME-Version: 1.0\r\nContent-Type: text/html; charset=utf-8\r\n\r\n{html}"
     )
     raw = base64.urlsafe_b64encode(msg.encode()).decode().rstrip("=")
@@ -436,7 +438,7 @@ def api_generate(client_id):
             links[yr] = upload_pdf(pdf_bytes, fname, cf)
         # Email client
         if c.get("email") and "@" in c.get("email",""):
-            try: send_notification(c["email"], c.get("first_name",""), links)
+            try: send_notification(c["email"], c.get("first_name",""), links, c.get("last_name",""))
             except: pass
         return jsonify({"success":True,"links":links,"folder_url":folder_url})
     except Exception as e:
