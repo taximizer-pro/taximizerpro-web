@@ -1,29 +1,22 @@
 #!/usr/bin/env python3
 """
-Taximizer Pro — IRS 1040 Form Filler (DEFINITIVE v4)
+Taximizer Pro — IRS 1040 Form Filler (DEFINITIVE v5)
 =====================================================
-Fills EXACTLY the right field for each piece of data.
-ONE field per purpose — no duplicates, no overflow.
+The Sign Here section on page 2 has NO form widgets for signature or date —
+they are drawn graphic boxes. We use insert_text overlay for date and 
+signature. All other fields use native widget values.
 
-Signature row (2023/2024):
-  f2_30 [x=144-295, y=420-438] = Your signature
-  f2_31 [x=331-425, y=420-438] = Date  ← one box left of HELPER
-  f2_33 [x=325-460, y=472-492] = Occupation = HELPER
+Sign Here boxes (drawn, no widget):
+  2023/2024: signature=[x=91.6-273.6, y=462-492]  date=[x=273.6-324.0, y=462-492]
+  2025:      signature=[x=91.6-273.6, y=636-666]  date=[x=273.6-324.0, y=636-666]
 
-Signature row (2025):
-  f2_37 [x=130-295, y=594-612] = Your signature
-  f2_38 [x=324-425, y=594-612] = Date  ← one box left of HELPER
-  f2_40 [x=325-460, y=646-666] = Occupation = HELPER
+Occupation widget (has a form field):
+  2023/2024: f2_33 [x=325-460, y=472-492] = HELPER
+  2025:      f2_40 [x=325-460, y=646-666] = HELPER
 
-Banking (2023/2024):
-  f2_25 [x=173-302, y=324-336] = first banking field (labeled ACCOUNT# in 2023, ROUTING# in 2024)
-  f2_26 [x=173-418, y=337-348] = second banking field
+Designee fields (f2_30, f2_31, f2_32) = BLANK — do not touch.
 
-Banking (2025):
-  f2_32 [x=180-310, y=504-515] = ROUTING#
-  f2_33 [x=180-425, y=516-527] = ACCOUNT#
-
-SSN: no dashes (333333333)
+SSN: no dashes.
 """
 
 import fitz
@@ -34,39 +27,14 @@ import urllib.parse
 import base64
 from datetime import date
 
-# ── Master template Google Drive file IDs ─────────────────────────────────────
 MASTER_IDS = {
     '2023': '12oZacU01PFs-GjmTnBeeARCWB8IKiRb0',
     '2024': '1nHkyzHC-jVryNKbHrkeeb355wPDe3fIC',
     '2025': '13gBIrUgh-nSZaKZz7yCJ3bDSVT0U8XHz',
 }
 
-# ── Field maps: short_name → token ────────────────────────────────────────────
-# Only ONE entry per purpose. No duplicates.
-
-FIELDS_2023 = {
-    # Page 1 — personal info
-    'f1_04[0]': 'FIRST_MIDDLE',  # [x=36-237,  y=88-102]
-    'f1_05[0]': 'LAST_NAME',     # [x=239-467, y=88-102]
-    'f1_06[0]': 'SSN',           # [x=469-576, y=88-102]
-    'f1_10[0]': 'ADDRESS',       # [x=36-417,  y=136-150]
-    'f1_11[0]': 'APT',           # [x=419-467, y=136-150]
-    'f1_12[0]': 'CITY',          # [x=36-337,  y=160-174]
-    'f1_13[0]': 'STATE',         # [x=339-402, y=160-174]
-    'f1_14[0]': 'ZIP',           # [x=404-467, y=160-174]
-    # Page 2 — banking
-    # NOTE: 2023 template has labels swapped vs 2024 — f2_25=ACCOUNT, f2_26=ROUTING
-    # We fill routing into f2_25 and account into f2_26 to match the visual label positions
-    'f2_25[0]': 'ROUTING',       # [x=173-302, y=324-336] labeled "ACCOUNT#" but routing goes here
-    'f2_26[0]': 'ACCOUNT',       # [x=173-418, y=337-348] labeled "ROUTING#" but account goes here
-    # Page 2 — signature row (ONE field each, no duplicates)
-    'f2_30[0]': 'SIGNATURE',     # [x=144-295, y=420-438] Your signature
-    'f2_31[0]': 'SIG_DATE',      # [x=331-425, y=420-438] Date — left of HELPER
-    'f2_33[0]': 'OCCUPATION',    # [x=325-460, y=472-492] Occupation = HELPER
-}
-
-FIELDS_2024 = {
-    # Page 1 — personal info (same positions as 2023)
+# ── Page 1 widget field maps ──────────────────────────────────────────────────
+P1_FIELDS_2023_2024 = {
     'f1_04[0]': 'FIRST_MIDDLE',
     'f1_05[0]': 'LAST_NAME',
     'f1_06[0]': 'SSN',
@@ -75,76 +43,113 @@ FIELDS_2024 = {
     'f1_12[0]': 'CITY',
     'f1_13[0]': 'STATE',
     'f1_14[0]': 'ZIP',
-    # Page 2 — banking
-    # 2024: f2_25=ROUTING#, f2_26=ACCOUNT# (correct labels)
-    'f2_25[0]': 'ROUTING',       # [x=173-302, y=324-336] ROUTING#
-    'f2_26[0]': 'ACCOUNT',       # [x=173-418, y=337-348] ACCOUNT#
-    # Page 2 — signature row
-    'f2_30[0]': 'SIGNATURE',     # [x=144-295, y=420-438] Your signature
-    'f2_31[0]': 'SIG_DATE',      # [x=331-425, y=420-438] Date — left of HELPER
-    'f2_33[0]': 'OCCUPATION',    # [x=325-460, y=472-492] Occupation = HELPER
+}
+P1_FIELDS_2025 = {
+    'f1_14[0]': 'FIRST_MIDDLE',
+    'f1_15[0]': 'LAST_NAME',
+    'f1_16[0]': 'SSN',
+    'f1_20[0]': 'ADDRESS',
+    'f1_21[0]': 'APT',
+    'f1_22[0]': 'CITY',
+    'f1_23[0]': 'STATE',
+    'f1_24[0]': 'ZIP',
 }
 
-FIELDS_2025 = {
-    # Page 1 — personal info (different field numbers in 2025)
-    'f1_14[0]': 'FIRST_MIDDLE',  # [x=36-251,  y=94-108]
-    'f1_15[0]': 'LAST_NAME',     # [x=253-467, y=94-108]
-    'f1_16[0]': 'SSN',           # [x=469-576, y=94-108]
-    'f1_20[0]': 'ADDRESS',       # [x=36-417,  y=142-156]
-    'f1_21[0]': 'APT',           # [x=419-467, y=142-156]
-    'f1_22[0]': 'CITY',          # [x=36-331,  y=166-180]
-    'f1_23[0]': 'STATE',         # [x=332-395, y=166-180]
-    'f1_24[0]': 'ZIP',           # [x=397-467, y=166-180]
-    # Page 2 — banking
-    'f2_32[0]': 'ROUTING',       # [x=180-310, y=504-515] ROUTING#
-    'f2_33[0]': 'ACCOUNT',       # [x=180-425, y=516-527] ACCOUNT#
-    # Page 2 — signature row
-    'f2_37[0]': 'SIGNATURE',     # [x=130-295, y=594-612] Your signature
-    'f2_38[0]': 'SIG_DATE',      # [x=324-425, y=594-612] Date — left of HELPER
-    'f2_40[0]': 'OCCUPATION',    # [x=325-460, y=646-666] Occupation = HELPER
+# ── Page 2 widget field maps (banking + occupation only) ──────────────────────
+P2_FIELDS_2023 = {
+    'f2_25[0]': 'ROUTING',   # labeled ACCOUNT# in template but routing goes here
+    'f2_26[0]': 'ACCOUNT',   # labeled ROUTING# in template but account goes here
+    'f2_33[0]': 'OCCUPATION', # Your occupation = HELPER
+}
+P2_FIELDS_2024 = {
+    'f2_25[0]': 'ROUTING',
+    'f2_26[0]': 'ACCOUNT',
+    'f2_33[0]': 'OCCUPATION',
+}
+P2_FIELDS_2025 = {
+    'f2_32[0]': 'ROUTING',
+    'f2_33[0]': 'ACCOUNT',
+    'f2_40[0]': 'OCCUPATION',
 }
 
-FIELD_MAPS = {
-    '2023': FIELDS_2023,
-    '2024': FIELDS_2024,
-    '2025': FIELDS_2025,
+WIDGET_MAPS = {
+    '2023': (P1_FIELDS_2023_2024, P2_FIELDS_2023),
+    '2024': (P1_FIELDS_2023_2024, P2_FIELDS_2024),
+    '2025': (P1_FIELDS_2025,      P2_FIELDS_2025),
+}
+
+# ── Sign Here pixel overlay coordinates (drawn boxes, no widgets) ─────────────
+# [x0, y0, x1, y1] of each drawn box
+SIGN_HERE = {
+    '2023': {
+        'sig_box':  (91.6,  462.0, 273.6, 492.0),   # Your signature
+        'date_box': (273.6, 462.0, 324.0, 492.0),   # Date
+    },
+    '2024': {
+        'sig_box':  (91.6,  462.0, 273.6, 492.0),
+        'date_box': (273.6, 462.0, 324.0, 492.0),
+    },
+    '2025': {
+        'sig_box':  (91.6,  636.0, 273.6, 666.0),
+        'date_box': (273.6, 636.0, 324.0, 666.0),
+    },
 }
 
 
-# ── Core fill function ─────────────────────────────────────────────────────────
-
-def fill_1040(template_path: str, output_path: str, year: str,
-              client: dict, signature_text: str = None) -> None:
+def fill_1040(template_path, output_path, year, client, signature_image_path=None):
     today = date.today().strftime('%m/%d/%Y')
-    ssn_clean = client.get('ssn', '').replace('-', '').replace(' ', '')
+    ssn   = client.get('ssn','').replace('-','').replace(' ','')
+    first_mid = (client['first_name'] + ' ' + client.get('middle_init','')).strip()
 
     tokens = {
-        'FIRST_MIDDLE': (client['first_name'] + ' ' + client.get('middle_init', '')).strip(),
+        'FIRST_MIDDLE': first_mid,
         'LAST_NAME':    client['last_name'],
-        'SSN':          ssn_clean,           # no dashes — fits the field
-        'ADDRESS':      client.get('address', ''),
-        'APT':          client.get('apt', ''),
-        'CITY':         client.get('city', ''),
-        'STATE':        client.get('state', ''),
-        'ZIP':          client.get('zip', ''),
-        'ROUTING':      client.get('routing', ''),
-        'ACCOUNT':      client.get('account', ''),
-        'SIGNATURE':    signature_text or '',  # blank if no pad — don't type name in sig field
-        'SIG_DATE':     today,               # ONE date, ONE field
+        'SSN':          ssn,
+        'ADDRESS':      client.get('address',''),
+        'APT':          client.get('apt',''),
+        'CITY':         client.get('city',''),
+        'STATE':        client.get('state',''),
+        'ZIP':          client.get('zip',''),
+        'ROUTING':      client.get('routing',''),
+        'ACCOUNT':      client.get('account',''),
         'OCCUPATION':   'HELPER',
     }
 
+    p1_map, p2_map = WIDGET_MAPS[year]
     doc = fitz.open(template_path)
-    for page in doc:
-        for widget in page.widgets():
-            if widget.field_type_string != 'Text':
-                continue
-            sn = widget.field_name.split('.')[-1]
-            if sn in FIELD_MAPS[year]:
-                val = tokens[FIELD_MAPS[year][sn]]
-                if val:
-                    widget.field_value = val
-                    widget.update()
+    p1, p2 = doc[0], doc[1]
+
+    # ── Page 1: fill widgets ──────────────────────────────────────────────────
+    for w in p1.widgets():
+        if w.field_type_string != 'Text': continue
+        sn = w.field_name.split('.')[-1]
+        if sn in p1_map and tokens.get(p1_map[sn]):
+            w.field_value = tokens[p1_map[sn]]
+            w.update()
+
+    # ── Page 2: fill banking + occupation widgets ─────────────────────────────
+    for w in p2.widgets():
+        if w.field_type_string != 'Text': continue
+        sn = w.field_name.split('.')[-1]
+        if sn in p2_map and tokens.get(p2_map[sn]):
+            w.field_value = tokens[p2_map[sn]]
+            w.update()
+
+    # ── Page 2: overlay date into the drawn date box ──────────────────────────
+    coords = SIGN_HERE[year]
+    db = coords['date_box']
+    # Center text vertically in the box
+    date_y = db[1] + (db[3] - db[1]) * 0.65
+    date_x = db[0] + 2
+    p2.insert_text((date_x, date_y), today, fontname='helv', fontsize=7, color=(0,0,0))
+
+    # ── Page 2: overlay signature into drawn signature box ────────────────────
+    sb = coords['sig_box']
+    if signature_image_path and os.path.exists(signature_image_path):
+        # Insert signature image inside the box with padding
+        sig_rect = fitz.Rect(sb[0]+4, sb[1]+4, sb[2]-4, sb[3]-4)
+        p2.insert_image(sig_rect, filename=signature_image_path, keep_proportion=True)
+    # else: leave blank — client will sign on paper or via app later
 
     doc.save(output_path, garbage=4, deflate=True, incremental=False)
     doc.close()
@@ -152,7 +157,6 @@ def fill_1040(template_path: str, output_path: str, year: str,
 
 
 # ── Drive / Gmail helpers ──────────────────────────────────────────────────────
-
 def _get(url, tok):
     return json.loads(urllib.request.urlopen(
         urllib.request.Request(url, headers={'Authorization': f'Bearer {tok}'})).read())
@@ -173,7 +177,7 @@ def find_or_create_folder(name, tok, parent_id=None):
     return _post('https://www.googleapis.com/drive/v3/files', meta, tok)['id']
 
 def upload_pdf(pdf_path, filename, folder_id, tok):
-    with open(pdf_path, 'rb') as f: b = f.read()
+    with open(pdf_path,'rb') as f: b = f.read()
     meta = json.dumps({'name': filename, 'parents': [folder_id], 'mimeType': 'application/pdf'})
     bnd  = 'tx42bnd'
     body = (f'--{bnd}\r\nContent-Type: application/json\r\n\r\n{meta}\r\n'
@@ -181,44 +185,40 @@ def upload_pdf(pdf_path, filename, folder_id, tok):
     r = json.loads(urllib.request.urlopen(urllib.request.Request(
         'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',
         data=body, method='POST',
-        headers={'Authorization': f'Bearer {tok}',
-                 'Content-Type': f'multipart/related; boundary={bnd}'})).read())
+        headers={'Authorization': f'Bearer {tok}', 'Content-Type': f'multipart/related; boundary={bnd}'})).read())
     return r.get('webViewLink', f"https://drive.google.com/file/d/{r['id']}/view")
 
 def download_template(file_id, dest, tok):
     req = urllib.request.Request(
         f'https://www.googleapis.com/drive/v3/files/{file_id}?alt=media',
         headers={'Authorization': f'Bearer {tok}'})
-    with urllib.request.urlopen(req) as r, open(dest, 'wb') as f: f.write(r.read())
+    with urllib.request.urlopen(req) as r, open(dest,'wb') as f: f.write(r.read())
 
-def send_email(to, client_name, links, gmail_tok):
-    rows = ''.join(f'<li><a href="{l}" style="color:#1a73e8">📄 {y} Form 1040</a></li>'
-                   for y, l in links.items())
+def send_email(to, client_name, links, tok):
+    rows = ''.join(f'<li><a href="{l}" style="color:#1a73e8">📄 {y} Form 1040</a></li>' for y,l in links.items())
     html = (f'<div style="font-family:Arial,sans-serif;max-width:600px;padding:20px">'
             f'<h2 style="color:#F59E0B">Taximizer Pro</h2>'
             f'<p>Forms ready for <strong>{client_name}</strong>:</p>'
             f'<ul style="line-height:2">{rows}</ul></div>')
     msg = '\r\n'.join([f'To: {to}', f'Subject: ✅ Form 1040 Ready — {client_name}',
-                       'MIME-Version: 1.0', 'Content-Type: text/html; charset=UTF-8', '', html])
+                       'MIME-Version: 1.0','Content-Type: text/html; charset=UTF-8','',html])
     raw = base64.urlsafe_b64encode(msg.encode()).decode().rstrip('=')
     urllib.request.urlopen(urllib.request.Request(
         'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
         data=json.dumps({'raw': raw}).encode(),
-        headers={'Authorization': f'Bearer {gmail_tok}', 'Content-Type': 'application/json'},
+        headers={'Authorization': f'Bearer {tok}','Content-Type': 'application/json'},
         method='POST'))
 
 
-# ── Main pipeline ──────────────────────────────────────────────────────────────
-
 def run_pipeline(client, years=None, send_email_to=None,
                  drive_token=None, gmail_token=None,
-                 out_dir='/tmp/taximizer_out', signature_text=None):
-    years       = years or ['2023', '2024', '2025']
+                 out_dir='/tmp/taximizer_out', signature_image_path=None):
+    years       = years or ['2023','2024','2025']
     drive_token = drive_token or os.environ.get('GOOGLEDRIVE_ACCESS_TOKEN')
     gmail_token = gmail_token or os.environ.get('GMAIL_ACCESS_TOKEN')
 
-    mid  = client.get('middle_init', '')
-    slug = '_'.join(filter(None, [client['first_name'], mid, client['last_name']])).replace(' ', '_')
+    mid  = client.get('middle_init','')
+    slug = '_'.join(filter(None,[client['first_name'],mid,client['last_name']])).replace(' ','_')
     folder_name = f"{slug}_{date.today().strftime('%m-%d-%Y')}"
 
     os.makedirs(out_dir, exist_ok=True)
@@ -232,7 +232,7 @@ def run_pipeline(client, years=None, send_email_to=None,
         out = os.path.join(out_dir, f'{slug}_{yr}_1040.pdf')
         print(f'\n  [{yr}] downloading...')
         download_template(MASTER_IDS[yr], tpl, drive_token)
-        fill_1040(tpl, out, yr, client, signature_text=signature_text)
+        fill_1040(tpl, out, yr, client, signature_image_path=signature_image_path)
         links[yr] = upload_pdf(out, f'{slug}_{yr}_1040.pdf', folder_id, drive_token)
         print(f'  [{yr}] → {links[yr]}')
 
@@ -244,7 +244,6 @@ def run_pipeline(client, years=None, send_email_to=None,
     return {'folder': f'Taximizer/{folder_name}', 'links': links}
 
 
-# ── CLI test ───────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     result = run_pipeline(
         client={
@@ -260,7 +259,7 @@ if __name__ == '__main__':
             'routing':     '021000021',
             'account':     '123456789',
         },
-        years=['2023', '2024', '2025'],
+        years=['2023','2024','2025'],
         send_email_to='taximizerpro@gmail.com',
         out_dir='/tmp/taximizer_out'
     )
