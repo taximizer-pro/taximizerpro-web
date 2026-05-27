@@ -14,9 +14,9 @@ ADMINS = {
 }
 
 MASTER_IDS = {
-    '2023': '1X6LIFErOXnEx9nzOKW-8rBDUN2bfhq4D',
-    '2024': '110bBcABuvofSYrQXLjw3N5DPH1y2Vjan',
-    '2025': '1kQQlQXXTyXjGYtARAP_U5WJ6hWT2Fmc3',
+    '2023': '12oZacU01PFs-GjmTnBeeARCWB8IKiRb0',
+    '2024': '1nHkyzHC-jVryNKbHrkeeb355wPDe3fIC',
+    '2025': '13gBIrUgh-nSZaKZz7yCJ3bDSVT0U8XHz',
 }
 ROOT_FOLDER = "TaximizerPro V 2.0 Clients"
 APP_ID = "6a13ae4b43ea85cec629af77"
@@ -365,7 +365,21 @@ def api_generate(client_id):
         return jsonify({"error":"unauthorized"}), 401
     data = request.json or {}
     c = data.get("client", {})
-    if not c: return jsonify({"error":"no client data"}), 400
+
+    # If no client data but we have a real client_id, try to fetch from Base44
+    if not c and client_id and client_id not in ("inline","test_v16"):
+        try:
+            base44_url = f"https://api.base44.com/api/apps/{APP_ID}/entities/TaxClient/{client_id}"
+            b44_req = urllib.request.Request(base44_url,
+                headers={"x-api-key": os.environ.get("BASE44_API_KEY","")})
+            with urllib.request.urlopen(b44_req, timeout=10) as r:
+                c = json.loads(r.read())
+        except:
+            pass
+
+    if not c:
+        return jsonify({"error":"no client data"}), 400
+
     try:
         years = [y.strip() for y in c.get("tax_year","").split(",") if y.strip() in MASTER_IDS]
         if not years: return jsonify({"error":"no valid tax years"}), 400
@@ -376,6 +390,7 @@ def api_generate(client_id):
                        f"{'_'.join(sorted(years))}")
         root_id = get_or_create_folder(ROOT_FOLDER)
         cf      = get_or_create_folder(folder_name, root_id)
+        folder_url = f"https://drive.google.com/drive/folders/{cf}"
         links   = {}
         for yr in years:
             tmpl_bytes = dl_template(MASTER_IDS[yr])
@@ -388,7 +403,7 @@ def api_generate(client_id):
         if c.get("email") and "@" in c.get("email",""):
             try: send_notification(c["email"], c.get("first_name",""), links)
             except: pass
-        return jsonify({"success":True,"links":links})
+        return jsonify({"success":True,"links":links,"folder_url":folder_url})
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({"error":str(e)}), 500
