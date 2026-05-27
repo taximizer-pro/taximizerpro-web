@@ -1,64 +1,59 @@
 #!/usr/bin/env python3
 """
-Taximizer Pro — IRS 1040 Form Filler (v12 — DEFINITIVE, ALL 3 YEARS)
-=====================================================================
-Always generates 3 PDFs per client: 2023, 2024, 2025. No exceptions.
+Taximizer Pro — IRS 1040 Form Filler (v13 — VERIFIED FROM WATERMARKS)
+======================================================================
+Field mapping derived directly from watermark text INSIDE each widget box.
 
-MASTER TEMPLATES (Drive — the FILLABLE_(1) versions that work):
+MASTER TEMPLATES (Drive — the FILLABLE_(1) versions):
   2023: 12oZacU01PFs-GjmTnBeeARCWB8IKiRb0  (369KB)
   2024: 1nHkyzHC-jVryNKbHrkeeb355wPDe3fIC  (377KB)
   2025: 13gBIrUgh-nSZaKZz7yCJ3bDSVT0U8XHz  (486KB)
 
-VERIFIED FIELD MAPS (from direct widget inspection):
+VERIFIED FIELD MAPS (watermarks confirm exactly):
 
 2023 & 2024 — Page 1:
-  f1_04[0] → First name + Middle initial
-  f1_05[0] → Last name
-  f1_06[0] → SSN (raw digits, no dashes)
-  f1_10[0] → Street address
-  f1_11[0] → Apt number (only if valid)
-  f1_12[0] → City
-  f1_13[0] → State
-  f1_14[0] → ZIP
-  c1_3[0]  → Single filing status checkbox
+  f1_04[0] → "FIRST NAME, MIDDLE"    x=36  y=88
+  f1_05[0] → "LAST"                  x=239 y=88
+  f1_06[0] → "S S #" (SSN)           x=469 y=88
+  f1_10[0] → "STREET ADDRESS"        x=36  y=136
+  f1_11[0] → "APT"                   x=419 y=136
+  f1_12[0] → "CITY"                  x=36  y=160
+  f1_13[0] → "STATE"                 x=339 y=160
+  f1_14[0] → "ZIP CODE"              x=404 y=160
+  c1_3[1]  → Single checkbox         x=355 y=200
 
 2023 & 2024 — Page 2:
-  f2_25[0]     → Routing number
-  c2_5[0]      → Checking checkbox
-  f2_26[0]     → Account number
-  f2_33[0]     → Date signed (x=325, y=472)
-  insert_text  → HELPER at (347, 478) — occupation has no widget
+  f2_25[0] → "A C C O U N T   #"    x=173 y=324  ← ACCOUNT (not routing!)
+  c2_5[0]  → Checking checkbox       x=377 y=327
+  f2_26[0] → "R O U T I N G   #"    x=173 y=337  ← ROUTING (not account!)
+  f2_33[0] → "HELPER" watermark      x=325 y=472  ← This IS the date/sign row field
+             (watermark says HELPER but label says "Date" — use for DATE)
+  insert_text HELPER at (347, 478)   ← occupation goes right of date label
 
-2025 — Page 1 (fat template — same field names, different y):
-  f1_14[0] → First name + Middle initial  (y=94)
-  f1_15[0] → Last name                    (y=94)
-  f1_16[0] → SSN (raw digits)             (y=94)
-  f1_20[0] → Street address               (y=142)
-  f1_21[0] → Apt number (only if valid)   (y=142)
-  f1_22[0] → City                         (y=166)
-  f1_23[0] → State                        (y=166)
-  f1_24[0] → ZIP                          (y=166)
-  c1_8[0]  → Single filing status checkbox (x=350, y=206)
+2025 — Page 1:
+  f1_14[0] → "FIRST NAME, MIDDLE INITIAL"  x=36  y=94
+  f1_15[0] → "LAST NAME"                   x=253 y=94
+  f1_16[0] → "S S   #" (SSN)               x=469 y=94
+  f1_20[0] → "STREET ADDRESS"              x=36  y=142
+  f1_21[0] → "APT"                         x=419 y=142
+  f1_22[0] → "CITY"                        x=36  y=166
+  f1_23[0] → "STATE"                       x=332 y=166
+  f1_24[0] → "ZIP CODE"                    x=397 y=166
+  c1_8[0]  → Single checkbox               x=350 y=206
 
 2025 — Page 2:
-  f2_34[0]     → Routing number  (x=410, y=528)
-  c2_16[0]     → Checking checkbox
-  f2_33[0]     → Account number  (x=180, y=516)  ← NOTE: f2_33 is account in 2025
-  f2_40[0]     → Date signed     (x=325, y=646)
-  insert_text  → HELPER at (347, 654) — occupation has no widget
-
-HARD RULES:
-  - Occupation ALWAYS = "HELPER" (text overlay, not a form field)
-  - SSN = raw digits only, no dashes
-  - Apt: blank if empty / None / null / Apt / apt. / # / unit
-  - Always generate ALL 3 years per client
+  f2_32[0] → "R O U T I N G   #"    x=180 y=504  ← ROUTING
+  c2_16[0] → Checking checkbox       x=377 y=506
+  f2_33[0] → "A C C O U N T   #"    x=180 y=516  ← ACCOUNT
+  f2_40[0] → "HELPER" watermark      x=325 y=646  ← occupation/date row
+  insert_text HELPER at (347, 654)   ← occupation overlay
+  f2_41[0] → date field              x=504 y=654
 """
 
 import fitz
 import os, json, re, urllib.request, urllib.parse, tempfile, base64
 from datetime import date
 
-# Use the bigger (1) versions — these are the ones that work
 MASTER_IDS = {
     '2023': '12oZacU01PFs-GjmTnBeeARCWB8IKiRb0',
     '2024': '1nHkyzHC-jVryNKbHrkeeb355wPDe3fIC',
@@ -69,7 +64,6 @@ ROOT_FOLDER = 'TaximizerPro V 2.0 Clients'
 BAD_APT = {'', 'none', 'null', 'apt', 'apt.', '#', 'unit', 'n/a', 'na'}
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
 def clean_apt(raw):
     v = str(raw or '').strip()
     return '' if v.lower() in BAD_APT else v
@@ -128,9 +122,7 @@ def upload_pdf_to_drive(pdf_path, filename, folder_id, tok):
     return res.get('webViewLink', f"https://drive.google.com/file/d/{res['id']}/view")
 
 
-# ── Field setters ─────────────────────────────────────────────────────────────
 def _set(doc, pg, sn, val):
-    """Set a text field by its short name."""
     for w in doc[pg].widgets():
         if w.field_name.split('.')[-1] == sn and w.field_type_string == 'Text':
             w.field_value = str(val)
@@ -139,7 +131,6 @@ def _set(doc, pg, sn, val):
     return False
 
 def _check(doc, pg, sn):
-    """Check a checkbox by its short name."""
     for w in doc[pg].widgets():
         if w.field_name.split('.')[-1] == sn and w.field_type_string == 'CheckBox':
             w.field_value = True
@@ -148,11 +139,10 @@ def _check(doc, pg, sn):
     return False
 
 
-# ── PDF fill ──────────────────────────────────────────────────────────────────
 def fill_form(template_path, output_path, year, client):
-    today = date.today().strftime('%m/%d/%Y')
-    ssn   = clean_ssn(client.get('ssn', ''))
-    apt   = clean_apt(client.get('apt', ''))
+    today   = date.today().strftime('%m/%d/%Y')
+    ssn     = clean_ssn(client.get('ssn', ''))
+    apt     = clean_apt(client.get('apt', ''))
     first_m = f"{(client.get('first_name') or '').strip()} {(client.get('middle_init') or '').strip()}".strip()
     last    = (client.get('last_name') or '').strip()
     street  = (client.get('address') or '').strip()
@@ -162,7 +152,7 @@ def fill_form(template_path, output_path, year, client):
     routing = (client.get('bank_routing') or '').strip()
     account = (client.get('bank_account') or '').strip()
 
-    # Repair PDF xrefs first
+    # Repair xrefs
     with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tf:
         tmp = tf.name
     doc = fitz.open(template_path)
@@ -171,64 +161,63 @@ def fill_form(template_path, output_path, year, client):
     doc = fitz.open(tmp)
 
     if year in ('2023', '2024'):
-        # ── PAGE 1 ──
-        _set(doc, 0, 'f1_04[0]', first_m)   # First + MI
-        _set(doc, 0, 'f1_05[0]', last)       # Last name
-        _set(doc, 0, 'f1_06[0]', ssn)        # SSN
-        _set(doc, 0, 'f1_10[0]', street)     # Street
+        # ── PAGE 1 ──────────────────────────────────────────────
+        _set(doc, 0, 'f1_04[0]', first_m)    # FIRST NAME, MIDDLE
+        _set(doc, 0, 'f1_05[0]', last)        # LAST
+        _set(doc, 0, 'f1_06[0]', ssn)         # SSN
+        _set(doc, 0, 'f1_10[0]', street)      # STREET ADDRESS
         if apt:
-            _set(doc, 0, 'f1_11[0]', apt)    # Apt
-        _set(doc, 0, 'f1_12[0]', city)       # City
-        _set(doc, 0, 'f1_13[0]', state)      # State
-        _set(doc, 0, 'f1_14[0]', zip_)       # ZIP
-        _check(doc, 0, 'c1_3[0]')            # Single
+            _set(doc, 0, 'f1_11[0]', apt)     # APT
+        _set(doc, 0, 'f1_12[0]', city)        # CITY
+        _set(doc, 0, 'f1_13[0]', state)       # STATE
+        _set(doc, 0, 'f1_14[0]', zip_)        # ZIP CODE
+        _check(doc, 0, 'c1_3[1]')             # Single (x=355, y=200)
 
-        # ── PAGE 2 ──
-        _set(doc, 1, 'f2_25[0]', routing)    # Routing
-        _check(doc, 1, 'c2_5[0]')            # Checking
-        _set(doc, 1, 'f2_26[0]', account)    # Account
-        _set(doc, 1, 'f2_33[0]', today)      # Date (x=325, y=472)
-        doc[1].insert_text(                   # Occupation — text overlay
-            (347, 478), 'HELPER', fontname='helv', fontsize=9, color=(0, 0, 0))
+        # ── PAGE 2 ──────────────────────────────────────────────
+        # Watermarks confirmed: f2_25=ACCOUNT, f2_26=ROUTING (counterintuitive but verified)
+        _set(doc, 1, 'f2_25[0]', account)     # A C C O U N T   #
+        _check(doc, 1, 'c2_5[0]')             # Checking
+        _set(doc, 1, 'f2_26[0]', routing)     # R O U T I N G   #
+        # f2_33 is in the sign row — use for date (watermark says HELPER but position is Date)
+        _set(doc, 1, 'f2_33[0]', today)       # Date signed
+        # Occupation = text overlay (no dedicated widget in sign row)
+        doc[1].insert_text((347, 478), 'HELPER', fontname='helv', fontsize=9, color=(0, 0, 0))
 
-    else:  # 2025 — fat template, same names, different positions
-        # ── PAGE 1 ──
-        _set(doc, 0, 'f1_14[0]', first_m)   # First + MI
-        _set(doc, 0, 'f1_15[0]', last)       # Last name
-        _set(doc, 0, 'f1_16[0]', ssn)        # SSN
-        _set(doc, 0, 'f1_20[0]', street)     # Street
+    else:  # 2025
+        # ── PAGE 1 ──────────────────────────────────────────────
+        _set(doc, 0, 'f1_14[0]', first_m)    # FIRST NAME, MIDDLE INITIAL
+        _set(doc, 0, 'f1_15[0]', last)        # LAST NAME
+        _set(doc, 0, 'f1_16[0]', ssn)         # SSN
+        _set(doc, 0, 'f1_20[0]', street)      # STREET ADDRESS
         if apt:
-            _set(doc, 0, 'f1_21[0]', apt)    # Apt
-        _set(doc, 0, 'f1_22[0]', city)       # City
-        _set(doc, 0, 'f1_23[0]', state)      # State
-        _set(doc, 0, 'f1_24[0]', zip_)       # ZIP
-        _check(doc, 0, 'c1_8[0]')            # Single (x=350, y=206)
+            _set(doc, 0, 'f1_21[0]', apt)     # APT
+        _set(doc, 0, 'f1_22[0]', city)        # CITY
+        _set(doc, 0, 'f1_23[0]', state)       # STATE
+        _set(doc, 0, 'f1_24[0]', zip_)        # ZIP CODE
+        _check(doc, 0, 'c1_8[0]')             # Single (x=350, y=206)
 
-        # ── PAGE 2 ──
-        _set(doc, 1, 'f2_34[0]', routing)    # Routing (x=410, y=528)
-        _check(doc, 1, 'c2_16[0]')           # Checking
-        _set(doc, 1, 'f2_33[0]', account)    # Account (x=180, y=516)
-        _set(doc, 1, 'f2_40[0]', today)      # Date (x=325, y=646)
-        doc[1].insert_text(                   # Occupation — text overlay
-            (347, 654), 'HELPER', fontname='helv', fontsize=9, color=(0, 0, 0))
+        # ── PAGE 2 ──────────────────────────────────────────────
+        _set(doc, 1, 'f2_32[0]', routing)     # R O U T I N G   #
+        _check(doc, 1, 'c2_16[0]')            # Checking
+        _set(doc, 1, 'f2_33[0]', account)     # A C C O U N T   #
+        _set(doc, 1, 'f2_40[0]', today)       # Date signed (x=325, y=646)
+        doc[1].insert_text((347, 654), 'HELPER', fontname='helv', fontsize=9, color=(0, 0, 0))
 
     doc.save(output_path, garbage=4, deflate=True, incremental=False)
     doc.close()
     os.unlink(tmp)
     kb = os.path.getsize(output_path) // 1024
-    print(f'    ✅ {year}: {kb}KB → {os.path.basename(output_path)}')
+    print(f'    ✅ {year}: {kb}KB')
     return output_path
 
 
-# ── Main: process one client ──────────────────────────────────────────────────
 def process_client(client, drive_tok, gmail_tok=None, tmpdir='/tmp'):
-    first = (client.get('first_name') or '').strip()
-    last  = (client.get('last_name') or '').strip()
+    first     = (client.get('first_name') or '').strip()
+    last      = (client.get('last_name') or '').strip()
     today_str = date.today().strftime('%m-%d-%Y')
     folder_name = f"{last}_{first}_{today_str}_2023-2024-2025"
 
     print(f"\n📋 {first} {last}")
-    print(f"   Folder: {folder_name}")
 
     root_id   = find_or_create_folder(ROOT_FOLDER, drive_tok)
     client_id = find_or_create_folder(folder_name, drive_tok, parent_id=root_id)
@@ -240,12 +229,11 @@ def process_client(client, drive_tok, gmail_tok=None, tmpdir='/tmp'):
         output_path   = os.path.join(tmpdir, f'{last}_{first}_{year}_1040.pdf')
         filename      = f'{last}_{first}_{year}_1040.pdf'
 
-        print(f"  ↓ {year} template...")
+        print(f"  ↓ {year}...")
         download_file(fid, template_path, drive_tok)
-
         fill_form(template_path, output_path, year, client)
 
-        print(f"  ↑ Uploading {filename}...")
+        print(f"  ↑ Uploading...")
         link = upload_pdf_to_drive(output_path, filename, client_id, drive_tok)
         links[year] = link
         print(f"    🔗 {link}")
@@ -260,24 +248,18 @@ def process_client(client, drive_tok, gmail_tok=None, tmpdir='/tmp'):
     return links
 
 
-# ── Email ─────────────────────────────────────────────────────────────────────
 def send_completion_email(client, links, gmail_tok):
     to_email = (client.get('email') or '').strip()
     if not to_email:
-        print("  ⚠️  No email — skipping")
         return
 
-    first = (client.get('first_name') or '').strip()
-    last  = (client.get('last_name') or '').strip()
-    name  = f"{first} {last}".strip()
-
+    name = f"{(client.get('first_name') or '').strip()} {(client.get('last_name') or '').strip()}".strip()
     rows = ''.join(
         f'<tr><td style="padding:10px 16px;border-bottom:1px solid #1e293b">'
         f'<a href="{link}" style="color:#F59E0B;font-weight:bold;text-decoration:none">'
         f'📄 {yr} Form 1040</a></td></tr>'
         for yr, link in sorted(links.items())
     )
-
     html = f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#080F1E;color:#fff;border-radius:16px;overflow:hidden">
   <div style="background:linear-gradient(135deg,#F59E0B,#D97706);padding:24px 28px">
     <div style="font-size:22px;font-weight:900">TaximizerPro</div>
@@ -286,37 +268,31 @@ def send_completion_email(client, links, gmail_tok):
   <div style="padding:28px">
     <h2 style="margin:0 0 8px;font-size:20px">Your Tax Returns Are Ready ✅</h2>
     <p style="color:#94a3b8;margin:0 0 24px;font-size:14px">
-      Hi <strong style="color:#fff">{name}</strong>,<br><br>
-      Your IRS Form 1040 for 2023, 2024, and 2025 has been prepared and is ready for your review.
+      Hi <strong style="color:#fff">{name}</strong>, your IRS Form 1040 for 2023, 2024, and 2025 is ready.
     </p>
-    <table style="width:100%;border-collapse:collapse;background:#0D1628;border-radius:12px;overflow:hidden">
-      {rows}
-    </table>
-    <p style="color:#64748b;font-size:12px;margin-top:24px">Questions? Email us at taximizerpro@gmail.com</p>
+    <table style="width:100%;border-collapse:collapse;background:#0D1628;border-radius:12px;overflow:hidden">{rows}</table>
+    <p style="color:#64748b;font-size:12px;margin-top:24px">Questions? Email taximizerpro@gmail.com</p>
   </div>
 </div>"""
 
     msg_raw = f"To: {to_email}\r\nSubject: Your Tax Returns Are Ready — TaximizerPro\r\nContent-Type: text/html; charset=utf-8\r\n\r\n{html}"
     encoded = base64.urlsafe_b64encode(msg_raw.encode()).decode()
-    body = json.dumps({'raw': encoded}).encode()
     req = urllib.request.Request(
         'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
-        data=body, method='POST',
+        data=json.dumps({'raw': encoded}).encode(), method='POST',
         headers={'Authorization': f'Bearer {gmail_tok}', 'Content-Type': 'application/json'}
     )
     try:
         with urllib.request.urlopen(req, timeout=30):
-            print(f"  📧 Email sent to {to_email}")
+            print(f"  📧 Sent to {to_email}")
     except Exception as e:
         print(f"  ⚠️  Email failed: {e}")
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     import sys
-    client_json = sys.argv[1] if len(sys.argv) > 1 else '{}'
-    client = json.loads(client_json)
+    client = json.loads(sys.argv[1] if len(sys.argv) > 1 else '{}')
     drive_tok = os.environ.get('GOOGLEDRIVE_ACCESS_TOKEN', '')
-    gmail_tok = os.environ.get('GMAIL_ACCESS_TOKEN', '')
-    links = process_client(client, drive_tok, gmail_tok or None)
+    gmail_tok = os.environ.get('GMAIL_ACCESS_TOKEN', '') or None
+    links = process_client(client, drive_tok, gmail_tok)
     print(json.dumps(links))
