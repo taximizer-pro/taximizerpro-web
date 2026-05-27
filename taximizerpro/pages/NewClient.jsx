@@ -1,323 +1,384 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { Client } from "@/api/entities";
+import { useState, useRef, useEffect } from "react";
+import { ClientMilestone } from "@/api/entities";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { useUser } from "@/hooks/useUser";
 
-const STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
+const STEPS = ["Personal Info", "Address", "Bank Info", "Signature & File"];
+const YEARS = [2025, 2024, 2023];
 
-// ── Free address autocomplete via Nominatim (OpenStreetMap) — no key required ──
-function useAddressSearch(query, setForm) {
+// Nominatim address autocomplete (OpenStreetMap — no API key needed)
+function AddressAutocomplete({ value, onChange, onSelect }) {
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
-  const debounceRef = useRef(null);
+  const timer = useRef(null);
 
-  useEffect(() => {
-    if (!query || query.length < 5) { setSuggestions([]); setOpen(false); return; }
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
+  function handleChange(e) {
+    onChange(e.target.value);
+    clearTimeout(timer.current);
+    if (e.target.value.length < 4) { setSuggestions([]); setOpen(false); return; }
+    timer.current = setTimeout(async () => {
       try {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=us&limit=6&q=${encodeURIComponent(query)}`;
-        const res = await fetch(url, { headers: { "Accept-Language": "en", "User-Agent": "TaximizerPro/1.0" } });
-        const data = await res.json();
-        setSuggestions(data.filter(d => d.address?.road));
-        setOpen(true);
-      } catch { setSuggestions([]); }
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=us&q=${encodeURIComponent(e.target.value)}&limit=5`, {
+          headers: { 'Accept-Language': 'en', 'User-Agent': 'TaximizerPro/1.0' }
+        });
+        const data = await r.json();
+        setSuggestions(data);
+        setOpen(data.length > 0);
+      } catch {}
     }, 400);
-    return () => clearTimeout(debounceRef.current);
-  }, [query]);
-
-  function pick(item) {
-    const a = item.address;
-    const houseNum = a.house_number || "";
-    const road = a.road || "";
-    const city = a.city || a.town || a.village || a.county || "";
-    const state = a.state_code?.toUpperCase() || a.state?.slice(0,2).toUpperCase() || "";
-    const zip = a.postcode?.split("-")[0] || "";
-    setForm(f => ({ ...f, address: `${houseNum} ${road}`.trim(), city, state, zip }));
-    setSuggestions([]);
-    setOpen(false);
   }
 
-  return { suggestions, open, setOpen, pick };
-}
+  function pick(item) {
+    const a = item.address || {};
+    const houseNum = a.house_number || "";
+    const road = a.road || a.pedestrian || "";
+    const street = [houseNum, road].filter(Boolean).join(" ");
+    onSelect({
+      address: street || item.display_name.split(",")[0],
+      city:  a.city || a.town || a.village || a.county || "",
+      state: a.state ? a.state.length === 2 ? a.state : stateAbbr(a.state) : "",
+      zip:   a.postcode || "",
+    });
+    setOpen(false);
+    setSuggestions([]);
+  }
 
-function Field({ label, required, hint, children }) {
   return (
-    <div>
-      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-        {label} {required && <span className="text-amber-400">*</span>}
-      </label>
-      {children}
-      {hint && <p className="text-xs text-slate-600 mt-1">{hint}</p>}
+    <div className="relative">
+      <input type="text" value={value} onChange={handleChange} placeholder="Start typing address..."
+        className="w-full bg-[#0A1628] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400/60 transition-colors"/>
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-[#0D1628] border border-white/10 rounded-xl overflow-hidden z-50 shadow-xl">
+          {suggestions.map((s,i) => (
+            <button key={i} onMouseDown={() => pick(s)}
+              className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-amber-400/10 hover:text-white transition-colors border-b border-white/5 last:border-0 truncate">
+              {s.display_name}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function Input({ name, value, onChange, type = "text", placeholder, ...rest }) {
+function stateAbbr(name) {
+  const map = {"Alabama":"AL","Alaska":"AK","Arizona":"AZ","Arkansas":"AR","California":"CA","Colorado":"CO","Connecticut":"CT","Delaware":"DE","Florida":"FL","Georgia":"GA","Hawaii":"HI","Idaho":"ID","Illinois":"IL","Indiana":"IN","Iowa":"IA","Kansas":"KS","Kentucky":"KY","Louisiana":"LA","Maine":"ME","Maryland":"MD","Massachusetts":"MA","Michigan":"MI","Minnesota":"MN","Mississippi":"MS","Missouri":"MO","Montana":"MT","Nebraska":"NE","Nevada":"NV","New Hampshire":"NH","New Jersey":"NJ","New Mexico":"NM","New York":"NY","North Carolina":"NC","North Dakota":"ND","Ohio":"OH","Oklahoma":"OK","Oregon":"OR","Pennsylvania":"PA","Rhode Island":"RI","South Carolina":"SC","South Dakota":"SD","Tennessee":"TN","Texas":"TX","Utah":"UT","Vermont":"VT","Virginia":"VA","Washington":"WA","West Virginia":"WV","Wisconsin":"WI","Wyoming":"WY"};
+  return map[name] || name;
+}
+
+// Signature pad
+function SignaturePad({ onSave }) {
+  const canvasRef = useRef(null);
+  const [drawing, setDrawing] = useState(false);
+  const [hasData, setHasData] = useState(false);
+  const lastPos = useRef(null);
+
+  function getPos(e, canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: (src.clientX - rect.left) * (canvas.width / rect.width), y: (src.clientY - rect.top) * (canvas.height / rect.height) };
+  }
+
+  function start(e) {
+    e.preventDefault();
+    const pos = getPos(e, canvasRef.current);
+    lastPos.current = pos;
+    setDrawing(true);
+  }
+
+  function move(e) {
+    e.preventDefault();
+    if (!drawing) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const pos = getPos(e, canvas);
+    ctx.beginPath();
+    ctx.moveTo(lastPos.current.x, lastPos.current.y);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.stroke();
+    lastPos.current = pos;
+    setHasData(true);
+  }
+
+  function end(e) { e.preventDefault(); setDrawing(false); }
+
+  function clear() {
+    const canvas = canvasRef.current;
+    canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+    setHasData(false);
+  }
+
+  function save() {
+    if (!hasData) return;
+    onSave(canvasRef.current.toDataURL("image/png"));
+  }
+
   return (
-    <input
-      type={type} name={name} value={value} onChange={onChange}
-      placeholder={placeholder} {...rest}
-      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-400/60 transition-all"
-    />
+    <div className="space-y-2">
+      <div className="border-2 border-dashed border-white/20 rounded-xl bg-white overflow-hidden touch-none" style={{height: 120}}>
+        <canvas ref={canvasRef} width={560} height={120}
+          onMouseDown={start} onMouseMove={move} onMouseUp={end} onMouseLeave={end}
+          onTouchStart={start} onTouchMove={move} onTouchEnd={end}
+          className="w-full h-full cursor-crosshair"/>
+      </div>
+      <div className="flex gap-2">
+        <button type="button" onClick={clear} className="text-xs text-slate-400 hover:text-white transition-colors px-3 py-1.5 bg-white/5 rounded-lg">Clear</button>
+        {hasData && <button type="button" onClick={save} className="text-xs text-amber-400 hover:text-amber-300 transition-colors px-3 py-1.5 bg-amber-400/10 rounded-lg font-semibold">✓ Use This Signature</button>}
+      </div>
+    </div>
+  );
+}
+
+function Input({ label, name, value, onChange, type="text", placeholder="", required=false, pattern, maxLength }) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">{label}{required && <span className="text-amber-400 ml-1">*</span>}</label>
+      <input type={type} name={name} value={value} onChange={onChange} placeholder={placeholder}
+        required={required} pattern={pattern} maxLength={maxLength}
+        className="w-full bg-[#0A1628] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400/60 transition-colors"/>
+    </div>
   );
 }
 
 export default function NewClient() {
   const navigate = useNavigate();
+  const { data: user } = useUser();
+  const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [step, setStep] = useState(1);
+  const [sigDataUrl, setSigDataUrl] = useState(null);
+  const [generating, setGenerating] = useState(false);
+  const [done, setDone] = useState(null);
+  const [error, setError] = useState("");
+
   const [form, setForm] = useState({
     first_name: "", middle_init: "", last_name: "",
-    ssn: "", dob: "", email: "", phone: "",
-    address: "", apt: "", city: "", state: "FL", zip: "",
-    bank_routing: "", bank_account: "",
-    filing_status: "single",
+    ssn: "", email: "", phone: "",
+    address: "", city: "", state: "", zip: "",
+    routing: "", account: "",
+    years: [2025, 2024, 2023],
   });
 
-  const set = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  function update(e) {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
+  }
 
-  const { suggestions, open, setOpen, pick } = useAddressSearch(form.address, setForm);
+  function toggleYear(y) {
+    setForm(f => ({
+      ...f,
+      years: f.years.includes(y) ? f.years.filter(x=>x!==y) : [...f.years, y]
+    }));
+  }
+
+  function formatSSN(raw) {
+    const digits = raw.replace(/\D/g,"").slice(0,9);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 5) return `${digits.slice(0,3)}-${digits.slice(3)}`;
+    return `${digits.slice(0,3)}-${digits.slice(3,5)}-${digits.slice(5)}`;
+  }
 
   function handleSSN(e) {
-    let v = e.target.value.replace(/\D/g, "").slice(0, 9);
-    if (v.length > 5) v = `${v.slice(0,3)}-${v.slice(3,5)}-${v.slice(5)}`;
-    else if (v.length > 3) v = `${v.slice(0,3)}-${v.slice(3)}`;
-    setForm(f => ({ ...f, ssn: v }));
+    setForm(f => ({ ...f, ssn: formatSSN(e.target.value) }));
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setSaving(true);
+  function canAdvance() {
+    if (step === 0) return form.first_name && form.last_name && form.ssn.length === 11;
+    if (step === 1) return form.address && form.city && form.state && form.zip;
+    if (step === 2) return true; // bank optional
+    return true;
+  }
+
+  async function submit() {
+    setGenerating(true);
+    setError("");
     try {
-      const client = await Client.create(form);
-      navigate(createPageUrl("ClientDetail") + `?id=${client.id}`);
-    } catch (err) {
-      alert("Error saving client: " + err.message);
-      setSaving(false);
+      // Create a milestone for each selected year
+      const clientName = `${form.first_name}${form.middle_init ? ' '+form.middle_init : ''} ${form.last_name}`.trim();
+      const clientId = `client_${Date.now()}`;
+
+      for (const yr of form.years) {
+        await ClientMilestone.create({
+          client_id: clientId,
+          client_name: clientName,
+          tax_year: yr,
+          milestone: "Documents Received",
+          status: "pending",
+          assigned_agent: user?.email,
+          notes: JSON.stringify({
+            ssn: form.ssn.replace(/-/g,""),
+            email: form.email,
+            phone: form.phone,
+            address: form.address + (form.apt ? " " + form.apt : ""),
+            city: form.city,
+            state: form.state,
+            zip: form.zip,
+            routing: form.routing,
+            account: form.account,
+          })
+        });
+      }
+
+      setDone({ clientId, clientName });
+    } catch(e) {
+      setError("Failed to save client. Please try again.");
     }
+    setGenerating(false);
   }
 
-  const steps = [
-    { n: 1, label: "Personal" },
-    { n: 2, label: "Address" },
-    { n: 3, label: "Banking" },
-  ];
-
-  const canProceed = {
-    1: form.first_name && form.last_name && form.ssn?.length >= 9,
-    2: form.address && form.city && form.state && form.zip,
-    3: true,
-  };
-
-  return (
-    <div className="min-h-screen bg-[#0A1628] text-white">
-      <div className="border-b border-white/10 bg-[#0D1F3C]">
-        <div className="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
-          <Link to={createPageUrl("Clients")} className="text-slate-500 hover:text-white transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
-          <div>
-            <h1 className="text-lg font-bold">New Client</h1>
-            <p className="text-xs text-slate-500">Complete all three steps to save</p>
-          </div>
+  if (done) return (
+    <div className="min-h-screen bg-[#080F1E] text-white flex items-center justify-center p-6">
+      <div className="bg-[#0D1628] border border-white/5 rounded-2xl p-8 max-w-md w-full text-center space-y-4">
+        <div className="text-5xl">✅</div>
+        <h2 className="text-xl font-black">Client Added!</h2>
+        <p className="text-slate-400 text-sm">{done.clientName} has been added and their tax returns are being tracked.</p>
+        <div className="flex gap-3 pt-2">
+          <Link to={createPageUrl("Clients")} className="flex-1 bg-amber-400 hover:bg-amber-300 text-[#080F1E] font-bold py-3 rounded-xl text-sm transition-colors">View Clients</Link>
+          <button onClick={() => { setDone(null); setStep(0); setForm({first_name:"",middle_init:"",last_name:"",ssn:"",email:"",phone:"",address:"",city:"",state:"",zip:"",routing:"",account:"",years:[2025,2024,2023]}); setSigDataUrl(null); }}
+            className="flex-1 bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl text-sm transition-colors">Add Another</button>
         </div>
       </div>
+    </div>
+  );
 
-      <div className="max-w-2xl mx-auto px-6 py-8">
-        {/* Step Pills */}
-        <div className="flex items-center gap-2 mb-8">
-          {steps.map((s, i) => (
-            <div key={s.n} className="flex items-center gap-2 flex-1">
-              <button
-                type="button"
-                onClick={() => step > s.n && setStep(s.n)}
-                className={`w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  step === s.n ? "bg-amber-400 text-[#0A1628]"
-                  : step > s.n ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-pointer"
-                  : "bg-white/5 text-slate-500 border border-white/10 cursor-default"
-                }`}>
-                <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{background:'rgba(255,255,255,0.1)'}}>
-                  {step > s.n ? "✓" : s.n}
-                </span>
-                {s.label}
-              </button>
-              {i < steps.length - 1 && <div className="w-6 h-px bg-white/10 flex-shrink-0" />}
+  return (
+    <div className="min-h-screen bg-[#080F1E] text-white">
+      <nav className="sticky top-0 z-50 bg-[#080F1E]/95 backdrop-blur border-b border-white/5">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
+          <Link to={createPageUrl("Clients")} className="p-1.5 hover:bg-white/5 rounded-lg transition-colors">
+            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
+            </svg>
+          </Link>
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-[#080F1E] font-black text-xs">T</div>
+            <span className="font-black text-base">New Client</span>
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+        {/* Step indicators */}
+        <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
+          {STEPS.map((s, i) => (
+            <div key={i} className="flex items-center gap-2 flex-shrink-0">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                i < step ? "bg-emerald-400 text-[#080F1E]" :
+                i === step ? "bg-amber-400 text-[#080F1E]" :
+                "bg-white/10 text-slate-500"
+              }`}>{i < step ? "✓" : i+1}</div>
+              <span className={`text-xs font-medium ${i === step ? "text-white" : "text-slate-500"}`}>{s}</span>
+              {i < STEPS.length-1 && <div className={`w-6 h-px ${i < step ? "bg-emerald-400/50" : "bg-white/10"}`}/>}
             </div>
           ))}
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="bg-[#0D1F3C] border border-white/10 rounded-2xl p-6 space-y-5">
+        <div className="bg-[#0D1628] border border-white/5 rounded-2xl p-6 space-y-5">
+          {/* Step 0: Personal */}
+          {step === 0 && (
+            <>
+              <h2 className="font-bold text-lg">Personal Information</h2>
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="First Name" name="first_name" value={form.first_name} onChange={update} required />
+                <Input label="Middle Initial" name="middle_init" value={form.middle_init} onChange={update} maxLength={2} placeholder="J" />
+              </div>
+              <Input label="Last Name" name="last_name" value={form.last_name} onChange={update} required />
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">SSN <span className="text-amber-400">*</span></label>
+                <input type="text" value={form.ssn} onChange={handleSSN} placeholder="333-33-3333" maxLength={11}
+                  className="w-full bg-[#0A1628] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400/60 font-mono tracking-wider"/>
+                <p className="text-xs text-slate-600 mt-1">Auto-formatted as XXX-XX-XXXX</p>
+              </div>
+              <Input label="Email" name="email" value={form.email} onChange={update} type="email" placeholder="client@email.com" />
+              <Input label="Phone" name="phone" value={form.phone} onChange={update} placeholder="(555) 000-0000" />
+            </>
+          )}
 
-            {/* ── STEP 1: PERSONAL ── */}
-            {step === 1 && (
-              <>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Personal Information</p>
-                <div className="grid grid-cols-6 gap-4">
-                  <div className="col-span-3">
-                    <Field label="First Name" required>
-                      <Input name="first_name" value={form.first_name} onChange={set} placeholder="John" required />
-                    </Field>
-                  </div>
-                  <div className="col-span-1">
-                    <Field label="M.I.">
-                      <Input name="middle_init" value={form.middle_init} onChange={set} placeholder="A" maxLength={1} />
-                    </Field>
-                  </div>
-                  <div className="col-span-2">
-                    <Field label="Last Name" required>
-                      <Input name="last_name" value={form.last_name} onChange={set} placeholder="Smith" required />
-                    </Field>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <Field label="SSN" required hint="Auto-formats as you type">
-                    <Input name="ssn" value={form.ssn} onChange={handleSSN} placeholder="123-45-6789" required />
-                  </Field>
-                  <Field label="Date of Birth">
-                    <Input name="dob" value={form.dob} onChange={set} type="date" />
-                  </Field>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <Field label="Email">
-                    <Input name="email" value={form.email} onChange={set} type="email" placeholder="client@email.com" />
-                  </Field>
-                  <Field label="Phone">
-                    <Input name="phone" value={form.phone} onChange={set} placeholder="(305) 000-0000" />
-                  </Field>
-                </div>
-                <Field label="Filing Status">
-                  <select name="filing_status" value={form.filing_status} onChange={set}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400/60 transition-all">
-                    <option value="single">Single</option>
-                    <option value="mfj">Married Filing Jointly</option>
-                    <option value="mfs">Married Filing Separately</option>
-                    <option value="hoh">Head of Household</option>
-                    <option value="qss">Qualifying Surviving Spouse</option>
-                  </select>
-                </Field>
-              </>
-            )}
+          {/* Step 1: Address */}
+          {step === 1 && (
+            <>
+              <h2 className="font-bold text-lg">Address</h2>
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">Street Address <span className="text-amber-400">*</span></label>
+                <AddressAutocomplete value={form.address} onChange={v => setForm(f=>({...f,address:v}))}
+                  onSelect={({address,city,state,zip}) => setForm(f=>({...f,address,city,state,zip}))} />
+                <p className="text-xs text-slate-600 mt-1">Start typing — we'll suggest verified addresses</p>
+              </div>
+              <Input label="Apt / Unit (optional)" name="apt" value={form.apt||""} onChange={update} placeholder="Apt 4B" />
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="City" name="city" value={form.city} onChange={update} required />
+                <Input label="State" name="state" value={form.state} onChange={update} placeholder="NY" maxLength={2} required />
+              </div>
+              <Input label="ZIP Code" name="zip" value={form.zip} onChange={update} required />
+            </>
+          )}
 
-            {/* ── STEP 2: ADDRESS ── */}
-            {step === 2 && (
-              <>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Address</p>
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 flex gap-2 items-start">
-                  <span className="text-blue-400 mt-0.5">📍</span>
-                  <p className="text-xs text-blue-300">Start typing a street address — suggestions will appear automatically. Free, no login required.</p>
-                </div>
+          {/* Step 2: Bank */}
+          {step === 2 && (
+            <>
+              <h2 className="font-bold text-lg">Bank Information <span className="text-slate-500 text-sm font-normal">(optional)</span></h2>
+              <p className="text-xs text-slate-500">Used to populate the refund direct deposit section on 1040 forms.</p>
+              <Input label="Routing Number" name="routing" value={form.routing} onChange={update} placeholder="021000021" maxLength={9} />
+              <Input label="Account Number" name="account" value={form.account} onChange={update} placeholder="123456789" />
+            </>
+          )}
 
-                {/* Address field with dropdown */}
-                <div className="relative">
-                  <Field label="Street Address" required>
-                    <input
-                      name="address"
-                      value={form.address}
-                      onChange={e => { set(e); }}
-                      onFocus={() => suggestions.length > 0 && setOpen(true)}
-                      placeholder="123 Main St"
-                      autoComplete="off"
-                      required
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-400/60 transition-all"
-                    />
-                  </Field>
-                  {open && suggestions.length > 0 && (
-                    <div className="absolute z-50 left-0 right-0 mt-1 bg-[#112040] border border-white/15 rounded-xl overflow-hidden shadow-2xl">
-                      {suggestions.map((s, i) => {
-                        const a = s.address;
-                        const line1 = `${a.house_number || ""} ${a.road || ""}`.trim();
-                        const line2 = [a.city || a.town || a.village, a.state_code?.toUpperCase(), a.postcode?.split("-")[0]].filter(Boolean).join(", ");
-                        return (
-                          <button
-                            key={i}
-                            type="button"
-                            onMouseDown={() => pick(s)}
-                            className="w-full text-left px-4 py-3 hover:bg-amber-400/10 border-b border-white/5 last:border-0 transition-colors">
-                            <div className="text-sm text-white">{line1}</div>
-                            <div className="text-xs text-slate-400">{line2}</div>
-                          </button>
-                        );
-                      })}
+          {/* Step 3: Signature + Years */}
+          {step === 3 && (
+            <>
+              <h2 className="font-bold text-lg">Signature & Tax Years</h2>
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">Select Tax Years</label>
+                <div className="flex gap-3">
+                  {YEARS.map(y => (
+                    <button key={y} type="button" onClick={() => toggleYear(y)}
+                      className={`flex-1 py-3 rounded-xl border font-bold text-sm transition-all ${
+                        form.years.includes(y) ? "bg-amber-400 border-amber-400 text-[#080F1E]" : "bg-white/5 border-white/10 text-slate-400 hover:border-amber-400/30"
+                      }`}>{y}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">Client Signature</label>
+                {sigDataUrl ? (
+                  <div className="space-y-2">
+                    <div className="border border-emerald-400/30 rounded-xl bg-white p-2" style={{height:80}}>
+                      <img src={sigDataUrl} className="h-full object-contain" alt="signature"/>
                     </div>
-                  )}
-                </div>
+                    <button type="button" onClick={() => setSigDataUrl(null)} className="text-xs text-slate-400 hover:text-white transition-colors">Re-sign</button>
+                  </div>
+                ) : (
+                  <SignaturePad onSave={setSigDataUrl} />
+                )}
+                <p className="text-xs text-slate-500 mt-1">Draw signature above — it will appear on 1040 forms</p>
+              </div>
+              {error && <p className="text-red-400 text-sm bg-red-400/10 rounded-xl px-4 py-3">{error}</p>}
+            </>
+          )}
 
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="col-span-1">
-                    <Field label="Apt / Unit">
-                      <Input name="apt" value={form.apt} onChange={set} placeholder="4B" />
-                    </Field>
-                  </div>
-                  <div className="col-span-3">
-                    <Field label="City" required>
-                      <Input name="city" value={form.city} onChange={set} placeholder="Miami" required />
-                    </Field>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="col-span-1">
-                    <Field label="State" required>
-                      <select name="state" value={form.state} onChange={set}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400/60 transition-all">
-                        {STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </Field>
-                  </div>
-                  <div className="col-span-2">
-                    <Field label="ZIP" required>
-                      <Input name="zip" value={form.zip} onChange={set} placeholder="33139" required maxLength={10} />
-                    </Field>
-                  </div>
-                </div>
-              </>
+          {/* Navigation */}
+          <div className="flex gap-3 pt-2">
+            {step > 0 && (
+              <button type="button" onClick={() => setStep(s=>s-1)}
+                className="px-5 py-3 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl text-sm transition-colors">
+                Back
+              </button>
             )}
-
-            {/* ── STEP 3: BANKING ── */}
-            {step === 3 && (
-              <>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Banking — Direct Deposit</p>
-                <div className="bg-amber-400/10 border border-amber-400/20 rounded-xl p-4 flex gap-3">
-                  <span className="text-xl flex-shrink-0">🔒</span>
-                  <p className="text-sm text-amber-200/80">Used for IRS refund direct deposit. Stored securely and never shared.</p>
-                </div>
-                <Field label="Routing Number" hint="9-digit number at the bottom left of a check">
-                  <Input name="bank_routing" value={form.bank_routing} onChange={set} placeholder="021000021" maxLength={9} />
-                </Field>
-                <Field label="Account Number">
-                  <Input name="bank_account" value={form.bank_account} onChange={set} placeholder="Account number" />
-                </Field>
-              </>
-            )}
-          </div>
-
-          {/* Nav buttons */}
-          <div className="flex justify-between mt-6">
-            <button type="button" onClick={() => setStep(s => Math.max(1, s - 1))}
-              className={`px-6 py-2.5 rounded-xl border border-white/10 text-sm font-medium text-slate-400 hover:text-white hover:border-white/20 transition-all ${step === 1 ? "invisible" : ""}`}>
-              ← Back
+            <button type="button" disabled={!canAdvance() || generating}
+              onClick={step < STEPS.length-1 ? () => setStep(s=>s+1) : submit}
+              className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${
+                canAdvance() && !generating
+                  ? "bg-amber-400 hover:bg-amber-300 text-[#080F1E]"
+                  : "bg-white/10 text-slate-500 cursor-not-allowed"
+              }`}>
+              {generating ? "Saving..." : step < STEPS.length-1 ? "Continue →" : "Add Client"}
             </button>
-
-            {step < 3 ? (
-              <button type="button" onClick={() => setStep(s => s + 1)}
-                disabled={!canProceed[step]}
-                className="bg-amber-400 hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed text-[#0A1628] font-semibold text-sm px-6 py-2.5 rounded-xl transition-colors">
-                Continue →
-              </button>
-            ) : (
-              <button type="submit" disabled={saving}
-                className="bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-[#0A1628] font-semibold text-sm px-8 py-2.5 rounded-xl transition-colors flex items-center gap-2">
-                {saving
-                  ? <><div className="w-4 h-4 border-2 border-[#0A1628]/30 border-t-[#0A1628] rounded-full animate-spin" /> Saving...</>
-                  : "✓ Save Client"}
-              </button>
-            )}
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

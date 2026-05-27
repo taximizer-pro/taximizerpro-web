@@ -1,250 +1,196 @@
 import { useState, useEffect } from "react";
-import { StaffMember, Notification } from "@/api/entities";
-import { useUser } from "@/hooks/useUser";
+import { StaffMember } from "@/api/entities";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { useUser } from "@/hooks/useUser";
 
-const ROLE_META = {
-  super_admin: { label:"Super Admin", badge:"text-amber-400 bg-amber-400/10 border-amber-400/20", icon:"👑" },
-  admin:       { label:"Admin",       badge:"text-blue-400 bg-blue-400/10 border-blue-400/20",   icon:"⚡" },
-  manager:     { label:"Manager",     badge:"text-purple-400 bg-purple-400/10 border-purple-400/20", icon:"🎯" },
-  agent:       { label:"Agent",       badge:"text-emerald-400 bg-emerald-400/10 border-emerald-400/20", icon:"👤" },
-  client:      { label:"Client",      badge:"text-slate-400 bg-slate-400/10 border-slate-400/20", icon:"🧑" },
+const ROLES = ["admin","manager","agent"];
+const ROLE_COLORS = {
+  super_admin: "text-amber-400 bg-amber-400/10 border-amber-400/20",
+  admin:       "text-blue-400 bg-blue-400/10 border-blue-400/20",
+  manager:     "text-purple-400 bg-purple-400/10 border-purple-400/20",
+  agent:       "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
 };
-
-// Default permission sets per role
-const ROLE_DEFAULTS = {
-  super_admin: { can_view_clients:true, can_edit_clients:true, can_generate_forms:true, can_view_financials:true, can_approve_milestones:true, can_message:true, can_view_team:true },
-  admin:       { can_view_clients:true, can_edit_clients:true, can_generate_forms:true, can_view_financials:true, can_approve_milestones:true, can_message:true, can_view_team:true },
-  manager:     { can_view_clients:true, can_edit_clients:false, can_generate_forms:true, can_view_financials:false, can_approve_milestones:true, can_message:true, can_view_team:true },
-  agent:       { can_view_clients:true, can_edit_clients:false, can_generate_forms:true, can_view_financials:false, can_approve_milestones:false, can_message:true, can_view_team:false },
-  client:      { can_view_clients:false, can_edit_clients:false, can_generate_forms:false, can_view_financials:false, can_approve_milestones:false, can_message:false, can_view_team:false },
-};
-
-const PERM_LABELS = {
-  can_view_clients:     "View Clients",
-  can_edit_clients:     "Edit Clients",
-  can_generate_forms:   "Generate Forms",
-  can_view_financials:  "View Financials",
-  can_approve_milestones:"Approve Milestones",
-  can_message:          "Team Messenger",
-  can_view_team:        "View Team",
-};
-
-const AVATAR_COLORS = ["#F59E0B","#3B82F6","#8B5CF6","#10B981","#EF4444","#F97316","#EC4899","#06B6D4"];
-
-function Avatar({ name, color }) {
-  const initials = (name||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
-  return (
-    <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs text-white flex-shrink-0"
-      style={{ background: color||"#374151" }}>{initials}</div>
-  );
-}
+const AVATAR_COLORS = ["#F59E0B","#3B82F6","#8B5CF6","#10B981","#EF4444","#F97316","#06B6D4","#EC4899"];
 
 export default function Staff() {
   const { data: user } = useUser();
+  const [myStaff, setMyStaff] = useState(null);
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showInvite, setShowInvite] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ email:"", full_name:"", role:"agent" });
+  const [invite, setInvite] = useState({ email: "", full_name: "", role: "agent" });
   const [saving, setSaving] = useState(false);
-  const [editPerms, setEditPerms] = useState(null); // member being edited
+  const [saved, setSaved] = useState(false);
 
-  const isSuperAdmin = user?.email === "taximizerpro@gmail.com";
-  const isAdmin = isSuperAdmin;
+  useEffect(() => {
+    if (!user) return;
+    load();
+  }, [user]);
 
-  useEffect(() => { StaffMember.list().then(s=>{ setStaff(s); setLoading(false); }); }, []);
+  async function load() {
+    const [sm, all] = await Promise.all([
+      StaffMember.filter({ email: user.email }),
+      StaffMember.list()
+    ]);
+    setMyStaff(sm[0] || null);
+    setStaff(all);
+    setLoading(false);
+  }
 
-  async function handleInvite(e) {
-    e.preventDefault(); setSaving(true);
-    const color = AVATAR_COLORS[Math.floor(Math.random()*AVATAR_COLORS.length)];
-    const perms = ROLE_DEFAULTS[inviteForm.role] || ROLE_DEFAULTS.agent;
-    const m = await StaffMember.create({ ...inviteForm, status:"pending", avatar_color:color, invited_by:user?.email, assigned_client_ids:[], is_online:false, permissions:perms });
-    await Notification.create({ recipient_email:"taximizerpro@gmail.com", type:"new_client", title:`New staff invited: ${inviteForm.full_name}`, body:`${inviteForm.email} added as ${inviteForm.role}`, read:false, actor_email:user?.email, actor_name:user?.full_name||user?.email });
-    setStaff(s=>[...s,m]); setShowInvite(false); setInviteForm({ email:"", full_name:"", role:"agent" });
+  const role = myStaff?.role;
+  const isAdmin = ["super_admin","admin"].includes(role);
+
+  async function addStaff() {
+    if (!invite.email || !invite.full_name) return;
+    setSaving(true);
+    try {
+      const color = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+      await StaffMember.create({
+        email: invite.email.toLowerCase().trim(),
+        full_name: invite.full_name.trim(),
+        role: invite.role,
+        status: "invited",
+        invited_by: user.email,
+        avatar_color: color,
+        is_online: false,
+      });
+      setSaved(true);
+      setTimeout(() => { setSaved(false); setShowInvite(false); setInvite({ email:"", full_name:"", role:"agent" }); }, 2000);
+      await load();
+    } catch(e) { console.error(e); }
     setSaving(false);
   }
 
-  async function updateRole(member, newRole) {
-    const perms = ROLE_DEFAULTS[newRole];
-    await StaffMember.update(member.id, { role:newRole, permissions:perms });
-    setStaff(s=>s.map(m=>m.id===member.id?{...m,role:newRole,permissions:perms}:m));
+  async function removeStaff(id) {
+    if (!confirm("Remove this staff member?")) return;
+    await StaffMember.delete(id);
+    await load();
   }
 
-  async function savePerms(member, perms) {
-    await StaffMember.update(member.id, { permissions:perms });
-    setStaff(s=>s.map(m=>m.id===member.id?{...m,permissions:perms}:m));
-    setEditPerms(null);
-  }
-
-  async function toggleStatus(member) {
-    const ns = member.status==="active"?"inactive":"active";
-    await StaffMember.update(member.id, { status:ns });
-    setStaff(s=>s.map(m=>m.id===member.id?{...m,status:ns}:m));
-  }
+  const onlineCount = staff.filter(s=>s.is_online).length;
 
   return (
-    <div className="min-h-screen bg-[#0A1628] text-white">
-      <div className="border-b border-white/10 bg-[#0D1F3C]">
-        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to={createPageUrl("Dashboard")} className="text-slate-500 hover:text-white transition-colors">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-            </Link>
+    <div className="min-h-screen bg-[#080F1E] text-white">
+      <nav className="sticky top-0 z-50 bg-[#080F1E]/95 backdrop-blur border-b border-white/5">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
+          <Link to={createPageUrl("Dashboard")} className="p-1.5 hover:bg-white/5 rounded-lg transition-colors">
+            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
+            </svg>
+          </Link>
+          <div className="flex items-center gap-3 flex-1">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-[#080F1E] font-black text-xs">T</div>
             <div>
-              <h1 className="text-lg font-bold">Team & Access Control</h1>
-              <p className="text-xs text-slate-500">{staff.length} members · Manage roles & permissions</p>
+              <span className="font-black text-base">Staff</span>
+              <span className="text-xs text-emerald-400 ml-2">● {onlineCount} online</span>
             </div>
           </div>
           {isAdmin && (
-            <button onClick={()=>setShowInvite(true)} className="bg-amber-400 hover:bg-amber-300 text-[#0A1628] font-semibold text-sm px-4 py-2 rounded-xl transition-colors">
-              + Invite Member
+            <button onClick={() => setShowInvite(true)} className="bg-amber-400 hover:bg-amber-300 text-[#080F1E] font-bold px-4 py-2 rounded-xl text-sm transition-colors">
+              + Add Staff
             </button>
           )}
         </div>
-      </div>
+      </nav>
 
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-4">
+      {/* Invite Modal */}
+      {showInvite && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0D1628] border border-white/10 rounded-2xl p-6 w-full max-w-md space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-white text-lg">Add Staff Member</h3>
+              <button onClick={() => setShowInvite(false)} className="text-slate-500 hover:text-white transition-colors">✕</button>
+            </div>
+            {saved ? (
+              <div className="py-6 text-center">
+                <div className="text-4xl mb-2">✅</div>
+                <div className="text-emerald-400 font-semibold">Staff member added!</div>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">Full Name</label>
+                    <input type="text" value={invite.full_name} onChange={e=>setInvite(i=>({...i,full_name:e.target.value}))} placeholder="Mike Hennigan"
+                      className="w-full bg-[#0A1628] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400/60"/>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">Email</label>
+                    <input type="email" value={invite.email} onChange={e=>setInvite(i=>({...i,email:e.target.value}))} placeholder="mike@example.com"
+                      className="w-full bg-[#0A1628] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400/60"/>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">Role</label>
+                    <select value={invite.role} onChange={e=>setInvite(i=>({...i,role:e.target.value}))}
+                      className="w-full bg-[#0A1628] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-400/60">
+                      {ROLES.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase()+r.slice(1)}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <button onClick={addStaff} disabled={!invite.email || !invite.full_name || saving}
+                  className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${invite.email && invite.full_name && !saving ? "bg-amber-400 hover:bg-amber-300 text-[#080F1E]" : "bg-white/10 text-slate-500 cursor-not-allowed"}`}>
+                  {saving ? "Adding..." : "Add Staff Member"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
-        {/* Legend */}
-        <div className="bg-[#0D1F3C] border border-white/10 rounded-2xl p-4 flex flex-wrap gap-3">
-          {Object.entries(ROLE_META).map(([r,m])=>(
-            <span key={r} className={`text-xs font-medium px-3 py-1.5 rounded-full border ${m.badge}`}>{m.icon} {m.label}</span>
-          ))}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {["super_admin","admin","manager","agent"].map(r => {
+            const count = staff.filter(s=>s.role===r).length;
+            return (
+              <div key={r} className={`border rounded-xl p-4 ${ROLE_COLORS[r]}`}>
+                <div className="text-2xl font-black">{count}</div>
+                <div className="text-xs font-medium mt-0.5 capitalize">{r.replace("_"," ")}</div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Member list */}
+        {/* Staff list */}
         {loading ? (
-          <div className="flex justify-center py-16"><div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" /></div>
+          <div className="bg-[#0D1628] border border-white/5 rounded-2xl py-12 text-center text-slate-500 text-sm">Loading...</div>
         ) : (
-          <div className="bg-[#0D1F3C] border border-white/10 rounded-2xl overflow-hidden">
+          <div className="bg-[#0D1628] border border-white/5 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/5">
+              <h2 className="font-bold text-white">Team Members <span className="text-slate-500 font-normal text-sm">({staff.length})</span></h2>
+            </div>
             <div className="divide-y divide-white/5">
-              {staff.map(member=>{
-                const rm = ROLE_META[member.role]||ROLE_META.agent;
-                const canEdit = isAdmin && member.email !== "taximizerpro@gmail.com";
-                return (
-                  <div key={member.id} className="px-6 py-5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="relative">
-                          <Avatar name={member.full_name} color={member.avatar_color} />
-                          {member.is_online && <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-[#0D1F3C]" />}
-                        </div>
-                        <div>
-                          <div className="font-medium text-sm">{member.full_name||"Unnamed"}</div>
-                          <div className="text-xs text-slate-500">{member.email}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${rm.badge}`}>{rm.label}</span>
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${member.status==="active"?"bg-emerald-500/15 text-emerald-400":member.status==="pending"?"bg-yellow-500/15 text-yellow-400":"bg-slate-500/15 text-slate-400"}`}>
-                          {member.status}
-                        </span>
-                        {canEdit && (
-                          <>
-                            <select value={member.role} onChange={e=>updateRole(member,e.target.value)}
-                              className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400/40 transition-all">
-                              <option value="admin">Admin</option>
-                              <option value="manager">Manager</option>
-                              <option value="agent">Agent</option>
-                              <option value="client">Client</option>
-                            </select>
-                            <button onClick={()=>setEditPerms(member)}
-                              className="text-xs px-3 py-1.5 rounded-lg border border-blue-500/30 text-blue-400 hover:bg-blue-500/10 transition-colors">
-                              Permissions
-                            </button>
-                            <button onClick={()=>toggleStatus(member)}
-                              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${member.status==="active"?"border-red-500/30 text-red-400 hover:bg-red-500/10":"border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"}`}>
-                              {member.status==="active"?"Deactivate":"Activate"}
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    {/* Permissions preview */}
-                    {member.permissions && (
-                      <div className="flex flex-wrap gap-1.5 mt-3 pl-13">
-                        {Object.entries(member.permissions).filter(([,v])=>v).map(([k])=>(
-                          <span key={k} className="text-xs bg-white/5 text-slate-400 px-2 py-0.5 rounded-md">{PERM_LABELS[k]||k}</span>
-                        ))}
-                      </div>
-                    )}
+              {staff.map(s => (
+                <div key={s.id} className="flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors">
+                  <div className="relative w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm text-white flex-shrink-0"
+                    style={{background: s.avatar_color || "#374151"}}>
+                    {(s.full_name || s.email || "?")[0].toUpperCase()}
+                    <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#0D1628] ${s.is_online ? "bg-emerald-400" : "bg-slate-600"}`}/>
                   </div>
-                );
-              })}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-white">{s.full_name || "—"}</div>
+                    <div className="text-xs text-slate-500">{s.email}</div>
+                  </div>
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border capitalize ${ROLE_COLORS[s.role] || "text-slate-400 bg-slate-700/50 border-slate-600/50"}`}>
+                    {s.role?.replace("_"," ")}
+                  </span>
+                  <span className={`text-xs font-medium px-2 py-1 rounded-lg ${s.status === "active" ? "bg-emerald-400/10 text-emerald-400" : "bg-slate-700/50 text-slate-500"}`}>
+                    {s.status || "invited"}
+                  </span>
+                  {isAdmin && s.role !== "super_admin" && s.email !== user?.email && (
+                    <button onClick={() => removeStaff(s.id)} className="text-slate-600 hover:text-red-400 transition-colors p-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}
       </div>
-
-      {/* Invite Modal */}
-      {showInvite && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0D1F3C] border border-white/15 rounded-2xl p-6 w-full max-w-md">
-            <h2 className="text-lg font-bold mb-5">Invite Team Member</h2>
-            <form onSubmit={handleInvite} className="space-y-4">
-              {[["Full Name","full_name","text","Jane Smith"],["Email","email","email","jane@email.com"]].map(([l,k,t,ph])=>(
-                <div key={k}>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{l}</label>
-                  <input type={t} value={inviteForm[k]} onChange={e=>setInviteForm(f=>({...f,[k]:e.target.value}))} placeholder={ph} required
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-400/60 transition-all" />
-                </div>
-              ))}
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Role</label>
-                <select value={inviteForm.role} onChange={e=>setInviteForm(f=>({...f,role:e.target.value}))}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400/60 transition-all">
-                  <option value="admin">Admin</option>
-                  <option value="manager">Manager</option>
-                  <option value="agent">Agent</option>
-                  <option value="client">Client</option>
-                </select>
-              </div>
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
-                <p className="text-xs text-blue-300">📧 Default permissions for this role will be applied. You can customize them after inviting.</p>
-              </div>
-              <div className="flex gap-3">
-                <button type="button" onClick={()=>setShowInvite(false)} className="flex-1 px-4 py-2.5 border border-white/10 rounded-xl text-sm text-slate-400 hover:text-white">Cancel</button>
-                <button type="submit" disabled={saving} className="flex-1 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-[#0A1628] font-semibold text-sm px-4 py-2.5 rounded-xl">
-                  {saving?"Inviting...":"Send Invite"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Permissions Editor Modal */}
-      {editPerms && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0D1F3C] border border-white/15 rounded-2xl p-6 w-full max-w-md">
-            <h2 className="text-lg font-bold mb-1">Permissions</h2>
-            <p className="text-xs text-slate-400 mb-5">{editPerms.full_name} · {ROLE_META[editPerms.role]?.label}</p>
-            <div className="space-y-3">
-              {Object.entries(PERM_LABELS).map(([key, label])=>{
-                const current = editPerms.permissions?.[key] ?? ROLE_DEFAULTS[editPerms.role]?.[key] ?? false;
-                return (
-                  <div key={key} className="flex items-center justify-between py-2 border-b border-white/5">
-                    <span className="text-sm text-slate-300">{label}</span>
-                    <button
-                      onClick={()=>setEditPerms(p=>({...p,permissions:{...(p.permissions||{}), [key]:!current}}))}
-                      className={`w-10 h-6 rounded-full transition-colors relative ${current?"bg-amber-400":"bg-white/20"}`}>
-                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${current?"translate-x-5":"translate-x-1"}`} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={()=>setEditPerms(null)} className="flex-1 px-4 py-2.5 border border-white/10 rounded-xl text-sm text-slate-400 hover:text-white">Cancel</button>
-              <button onClick={()=>savePerms(editPerms, editPerms.permissions||ROLE_DEFAULTS[editPerms.role])}
-                className="flex-1 bg-amber-400 hover:bg-amber-300 text-[#0A1628] font-semibold text-sm px-4 py-2.5 rounded-xl">
-                Save Permissions
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

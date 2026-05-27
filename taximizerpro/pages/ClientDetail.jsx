@@ -1,393 +1,286 @@
 import { useState, useEffect, useRef } from "react";
-import { Client, TaxReturn } from "@/api/entities";
-import { Link, useSearchParams } from "react-router-dom";
+import { ClientMilestone } from "@/api/entities";
+import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { useUser } from "@/hooks/useUser";
 
-const STATUS_STEPS = ["new", "in_progress", "ready", "filed", "complete"];
-const STATUS_LABELS = {
-  new: "New", in_progress: "In Progress", ready: "Ready to File",
-  filed: "Filed", complete: "Complete"
-};
-const STATUS_COLORS = {
-  new: "text-blue-400 bg-blue-500/10 border-blue-500/20",
-  in_progress: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20",
-  ready: "text-purple-400 bg-purple-500/10 border-purple-500/20",
-  filed: "text-green-400 bg-green-500/10 border-green-500/20",
-  complete: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-};
-const TAX_YEARS = ["2025", "2024", "2023"];
+const MILESTONES = [
+  "Documents Received",
+  "Under Review",
+  "Ready for Signature",
+  "Filed",
+  "Refund Pending",
+  "Funded",
+  "Complete",
+];
 
-export default function ClientDetail() {
-  const [params] = useSearchParams();
-  const clientId = params.get("id");
-  const sigRef = useRef(null);
-  const isDrawing = useRef(false);
+const MILESTONE_ICONS = {
+  "Documents Received": "📥",
+  "Under Review": "🔍",
+  "Ready for Signature": "✍️",
+  "Filed": "📤",
+  "Refund Pending": "⏳",
+  "Funded": "💰",
+  "Complete": "✅",
+};
+
+const STATUS_STYLE = {
+  approved: "bg-emerald-400/10 text-emerald-400 border-emerald-400/20",
+  pending:  "bg-amber-400/10 text-amber-400 border-amber-400/20",
+  rejected: "bg-red-400/10 text-red-400 border-red-400/20",
+};
+
+// Signature Pad
+function SignaturePad({ onSave, onClose }) {
+  const canvasRef = useRef(null);
+  const [drawing, setDrawing] = useState(false);
+  const [hasData, setHasData] = useState(false);
   const lastPos = useRef(null);
 
-  const [client, setClient] = useState(null);
-  const [returns, setReturns] = useState([]);
+  function getPos(e, canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: (src.clientX - rect.left) * (canvas.width / rect.width), y: (src.clientY - rect.top) * (canvas.height / rect.height) };
+  }
+  function start(e) { e.preventDefault(); lastPos.current = getPos(e, canvasRef.current); setDrawing(true); }
+  function move(e) {
+    e.preventDefault();
+    if (!drawing) return;
+    const c = canvasRef.current, ctx = c.getContext("2d");
+    const pos = getPos(e, c);
+    ctx.beginPath(); ctx.moveTo(lastPos.current.x, lastPos.current.y); ctx.lineTo(pos.x, pos.y);
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.stroke();
+    lastPos.current = pos; setHasData(true);
+  }
+  function end(e) { e.preventDefault(); setDrawing(false); }
+  function clear() { canvasRef.current.getContext("2d").clearRect(0,0,600,150); setHasData(false); }
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-[#0D1628] border border-white/10 rounded-2xl p-6 w-full max-w-lg space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-white">Client Signature</h3>
+          <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">✕</button>
+        </div>
+        <p className="text-sm text-slate-400">Have the client sign in the box below:</p>
+        <div className="border-2 border-dashed border-white/20 rounded-xl bg-white touch-none" style={{height:150}}>
+          <canvas ref={canvasRef} width={560} height={150}
+            onMouseDown={start} onMouseMove={move} onMouseUp={end} onMouseLeave={end}
+            onTouchStart={start} onTouchMove={move} onTouchEnd={end}
+            className="w-full h-full cursor-crosshair"/>
+        </div>
+        <div className="flex gap-3">
+          <button onClick={clear} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-sm transition-colors">Clear</button>
+          <button disabled={!hasData} onClick={() => onSave(canvasRef.current.toDataURL("image/png"))}
+            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${hasData ? "bg-amber-400 hover:bg-amber-300 text-[#080F1E]" : "bg-white/10 text-slate-500 cursor-not-allowed"}`}>
+            ✓ Confirm Signature
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ClientDetail() {
+  const { data: user } = useUser();
+  const navigate = useNavigate();
+  const [milestones, setMilestones] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showSig, setShowSig] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [genYear, setGenYear] = useState("2024");
   const [genResult, setGenResult] = useState(null);
-  const [genError, setGenError] = useState(null);
-  const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({});
-  const [sigEmpty, setSigEmpty] = useState(true);
+  const [genError, setGenError] = useState("");
+  const [activeYear, setActiveYear] = useState(null);
+  const [updatingMs, setUpdatingMs] = useState(null);
+
+  const clientId = new URLSearchParams(window.location.search).get("id");
 
   useEffect(() => {
     if (!clientId) return;
-    async function load() {
-      const [c, r] = await Promise.all([
-        Client.filter({ id: clientId }),
-        TaxReturn.filter({ client_id: clientId }),
-      ]);
-      if (c[0]) { setClient(c[0]); setEditForm(c[0]); }
-      setReturns(r.sort((a, b) => (b.tax_year || 0) - (a.tax_year || 0)));
+    ClientMilestone.filter({ client_id: clientId }).then(ms => {
+      setMilestones(ms);
+      if (ms.length > 0 && !activeYear) setActiveYear(ms[0].tax_year);
       setLoading(false);
-    }
-    load();
+    });
   }, [clientId]);
 
-  // Canvas signature drawing
-  function getPos(e, canvas) {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
-  }
+  const clientName = milestones[0]?.client_name || "Client";
+  const clientData = milestones[0]?.notes ? (() => { try { return JSON.parse(milestones[0].notes); } catch { return {}; } })() : {};
+  const years = [...new Set(milestones.map(m => m.tax_year))].sort((a,b)=>b-a);
+  const yearMilestones = milestones.filter(m => m.tax_year === activeYear);
+  const currentMilestone = yearMilestones.sort((a,b) => MILESTONES.indexOf(b.milestone) - MILESTONES.indexOf(a.milestone))[0];
+  const currentMsIndex = MILESTONES.indexOf(currentMilestone?.milestone);
 
-  function startDraw(e) {
-    e.preventDefault();
-    isDrawing.current = true;
-    lastPos.current = getPos(e, sigRef.current);
-  }
-
-  function draw(e) {
-    e.preventDefault();
-    if (!isDrawing.current || !sigRef.current) return;
-    const ctx = sigRef.current.getContext("2d");
-    const pos = getPos(e, sigRef.current);
-    ctx.beginPath();
-    ctx.moveTo(lastPos.current.x, lastPos.current.y);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.strokeStyle = "#1a1a2e";
-    ctx.lineWidth = 2;
-    ctx.lineCap = "round";
-    ctx.stroke();
-    lastPos.current = pos;
-    setSigEmpty(false);
-  }
-
-  function endDraw() { isDrawing.current = false; }
-
-  function clearSig() {
-    const ctx = sigRef.current.getContext("2d");
-    ctx.clearRect(0, 0, sigRef.current.width, sigRef.current.height);
-    setSigEmpty(true);
-  }
-
-  async function handleGenerate() {
-    if (!client) return;
-    setGenerating(true);
-    setGenError(null);
-    setGenResult(null);
-
-    let sigB64 = null;
-    if (!sigEmpty && sigRef.current) {
-      sigB64 = sigRef.current.toDataURL("image/png").split(",")[1];
-    }
-
+  async function advanceMilestone(yr) {
+    if (!currentMilestone) return;
+    const nextIdx = Math.min(currentMsIndex + 1, MILESTONES.length - 1);
+    const nextMs = MILESTONES[nextIdx];
+    setUpdatingMs(yr);
     try {
-      const resp = await fetch("https://superagent-0baff5aa.base44.app/functions/fillTaxForm", {
+      await ClientMilestone.create({
+        client_id: clientId,
+        client_name: clientName,
+        tax_year: yr,
+        milestone: nextMs,
+        status: "approved",
+        assigned_agent: user?.email,
+        notes: milestones[0]?.notes || ""
+      });
+      const ms = await ClientMilestone.filter({ client_id: clientId });
+      setMilestones(ms);
+    } catch(e) { console.error(e); }
+    setUpdatingMs(null);
+  }
+
+  async function generateForms(sigDataUrl) {
+    setShowSig(false);
+    setGenerating(true);
+    setGenError("");
+    try {
+      const nameParts = clientName.split(" ");
+      const client = {
+        first_name: nameParts[0] || "",
+        middle_init: nameParts.length > 2 ? nameParts[1] : "",
+        last_name: nameParts[nameParts.length-1] || "",
+        ssn: clientData.ssn || "",
+        address: clientData.address || "",
+        city: clientData.city || "",
+        state: clientData.state || "",
+        zip: clientData.zip || "",
+        routing: clientData.routing || "",
+        account: clientData.account || "",
+      };
+
+      const resp = await fetch("https://superagent-0baff5aa.base44.app/functions/generateTaxForms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          year: genYear,
-          first_name: client.first_name,
-          last_name: client.last_name,
-          middle_init: client.middle_init || "",
-          ssn: client.ssn,
-          address: client.address,
-          apt: client.apt || "",
-          city: client.city,
-          state: client.state,
-          zip: client.zip,
-          bank_routing: client.bank_routing || "",
-          bank_account: client.bank_account || "",
-          signature_base64: sigB64,
-          send_email_to: client.email || null,
-        }),
+        body: JSON.stringify({ client, years: years.map(String) })
       });
-
       const data = await resp.json();
-      if (data.success) {
-        setGenResult(data);
-        const existing = returns.find(r => r.tax_year === parseInt(genYear));
-        if (existing) {
-          await TaxReturn.update(existing.id, { status: "ready", pdf_url: data.drive_link, signature_date: new Date().toISOString() });
-        } else {
-          await TaxReturn.create({
-            client_id: clientId,
-            client_name: `${client.first_name} ${client.last_name}`,
-            tax_year: parseInt(genYear),
-            status: "ready",
-            pdf_url: data.drive_link,
-            signature_date: new Date().toISOString(),
-          });
-        }
-        const r = await TaxReturn.filter({ client_id: clientId });
-        setReturns(r.sort((a, b) => (b.tax_year || 0) - (a.tax_year || 0)));
-      } else {
-        setGenError(data.error || "Unknown error");
-      }
-    } catch (err) {
-      setGenError(err.message);
+      if (!resp.ok || data.error) throw new Error(data.error || "Generation failed");
+      setGenResult(data);
+    } catch(e) {
+      setGenError(e.message || "Generation failed. Please try again.");
     }
     setGenerating(false);
   }
 
-  async function updateStatus(returnId, status) {
-    await TaxReturn.update(returnId, { status });
-    setReturns(prev => prev.map(r => r.id === returnId ? { ...r, status } : r));
-  }
-
-  async function saveEdit() {
-    await Client.update(clientId, editForm);
-    setClient(editForm);
-    setEditing(false);
-  }
-
   if (loading) return (
-    <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+    <div className="min-h-screen bg-[#080F1E] flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"/>
     </div>
   );
 
-  if (!client) return (
-    <div className="min-h-screen bg-[#0A1628] flex items-center justify-center text-slate-500">Client not found</div>
-  );
-
-  const latestReturn = returns[0];
-  const currentStepIdx = latestReturn ? STATUS_STEPS.indexOf(latestReturn.status) : -1;
-
   return (
-    <div className="min-h-screen bg-[#0A1628] text-white">
-      <div className="border-b border-white/10 bg-[#0D1F3C]">
-        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to={createPageUrl("Clients")} className="text-slate-500 hover:text-white transition-colors">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </Link>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-amber-400/15 border border-amber-400/20 flex items-center justify-center text-amber-400 font-bold text-sm">
-                {client.first_name?.[0]}{client.last_name?.[0]}
-              </div>
-              <div>
-                <h1 className="text-lg font-bold">{client.first_name} {client.last_name}</h1>
-                <p className="text-xs text-slate-500">{client.email || "No email"} · SSN •••-••-{(client.ssn || "").slice(-4)}</p>
-              </div>
+    <div className="min-h-screen bg-[#080F1E] text-white">
+      {showSig && <SignaturePad onSave={generateForms} onClose={() => setShowSig(false)} />}
+
+      <nav className="sticky top-0 z-40 bg-[#080F1E]/95 backdrop-blur border-b border-white/5">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
+          <Link to={createPageUrl("Clients")} className="p-1.5 hover:bg-white/5 rounded-lg transition-colors">
+            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
+            </svg>
+          </Link>
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400/20 to-orange-500/20 border border-amber-400/20 flex items-center justify-center text-amber-400 font-black text-sm flex-shrink-0">
+              {clientName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}
             </div>
+            <span className="font-bold text-white truncate">{clientName}</span>
           </div>
-          <button onClick={() => setEditing(!editing)}
-            className="text-sm text-slate-400 hover:text-white border border-white/10 hover:border-white/20 px-4 py-2 rounded-lg transition-all">
-            {editing ? "Cancel" : "✏️ Edit"}
-          </button>
         </div>
-      </div>
+      </nav>
 
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-        {/* Progress Bar */}
-        {latestReturn && (
-          <div className="bg-[#0D1F3C] border border-white/10 rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Filing Progress — {latestReturn.tax_year}</h2>
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_COLORS[latestReturn.status] || ""}`}>
-                {STATUS_LABELS[latestReturn.status]}
-              </span>
-            </div>
-            <div className="flex gap-1">
-              {STATUS_STEPS.map((s, i) => (
-                <div key={s} className={`h-2 flex-1 rounded-full transition-all ${i <= currentStepIdx ? "bg-amber-400" : "bg-white/10"}`} />
-              ))}
-            </div>
-            <div className="flex justify-between mt-2">
-              {STATUS_STEPS.map((s, i) => (
-                <span key={s} className={`text-xs ${i <= currentStepIdx ? "text-amber-400" : "text-slate-600"}`}>{STATUS_LABELS[s]}</span>
-              ))}
-            </div>
-          </div>
-        )}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Year tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {years.map(y => (
+            <button key={y} onClick={() => setActiveYear(y)}
+              className={`flex-shrink-0 px-4 py-2 rounded-xl font-bold text-sm border transition-all ${
+                activeYear === y ? "bg-amber-400 border-amber-400 text-[#080F1E]" : "bg-[#0D1628] border-white/10 text-slate-400 hover:border-amber-400/30"
+              }`}>{y} Tax Year</button>
+          ))}
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Client Info Panel */}
-          <div className="lg:col-span-1 space-y-4">
-            <div className="bg-[#0D1F3C] border border-white/10 rounded-2xl p-5">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Client Info</h3>
-              {editing ? (
-                <div className="space-y-3">
-                  {[["First Name","first_name"],["Last Name","last_name"],["Email","email"],["Phone","phone"],["Address","address"],["Apt","apt"],["City","city"],["State","state"],["ZIP","zip"]].map(([label, key]) => (
-                    <div key={key}>
-                      <label className="text-xs text-slate-500 mb-1 block">{label}</label>
-                      <input value={editForm[key] || ""} onChange={e => setEditForm(p => ({ ...p, [key]: e.target.value }))}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400/50" />
-                    </div>
-                  ))}
-                  <button onClick={saveEdit} className="w-full mt-2 bg-amber-400 text-[#0A1628] font-semibold text-sm py-2 rounded-lg hover:bg-amber-300 transition-colors">
-                    Save Changes
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {[
-                    ["Full Name", `${client.first_name} ${client.middle_init || ""} ${client.last_name}`.trim()],
-                    ["SSN", `•••-••-${(client.ssn || "").slice(-4)}`],
-                    ["DOB", client.dob || "—"],
-                    ["Filing", (client.filing_status || "single").toUpperCase()],
-                    ["Email", client.email || "—"],
-                    ["Phone", client.phone || "—"],
-                    ["Address", [client.address, client.apt, client.city, client.state, client.zip].filter(Boolean).join(", ") || "—"],
-                  ].map(([label, value]) => (
-                    <div key={label} className="flex justify-between items-start gap-2">
-                      <span className="text-xs text-slate-500 flex-shrink-0">{label}</span>
-                      <span className="text-xs text-slate-200 text-right">{value}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="bg-[#0D1F3C] border border-white/10 rounded-2xl p-5">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Direct Deposit</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-xs text-slate-500">Routing</span>
-                  <span className="text-xs text-slate-200 font-mono">{client.bank_routing || "—"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-xs text-slate-500">Account</span>
-                  <span className="text-xs text-slate-200 font-mono">{client.bank_account ? `•••${client.bank_account.slice(-4)}` : "—"}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right — Generate + Returns */}
-          <div className="lg:col-span-2 space-y-5">
-            <div className="bg-[#0D1F3C] border border-white/10 rounded-2xl p-6">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-5">Generate IRS Form 1040</h3>
-
-              <div className="flex gap-2 mb-5">
-                {TAX_YEARS.map(y => (
-                  <button key={y} onClick={() => setGenYear(y)}
-                    className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-all ${genYear === y ? "bg-amber-400 border-amber-400 text-[#0A1628]" : "bg-white/5 border-white/10 text-slate-400 hover:border-amber-400/30"}`}>
-                    {y}
-                  </button>
-                ))}
-              </div>
-
-              {/* Signature Canvas */}
-              <div className="mb-5">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Client Signature</label>
-                  {!sigEmpty && (
-                    <button onClick={clearSig} className="text-xs text-slate-500 hover:text-red-400 transition-colors">✕ Clear</button>
-                  )}
-                </div>
-                <div className="border border-white/15 rounded-xl overflow-hidden bg-white relative" style={{ height: 110 }}>
-                  <canvas
-                    ref={sigRef}
-                    width={700}
-                    height={110}
-                    className="w-full h-full cursor-crosshair touch-none"
-                    onMouseDown={startDraw}
-                    onMouseMove={draw}
-                    onMouseUp={endDraw}
-                    onMouseLeave={endDraw}
-                    onTouchStart={startDraw}
-                    onTouchMove={draw}
-                    onTouchEnd={endDraw}
-                  />
-                  {sigEmpty && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <span className="text-slate-400 text-sm">✍️ Sign here</span>
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-slate-600 mt-1.5">Draw signature above using mouse or touch</p>
-              </div>
-
-              <button onClick={handleGenerate} disabled={generating}
-                className="w-full bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-[#0A1628] font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
-                {generating
-                  ? <><div className="w-4 h-4 border-2 border-[#0A1628]/30 border-t-[#0A1628] rounded-full animate-spin" /> Generating {genYear} Form...</>
-                  : <>📄 Generate {genYear} Form 1040</>}
+        {/* Milestone tracker */}
+        <div className="bg-[#0D1628] border border-white/5 rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="font-bold text-white">Progress — {activeYear}</h2>
+            {currentMilestone && currentMsIndex < MILESTONES.length - 1 && (
+              <button onClick={() => advanceMilestone(activeYear)} disabled={!!updatingMs}
+                className="text-xs font-bold px-3 py-2 bg-amber-400 hover:bg-amber-300 text-[#080F1E] rounded-xl transition-colors disabled:opacity-50">
+                {updatingMs ? "Updating..." : `→ ${MILESTONES[currentMsIndex+1]}`}
               </button>
-
-              {genResult && (
-                <div className="mt-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-start gap-3">
-                  <span className="text-xl">✅</span>
-                  <div>
-                    <p className="text-sm font-semibold text-emerald-300">Form generated successfully!</p>
-                    <p className="text-xs text-slate-400 mt-1">Saved to: {genResult.folder}</p>
-                    <a href={genResult.drive_link} target="_blank" rel="noreferrer"
-                      className="inline-flex items-center gap-1 mt-2 text-xs text-amber-400 hover:text-amber-300 font-medium">
-                      Open in Google Drive →
-                    </a>
+            )}
+          </div>
+          <div className="space-y-2">
+            {MILESTONES.map((ms, i) => {
+              const reached = i <= currentMsIndex;
+              const isCurrent = i === currentMsIndex;
+              return (
+                <div key={ms} className={`flex items-center gap-3 p-3 rounded-xl transition-all ${isCurrent ? "bg-amber-400/10 border border-amber-400/20" : reached ? "opacity-70" : "opacity-30"}`}>
+                  <span className="text-xl">{MILESTONE_ICONS[ms]}</span>
+                  <div className="flex-1">
+                    <div className={`text-sm font-semibold ${isCurrent ? "text-amber-400" : reached ? "text-white" : "text-slate-500"}`}>{ms}</div>
                   </div>
+                  {reached && <span className={`text-xs font-bold ${isCurrent ? "text-amber-400" : "text-emerald-400"}`}>{isCurrent ? "CURRENT" : "✓"}</span>}
                 </div>
-              )}
+              );
+            })}
+          </div>
+        </div>
 
-              {genError && (
-                <div className="mt-4 bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-sm text-red-400">
-                  ⚠️ {genError}
-                </div>
-              )}
+        {/* Generate Forms */}
+        <div className="bg-[#0D1628] border border-white/5 rounded-2xl p-5">
+          <h2 className="font-bold text-white mb-3">Tax Forms</h2>
+          {genResult ? (
+            <div className="space-y-3">
+              <div className="text-sm text-emerald-400 font-semibold">✅ Forms generated successfully!</div>
+              {Object.entries(genResult.links || {}).map(([yr, link]) => (
+                <a key={yr} href={link} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-4 py-3 bg-white/5 hover:bg-amber-400/10 border border-white/10 hover:border-amber-400/20 rounded-xl transition-all text-sm text-slate-300 hover:text-white">
+                  📄 {yr} Form 1040
+                  <svg className="w-4 h-4 ml-auto text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                  </svg>
+                </a>
+              ))}
+              <button onClick={() => setGenResult(null)} className="text-xs text-slate-500 hover:text-white transition-colors mt-1">Regenerate</button>
             </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-400">Generate IRS 1040 forms for {years.join(", ")} and upload to Google Drive.</p>
+              {genError && <p className="text-red-400 text-sm bg-red-400/10 rounded-xl px-4 py-3">{genError}</p>}
+              <button onClick={() => setShowSig(true)} disabled={generating}
+                className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${generating ? "bg-white/10 text-slate-500 cursor-not-allowed" : "bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-[#080F1E]"}`}>
+                {generating ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-[#080F1E] border-t-transparent rounded-full animate-spin"/>
+                    Generating Forms...
+                  </span>
+                ) : "✍️ Sign & Generate 1040s"}
+              </button>
+            </div>
+          )}
+        </div>
 
-            {/* Returns History */}
-            <div className="bg-[#0D1F3C] border border-white/10 rounded-2xl overflow-hidden">
-              <div className="px-6 py-4 border-b border-white/10">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Returns History</h3>
+        {/* Client Info */}
+        <div className="bg-[#0D1628] border border-white/5 rounded-2xl p-5">
+          <h2 className="font-bold text-white mb-4">Client Information</h2>
+          <div className="grid sm:grid-cols-2 gap-3 text-sm">
+            {[
+              { label: "Full Name", value: clientName },
+              { label: "SSN", value: clientData.ssn ? `•••-••-${String(clientData.ssn).slice(-4)}` : "—" },
+              { label: "Email", value: clientData.email || "—" },
+              { label: "Phone", value: clientData.phone || "—" },
+              { label: "Address", value: clientData.address ? `${clientData.address}, ${clientData.city}, ${clientData.state} ${clientData.zip}` : "—" },
+              { label: "Routing #", value: clientData.routing || "—" },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-white/[0.03] rounded-xl px-4 py-3">
+                <div className="text-xs text-slate-500 mb-1 uppercase tracking-wide">{label}</div>
+                <div className="text-white font-medium">{value}</div>
               </div>
-              {returns.length === 0 ? (
-                <div className="py-10 text-center text-slate-600 text-sm">No returns yet</div>
-              ) : (
-                <div className="divide-y divide-white/5">
-                  {returns.map(ret => (
-                    <div key={ret.id} className="px-6 py-4 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center">
-                          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        </div>
-                        <div>
-                          <div className="text-sm font-semibold">Form 1040 — {ret.tax_year}</div>
-                          <div className="text-xs text-slate-500">{ret.signature_date ? `Signed ${new Date(ret.signature_date).toLocaleDateString()}` : "Unsigned"}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <select value={ret.status} onChange={e => updateStatus(ret.id, e.target.value)}
-                          className={`text-xs font-medium px-3 py-1.5 rounded-lg border bg-transparent cursor-pointer focus:outline-none ${STATUS_COLORS[ret.status] || "text-slate-400 border-slate-600"}`}>
-                          {STATUS_STEPS.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-                        </select>
-                        {ret.pdf_url && (
-                          <a href={ret.pdf_url} target="_blank" rel="noreferrer"
-                            className="text-xs text-amber-400 hover:text-amber-300 border border-amber-400/20 px-3 py-1.5 rounded-lg transition-all">
-                            View →
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            ))}
           </div>
         </div>
       </div>
