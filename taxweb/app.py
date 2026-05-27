@@ -66,9 +66,13 @@ _tokens = {
 _tok_lock = _threading.Lock()
 
 def dtok():
-    with _tok_lock: return _tokens.get("drive", "")
+    with _tok_lock:
+        t = _tokens.get("drive", "")
+    return t or os.environ.get("DRIVE_ACCESS_TOKEN", "")
 def gtok():
-    with _tok_lock: return _tokens.get("gmail", "")
+    with _tok_lock:
+        t = _tokens.get("gmail", "")
+    return t or os.environ.get("GMAIL_ACCESS_TOKEN_RENDER", "")
 
 @app.route("/api/refresh-tokens", methods=["POST"])
 def refresh_tokens():
@@ -222,29 +226,39 @@ def fill_form(tmpl_bytes, yr, c):
     clr(1, occ_sn)
     sf(1, occ_sn, "HELPER")
 
-    # ── SSN TEXT OVERLAY (guarantees visibility in all viewers incl. Drive) ──
-    # Comb fields can fail to render in Drive/lightweight PDF viewers.
-    # We draw the SSN as spaced plain text on top of the comb boxes.
+    # ── SSN: two-pass flatten approach ──
+    # Step 1: capture SSN rect from widget, then blank it
+    # Step 2: after first save, re-open and stamp text (widgets gone)
     p1 = doc[0]
-    ssn_rects = {
-        '2023': fitz.Rect(469, 85, 576, 103),
-        '2024': fitz.Rect(469, 85, 576, 103),
-        '2025': fitz.Rect(469, 85, 576, 103),
-    }
-    ssn_rect = ssn_rects.get(yr, fitz.Rect(469, 85, 576, 103))
-    if ssn:
-        # White out the comb field first, then draw clean text
-        p1.draw_rect(ssn_rect, color=(1,1,1), fill=(1,1,1))
-        # Format as XXX-XX-XXXX style spaced across the box
-        formatted = f"{ssn[:3]}-{ssn[3:5]}-{ssn[5:]}" if len(ssn)==9 else ssn
-        p1.insert_text(
-            (ssn_rect.x0 + 4, ssn_rect.y1 - 3),
-            formatted,
-            fontname="helv", fontsize=8, color=(0,0,0)
-        )
+    ssn_field_names = {'2023':'f1_06[0]', '2024':'f1_06[0]', '2025':'f1_16[0]'}
+    ssn_fn = ssn_field_names.get(yr, 'f1_06[0]')
+    ssn_rect_coords = None
+    for w in p1.widgets():
+        if w.field_name.split(".")[-1] == ssn_fn:
+            r = w.rect
+            ssn_rect_coords = (r.x0, r.y0, r.x1, r.y1)
+            w.field_value = ""
+            w.update()
+            break
 
-    doc.save(out_path, garbage=4, deflate=True, incremental=False)
+    # First save — writes all field data
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tf2:
+        pass1_path = tf2.name
+    doc.save(pass1_path, garbage=4, deflate=True, incremental=False)
     doc.close()
+
+    # Second pass — re-open, stamp SSN as flat text over blank comb area
+    doc2 = fitz.open(pass1_path)
+    if ssn and ssn_rect_coords:
+        rx0, ry0, rx1, ry1 = ssn_rect_coords
+        sr = fitz.Rect(rx0, ry0, rx1, ry1)
+        doc2[0].draw_rect(sr, color=(1,1,1), fill=(1,1,1))
+        formatted_ssn = f"{ssn[:3]}-{ssn[3:5]}-{ssn[5:]}" if len(ssn)==9 else ssn
+        doc2[0].insert_text((rx0+3, ry1-2), formatted_ssn, fontname="helv", fontsize=8, color=(0,0,0))
+    doc2.save(out_path, garbage=4, deflate=True, incremental=False)
+    doc2.close()
+    try: os.unlink(pass1_path)
+    except: pass
     with open(out_path,"rb") as f2: result = f2.read()
     for p in [tmpl_path, tmp_path, out_path]:
         try: os.unlink(p)
