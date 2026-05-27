@@ -46,12 +46,12 @@ function AddressAutocomplete({ value, onChange, onSelect }) {
   return (
     <div className="relative">
       <input type="text" value={value} onChange={handleChange} placeholder="Start typing address..."
-        className="w-full bg-[#0A1628] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400/60 transition-colors" />
+        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-400/60 transition-colors" />
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-[#0D1628] border border-white/10 rounded-xl overflow-hidden z-50 shadow-xl">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl overflow-hidden z-50 shadow-xl">
           {suggestions.map((s, i) => (
             <button key={i} onMouseDown={() => pick(s)}
-              className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-amber-400/10 hover:text-white transition-colors border-b border-white/5 last:border-0 truncate">
+              className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-amber-400/10 hover:text-white transition-colors border-b border-slate-200 last:border-0 truncate">
               {s.display_name}
             </button>
           ))}
@@ -128,7 +128,7 @@ function SignaturePad({ onSave, onClear, hasSig }) {
   return (
     <div className="space-y-3">
       {/* Canvas */}
-      <div className="relative border-2 border-dashed border-white/20 rounded-xl overflow-hidden bg-white touch-none" style={{ height: 150 }}>
+      <div className="relative border-2 border-dashed border-slate-300 rounded-xl overflow-hidden bg-white touch-none" style={{ height: 150 }}>
         <canvas
           ref={canvasRef} width={580} height={150}
           onMouseDown={start} onMouseMove={move} onMouseUp={end} onMouseLeave={end}
@@ -148,14 +148,14 @@ function SignaturePad({ onSave, onClear, hasSig }) {
       {/* Controls */}
       <div className="flex gap-2 items-center">
         <button type="button" onClick={clear}
-          className="px-3 py-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-xs font-semibold transition-colors">
+          className="px-3 py-2 bg-slate-100 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-xl text-xs font-semibold transition-colors">
           Clear
         </button>
         <button type="button" onClick={confirmSig} disabled={!hasData}
           className={`flex-1 py-2 rounded-xl text-xs font-black transition-all ${
             hasData
               ? "bg-amber-400 hover:bg-amber-300 text-[#080F1E] shadow-md shadow-amber-400/20"
-              : "bg-white/5 text-slate-500 cursor-not-allowed"
+              : "bg-slate-100 text-slate-500 cursor-not-allowed"
           }`}>
           {hasData ? "✓ Use This Signature" : "Draw signature above"}
         </button>
@@ -180,7 +180,7 @@ function Input({ label, name, value, onChange, type = "text", placeholder = "", 
       </label>
       <input type={type} name={name} value={value} onChange={onChange} placeholder={placeholder}
         required={required} maxLength={maxLength}
-        className="w-full bg-[#0A1628] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400/60 transition-colors" />
+        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-400/60 transition-colors" />
     </div>
   );
 }
@@ -276,10 +276,10 @@ export default function NewClient() {
 
   // ── Done screen ───────────────────────────────────────────────────────────
   if (done) return (
-    <div className="min-h-screen bg-[#080F1E] text-white flex items-center justify-center p-6">
-      <div className="bg-[#0D1628] border border-white/5 rounded-2xl p-8 max-w-md w-full text-center space-y-5">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div className="bg-white border border-slate-200 rounded-2xl p-8 max-w-md w-full text-center space-y-5">
         <div className="text-5xl">✅</div>
-        <h2 className="text-xl font-black text-white">Client Added & Signed!</h2>
+        <h2 className="text-xl font-black text-slate-800">Client Added & Signed!</h2>
         <p className="text-slate-400 text-sm">
           <span className="text-white font-semibold">{done.clientName}</span> has been added, signature is on file, and their returns are ready to generate.
         </p>
@@ -297,7 +297,7 @@ export default function NewClient() {
           </Link>
           <button
             onClick={() => { setDone(null); setStep(0); setSigDataUrl(null); setForm({ first_name:"",middle_init:"",last_name:"",ssn:"",email:"",phone:"",address:"",apt:"",city:"",state:"",zip:"",routing:"",account:"",years:[2025,2024,2023] }); }}
-            className="flex-1 bg-white/5 hover:bg-white/10 text-slate-300 font-bold py-3 rounded-xl text-sm transition-colors border border-white/10"
+            className="flex-1 bg-slate-100 hover:bg-slate-100 text-slate-300 font-bold py-3 rounded-xl text-sm transition-colors border border-slate-200"
           >
             Add Another
           </button>
@@ -307,17 +307,17 @@ export default function NewClient() {
   );
 
   return (
-    <div className="min-h-screen bg-[#080F1E] text-white">
+    <div className="min-h-screen bg-slate-50">
       {/* Nav */}
-      <nav className="sticky top-0 z-50 bg-[#080F1E]/95 backdrop-blur border-b border-white/5">
+      <nav className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-lg mx-auto px-4 h-16 flex items-center gap-4">
-          <Link to={createPageUrl("Clients")} className="p-1.5 hover:bg-white/5 rounded-lg transition-colors">
+          <Link to={createPageUrl("Clients")} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
             <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </Link>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-[#080F1E] font-black text-xs">T</div>
+            <img src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/883f43554_generated_image.png" alt="TaximizerPro" class="h-8 w-auto" />
             <span className="font-black text-sm">New Client</span>
           </div>
         </div>
@@ -331,12 +331,12 @@ export default function NewClient() {
               <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-black flex-shrink-0 transition-all ${
                 i < step ? "bg-emerald-400 text-[#080F1E]" :
                 i === step ? "bg-amber-400 text-[#080F1E]" :
-                "bg-white/10 text-slate-500"
+                "bg-slate-200 text-slate-500"
               }`}>
                 {i < step ? "✓" : i + 1}
               </div>
               <span className={`text-xs font-semibold hidden sm:block transition-colors ${i === step ? "text-white" : "text-slate-600"}`}>{s}</span>
-              {i < STEPS.length - 1 && <div className={`flex-1 h-px mx-1 ${i < step ? "bg-emerald-400/40" : "bg-white/10"}`} />}
+              {i < STEPS.length - 1 && <div className={`flex-1 h-px mx-1 ${i < step ? "bg-emerald-400/40" : "bg-slate-200"}`} />}
             </div>
           ))}
         </div>
@@ -346,7 +346,7 @@ export default function NewClient() {
           {/* ── STEP 0: Personal Info ────────────────────────────────────── */}
           {step === 0 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-black text-white">Personal Info</h2>
+              <h2 className="text-lg font-black text-slate-800">Personal Info</h2>
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-1">
                   <Input label="First Name" name="first_name" value={form.first_name} onChange={update} required placeholder="John" />
@@ -364,7 +364,7 @@ export default function NewClient() {
                   type="text" name="ssn" value={form.ssn}
                   onChange={e => setForm(f => ({ ...f, ssn: formatSSN(e.target.value) }))}
                   placeholder="333-33-3333" maxLength={11}
-                  className="w-full bg-[#0A1628] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400/60 transition-colors font-mono tracking-widest"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-400/60 transition-colors font-mono tracking-widest"
                 />
               </div>
               <Input label="Email" name="email" value={form.email} onChange={update} type="email" placeholder="john@email.com" />
@@ -378,7 +378,7 @@ export default function NewClient() {
                       className={`flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all ${
                         form.years.includes(y)
                           ? "bg-amber-400 border-amber-400 text-[#080F1E]"
-                          : "bg-[#0A1628] border-white/10 text-slate-400 hover:border-amber-400/30"
+                          : "bg-slate-50 border-slate-200 text-slate-400 hover:border-amber-400/30"
                       }`}>
                       {y}
                     </button>
@@ -391,7 +391,7 @@ export default function NewClient() {
           {/* ── STEP 1: Address ──────────────────────────────────────────── */}
           {step === 1 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-black text-white">Address</h2>
+              <h2 className="text-lg font-black text-slate-800">Address</h2>
               <div>
                 <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wide">Street Address <span className="text-amber-400">*</span></label>
                 <AddressAutocomplete
@@ -418,7 +418,7 @@ export default function NewClient() {
           {/* ── STEP 2: Bank Info ────────────────────────────────────────── */}
           {step === 2 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-black text-white">Bank Info <span className="text-slate-500 text-sm font-normal">(optional)</span></h2>
+              <h2 className="text-lg font-black text-slate-800">Bank Info <span className="text-slate-500 text-sm font-normal">(optional)</span></h2>
               <p className="text-sm text-slate-400">For direct deposit of refund. Leave blank if not applicable.</p>
               <Input label="Routing Number" name="routing" value={form.routing} onChange={update} placeholder="021000021" maxLength={9} />
               <Input label="Account Number" name="account" value={form.account} onChange={update} placeholder="Account number" />
@@ -429,22 +429,22 @@ export default function NewClient() {
           {step === 3 && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-lg font-black text-white">Sign & Submit</h2>
+                <h2 className="text-lg font-black text-slate-800">Sign & Submit</h2>
                 <p className="text-sm text-slate-400 mt-1">
                   Have <span className="text-white font-semibold">{form.first_name} {form.last_name}</span> sign below to authorize their tax return. The signature will be auto-stamped into all selected 1040 forms.
                 </p>
               </div>
 
               {/* Authorization notice */}
-              <div className="bg-[#0D1628] border border-white/5 rounded-xl p-4 space-y-2 text-xs text-slate-400">
-                <div className="font-bold text-white text-sm">By signing, the client authorizes:</div>
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2 text-xs text-slate-400">
+                <div className="font-bold text-slate-800 text-sm">By signing, the client authorizes:</div>
                 <div className="flex items-start gap-2"><span className="text-amber-400 mt-0.5">•</span><span>Preparation and e-filing of IRS Form 1040 ({form.years.join(", ")})</span></div>
                 <div className="flex items-start gap-2"><span className="text-amber-400 mt-0.5">•</span><span>Direct deposit of any refund to the registered bank account</span></div>
                 <div className="flex items-start gap-2"><span className="text-amber-400 mt-0.5">•</span><span>Their preparer to act on their behalf with the IRS</span></div>
               </div>
 
               {/* Review summary */}
-              <div className="bg-[#0D1628] border border-white/5 rounded-xl p-4 grid grid-cols-2 gap-3 text-xs">
+              <div className="bg-white border border-slate-200 rounded-xl p-4 grid grid-cols-2 gap-3 text-xs">
                 <div><span className="text-slate-500">Name: </span><span className="text-white font-semibold">{form.first_name} {form.middle_init} {form.last_name}</span></div>
                 <div><span className="text-slate-500">SSN: </span><span className="text-white font-mono">***-**-{form.ssn.slice(-4)}</span></div>
                 <div><span className="text-slate-500">Address: </span><span className="text-white">{form.address}{form.apt ? ` ${form.apt}` : ""}, {form.city} {form.state}</span></div>
@@ -474,7 +474,7 @@ export default function NewClient() {
           <div className="flex gap-3 pt-2 pb-10">
             {step > 0 && (
               <button type="button" onClick={() => setStep(s => s - 1)}
-                className="px-5 py-3 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl font-semibold text-sm transition-colors border border-white/10">
+                className="px-5 py-3 bg-slate-100 hover:bg-slate-100 text-slate-300 rounded-xl font-semibold text-sm transition-colors border border-slate-200">
                 ← Back
               </button>
             )}
@@ -483,7 +483,7 @@ export default function NewClient() {
                 className={`flex-1 py-3 rounded-xl font-black text-sm transition-all ${
                   canAdvance()
                     ? "bg-amber-400 hover:bg-amber-300 text-[#080F1E]"
-                    : "bg-white/10 text-slate-500 cursor-not-allowed"
+                    : "bg-slate-200 text-slate-500 cursor-not-allowed"
                 }`}>
                 Continue →
               </button>
@@ -493,7 +493,7 @@ export default function NewClient() {
                 className={`flex-1 py-3 rounded-xl font-black text-sm transition-all ${
                   canAdvance() && !saving
                     ? "bg-amber-400 hover:bg-amber-300 text-[#080F1E] shadow-lg shadow-amber-400/20"
-                    : "bg-white/10 text-slate-500 cursor-not-allowed"
+                    : "bg-slate-200 text-slate-500 cursor-not-allowed"
                 }`}>
                 {saving ? "Saving..." : "✓ Submit & Save Client"}
               </button>

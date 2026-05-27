@@ -88,7 +88,7 @@ export function SignaturePad({ onSave, onClose, clientName, label = "Sign Here",
 
   return (
     <div className={compact ? "" : "fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"}>
-      <div className={`bg-[#0D1628] border border-white/10 rounded-2xl p-6 w-full ${compact ? "" : "max-w-lg"} space-y-5`}>
+      <div className={`bg-white border border-slate-200 rounded-2xl p-6 w-full ${compact ? "" : "max-w-lg"} space-y-5`}>
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -96,7 +96,7 @@ export function SignaturePad({ onSave, onClose, clientName, label = "Sign Here",
             {clientName && <p className="text-sm text-slate-400 mt-0.5">{clientName}</p>}
           </div>
           {onClose && (
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-colors">✕</button>
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded-full text-slate-500 hover:text-slate-800 transition-colors">✕</button>
           )}
         </div>
 
@@ -107,7 +107,7 @@ export function SignaturePad({ onSave, onClose, clientName, label = "Sign Here",
         </div>
 
         {/* Canvas */}
-        <div className="relative border-2 border-dashed border-white/20 rounded-xl overflow-hidden bg-white touch-none" style={{ height: 160 }}>
+        <div className="relative border-2 border-dashed border-slate-300 rounded-xl overflow-hidden bg-white touch-none" style={{ height: 160 }}>
           <canvas
             ref={canvasRef}
             width={580}
@@ -130,14 +130,14 @@ export function SignaturePad({ onSave, onClose, clientName, label = "Sign Here",
         <div className="flex gap-3">
           <button
             onClick={clearPad}
-            className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-sm font-semibold transition-colors"
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-xl text-sm font-semibold transition-colors"
           >
             Clear
           </button>
           {onClose && (
             <button
               onClick={onClose}
-              className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-sm font-semibold transition-colors"
+              className="px-4 py-2.5 bg-slate-100 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-xl text-sm font-semibold transition-colors"
             >
               Cancel
             </button>
@@ -148,7 +148,7 @@ export function SignaturePad({ onSave, onClose, clientName, label = "Sign Here",
             className={`flex-1 py-2.5 rounded-xl font-black text-sm transition-all ${
               hasData
                 ? "bg-amber-400 hover:bg-amber-300 text-[#080F1E] shadow-lg shadow-amber-400/20"
-                : "bg-white/10 text-slate-500 cursor-not-allowed"
+                : "bg-slate-200 text-slate-500 cursor-not-allowed"
             }`}
           >
             ✓ Confirm Signature
@@ -228,14 +228,14 @@ export default function SignaturePage() {
   // ── Done State ───────────────────────────────────────────────────────────────
   if (step === "done") {
     return (
-      <div className="min-h-screen bg-[#080F1E] text-white flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-slate-50 text-white flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-sm space-y-6 text-center">
           <div className="w-20 h-20 rounded-full bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center mx-auto text-4xl">✅</div>
           <div>
-            <h2 className="text-2xl font-black text-white">Signature Received</h2>
+            <h2 className="text-2xl font-black text-slate-800">Signature Received</h2>
             <p className="text-slate-400 mt-2">Thank you, <span className="text-white font-semibold">{clientName}</span>. Your tax return is now being processed.</p>
           </div>
-          <div className="bg-[#0D1628] border border-white/10 rounded-2xl p-5 text-left space-y-3">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 text-left space-y-3">
             <div className="flex items-center gap-3">
               <span className="text-emerald-400">✓</span>
               <span className="text-sm text-slate-300">Signature captured securely</span>
@@ -258,10 +258,10 @@ export default function SignaturePage() {
   // ── Error State ──────────────────────────────────────────────────────────────
   if (step === "error") {
     return (
-      <div className="min-h-screen bg-[#080F1E] text-white flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-slate-50 text-white flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-sm space-y-4 text-center">
           <div className="text-5xl">⚠️</div>
-          <h2 className="text-xl font-black text-white">Something went wrong</h2>
+          <h2 className="text-xl font-black text-slate-800">Something went wrong</h2>
           <p className="text-slate-400 text-sm">{errorMsg}</p>
           <button onClick={() => setStep("sign")} className="w-full py-3 bg-amber-400 hover:bg-amber-300 text-[#080F1E] font-black rounded-xl transition-colors">
             Try Again
@@ -273,10 +273,10 @@ export default function SignaturePage() {
 
   // ── Sign State ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#080F1E] text-white flex flex-col">
+    <div className="min-h-screen bg-slate-50 text-white flex flex-col">
       {/* Header */}
-      <div className="bg-[#0D1628] border-b border-white/5 px-6 py-4 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-[#080F1E] font-black text-sm">T</div>
+      <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center gap-3">
+        <img src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/883f43554_generated_image.png" alt="TaximizerPro" className="h-8 w-auto" />
         <div>
           <div className="font-black text-white text-sm">TaximizerPro</div>
           <div className="text-xs text-slate-500">Secure Signature Portal</div>
@@ -287,13 +287,13 @@ export default function SignaturePage() {
         <div className="w-full max-w-lg space-y-6">
           {/* Welcome */}
           <div>
-            <h1 className="text-2xl font-black text-white">Hi, {clientName} 👋</h1>
+            <h1 className="text-2xl font-black text-slate-800">Hi, {clientName} 👋</h1>
             <p className="text-slate-400 mt-1 text-sm">Your tax preparer needs your signature to finalize and file your return.</p>
           </div>
 
           {/* What you're signing */}
-          <div className="bg-[#0D1628] border border-white/5 rounded-2xl p-5 space-y-3">
-            <h3 className="text-sm font-bold text-white">What you're authorizing:</h3>
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+            <h3 className="text-sm font-bold text-slate-800">What you're authorizing:</h3>
             <div className="space-y-2 text-sm text-slate-400">
               <div className="flex items-start gap-2">
                 <span className="text-amber-400 mt-0.5">•</span>

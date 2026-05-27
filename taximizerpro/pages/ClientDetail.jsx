@@ -163,13 +163,13 @@ export default function ClientDetail() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-[#080F1E] flex items-center justify-center">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
       <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"/>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#080F1E] text-white">
+    <div className="min-h-screen bg-slate-50">
 
       {/* Admin Signature Modal */}
       {showSig && (
@@ -182,9 +182,9 @@ export default function ClientDetail() {
       )}
 
       {/* Nav */}
-      <nav className="sticky top-0 z-40 bg-[#080F1E]/95 backdrop-blur border-b border-white/5">
+      <nav className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
-          <Link to={createPageUrl("Clients")} className="p-1.5 hover:bg-white/5 rounded-lg transition-colors">
+          <Link to={createPageUrl("Clients")} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
             <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
             </svg>
@@ -193,7 +193,7 @@ export default function ClientDetail() {
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400/20 to-orange-500/20 border border-amber-400/20 flex items-center justify-center text-amber-400 font-black text-sm flex-shrink-0">
               {clientName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}
             </div>
-            <span className="font-bold text-white truncate">{clientName}</span>
+            <span className="font-bold text-slate-800 truncate">{clientName}</span>
           </div>
           {sigStatus === "signed" && (
             <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 flex-shrink-0">
@@ -210,17 +210,17 @@ export default function ClientDetail() {
           {years.map(y => (
             <button key={y} onClick={() => setActiveYear(y)}
               className={`flex-shrink-0 px-4 py-2 rounded-xl font-bold text-sm border transition-all ${
-                activeYear === y ? "bg-amber-400 border-amber-400 text-[#080F1E]" : "bg-[#0D1628] border-white/10 text-slate-400 hover:border-amber-400/30"
+                activeYear === y ? "bg-amber-400 border-amber-400 text-[#080F1E]" : "bg-white border-slate-200 text-slate-400 hover:border-amber-400/30"
               }`}>{y} Tax Year</button>
           ))}
         </div>
 
         {/* ── SIGNATURE SECTION ─────────────────────────────── */}
-        <div className="bg-[#0D1628] border border-white/5 rounded-2xl p-5 space-y-4">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-xl">✍️</span>
-              <h2 className="font-bold text-white">Signature</h2>
+              <h2 className="font-bold text-slate-800">Signature</h2>
             </div>
             {sigStatus === "signed" && (
               <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-400/10 text-emerald-400 border border-emerald-400/20">
@@ -238,7 +238,7 @@ export default function ClientDetail() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => setShowSig(true)}
-                  className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl text-sm font-semibold border border-white/10 hover:border-white/20 transition-all"
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-100 text-slate-300 rounded-xl text-sm font-semibold border border-slate-200 hover:border-slate-300 transition-all"
                 >
                   🔄 Re-capture Signature
                 </button>
@@ -258,11 +258,11 @@ export default function ClientDetail() {
                 {/* Option A: Sign in person */}
                 <button
                   onClick={() => setShowSig(true)}
-                  className="flex flex-col items-start gap-2 p-4 bg-[#111827] hover:bg-[#1a2333] border border-white/10 hover:border-amber-400/30 rounded-xl text-left transition-all group"
+                  className="flex flex-col items-start gap-2 p-4 bg-slate-800 hover:bg-slate-100 border border-slate-200 hover:border-amber-400/30 rounded-xl text-left transition-all group"
                 >
                   <span className="text-2xl">📱</span>
                   <div>
-                    <div className="font-bold text-white text-sm group-hover:text-amber-400 transition-colors">Sign In Person</div>
+                    <div className="font-bold text-slate-800 text-sm group-hover:text-amber-400 transition-colors">Sign In Person</div>
                     <div className="text-xs text-slate-500 mt-0.5">Hand device to client to sign now</div>
                   </div>
                 </button>
@@ -270,11 +270,11 @@ export default function ClientDetail() {
                 {/* Option B: Send link */}
                 <button
                   onClick={copySignatureLink}
-                  className="flex flex-col items-start gap-2 p-4 bg-[#111827] hover:bg-[#1a2333] border border-white/10 hover:border-amber-400/30 rounded-xl text-left transition-all group"
+                  className="flex flex-col items-start gap-2 p-4 bg-slate-800 hover:bg-slate-100 border border-slate-200 hover:border-amber-400/30 rounded-xl text-left transition-all group"
                 >
                   <span className="text-2xl">{linkCopied ? "✅" : "🔗"}</span>
                   <div>
-                    <div className="font-bold text-white text-sm group-hover:text-amber-400 transition-colors">
+                    <div className="font-bold text-slate-800 text-sm group-hover:text-amber-400 transition-colors">
                       {linkCopied ? "Link Copied!" : "Send Signature Link"}
                     </div>
                     <div className="text-xs text-slate-500 mt-0.5">Copy link for client to sign remotely</div>
@@ -283,7 +283,7 @@ export default function ClientDetail() {
               </div>
 
               {/* Show the link so admin can also text/email it */}
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5">
+              <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-xl px-3 py-2.5">
                 <span className="text-xs text-slate-500 truncate flex-1">{signatureLink}</span>
                 <button onClick={copySignatureLink} className="text-xs font-bold text-amber-400 hover:text-amber-300 flex-shrink-0 transition-colors">
                   {linkCopied ? "✓" : "Copy"}
@@ -319,19 +319,19 @@ export default function ClientDetail() {
         )}
 
         {generating && (
-          <div className="bg-[#0D1628] border border-white/5 rounded-2xl p-6 flex items-center gap-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 flex items-center gap-4">
             <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin flex-shrink-0"/>
             <div>
-              <div className="text-sm font-bold text-white">Generating 1040s...</div>
+              <div className="text-sm font-bold text-slate-800">Generating 1040s...</div>
               <div className="text-xs text-slate-500 mt-0.5">Filling forms for all tax years and uploading to Drive</div>
             </div>
           </div>
         )}
 
         {/* ── MILESTONE TRACKER ────────────────────────────── */}
-        <div className="bg-[#0D1628] border border-white/5 rounded-2xl p-5">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="font-bold text-white">Progress — {activeYear}</h2>
+            <h2 className="font-bold text-slate-800">Progress — {activeYear}</h2>
             {currentMilestone && currentMsIndex < MILESTONES.length - 1 && (
               <button onClick={() => advanceMilestone(activeYear)} disabled={!!updatingMs}
                 className="text-xs font-bold px-3 py-2 bg-amber-400 hover:bg-amber-300 text-[#080F1E] rounded-xl transition-colors disabled:opacity-50">
@@ -359,8 +359,8 @@ export default function ClientDetail() {
 
         {/* ── CLIENT INFO ──────────────────────────────────── */}
         {Object.keys(clientData).length > 0 && (
-          <div className="bg-[#0D1628] border border-white/5 rounded-2xl p-5 space-y-3">
-            <h2 className="font-bold text-white">Client Info</h2>
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+            <h2 className="font-bold text-slate-800">Client Info</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
                 ["SSN", clientData.ssn ? "***-**-" + String(clientData.ssn).slice(-4) : "—"],

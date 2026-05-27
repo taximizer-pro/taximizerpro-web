@@ -117,7 +117,7 @@ export default function Staff() {
             </svg>
           </Link>
           <div className="flex items-center gap-2 flex-1">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-black text-xs">T</div>
+            <img src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/883f43554_generated_image.png" alt="TaximizerPro" class="h-8 w-auto" />
             <span className="font-black text-sm">Team & Permissions</span>
             <span className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full font-semibold">● {onlineCount} online</span>
           </div>

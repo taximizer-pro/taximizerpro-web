@@ -240,7 +240,7 @@ export default function Dashboard() {
       <nav className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-black text-sm shadow-md shadow-amber-200">T</div>
+            <img src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/883f43554_generated_image.png" alt="TaximizerPro" class="h-9 w-auto" />
             <span className="font-black text-lg tracking-tight text-slate-800">Taximizer<span className="text-amber-500">Pro</span></span>
           </div>
           <div className="flex items-center gap-2">
