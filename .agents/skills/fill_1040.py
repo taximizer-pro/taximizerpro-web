@@ -1,59 +1,43 @@
 #!/usr/bin/env python3
 """
-Taximizer Pro — IRS 1040 Form Filler (v15 — FIXED: apt/date/signature)
+Taximizer Pro — IRS 1040 Form Filler (v16 — FINAL LOCKED COORDINATES)
 ======================================================================
 New templates (uploaded 2026-05-27T12:03):
   2023: 1X6LIFErOXnEx9nzOKW-8rBDUN2bfhq4D
   2024: 110bBcABuvofSYrQXLjw3N5DPH1y2Vjan
   2025: 1kQQlQXXTyXjGYtARAP_U5WJ6hWT2Fmc3
 
-VERIFIED FIELD MAPS (widget rect inspection):
+SIGN ROW — CONFIRMED BOX BOUNDARIES (from get_drawings()):
 
-── 2023 & 2024 (identical) ──────────────────────────────────────
+  2023 & 2024:
+    Box 1 Signature: x=91.6–273.6, y=462–492
+    Box 2 Date:      x=273.6–324.0, y=462–492
+    Box 3 Occupation (f2_33[0]): x=324.0–460.8, y=472–492
+    → sig underline at y=488 (y1-4), x=95–270
+    → date text     at y=488 (y1-4), x=275
 
-P1:
-  f1_04[0]  y=88  x=36   → First + Middle
-  f1_05[0]  y=88  x=239  → Last
-  f1_06[0]  y=88  x=469  → SSN
-  f1_10[0]  y=136 x=36   → Street
-  f1_11[0]  y=136 x=419  → Apt  ← ONLY write if apt non-empty; clear watermark first
-  f1_12[0]  y=160 x=36   → City
-  f1_13[0]  y=160 x=339  → State
-  f1_14[0]  y=160 x=404  → ZIP
-  c1_3[1]               → Single checkbox
+  2025:
+    Box 1 Signature: x=91.6–273.6, y=636–666
+    Box 2 Date:      x=273.6–324.0, y=636–666
+    Box 3 Occupation (f2_40[0]): x=324.0–460.8, y=646–666
+    → sig underline at y=662 (y1-4), x=95–270
+    → date text     at y=662 (y1-4), x=275
 
-P2 sign row (label line y=463):
-  "Your signature" col  x=101–270   → blank signature line drawn at y=476
-  "Date" col            x=278–325   → date text overlay at (278, 476)
-  f2_33[0]              x=325–460 y=472  → HELPER (occupation widget — clear watermark, set value)
+PAGE 1 FIELDS:
+  2023 & 2024:
+    f1_04  First+MI, f1_05  Last, f1_06  SSN
+    f1_10  Street,   f1_11  Apt (clear always),  f1_12  City
+    f1_13  State,    f1_14  ZIP,  c1_3[1]  Single
 
-P2 bank:
-  f2_25[0]  y=324 x=173  → Routing
-  c2_5[0]               → Checking
-  f2_26[0]  y=337 x=173  → Account
+  2025:
+    f1_14  First+MI, f1_15  Last, f1_16  SSN
+    f1_20  Street,   f1_21  Apt (clear always),  f1_22  City
+    f1_23  State,    f1_24  ZIP,  c1_3[1]  Single
 
-── 2025 ─────────────────────────────────────────────────────────
-
-P1 (different layout from 2023/2024!):
-  f1_14[0]  y=94  x=36   → First + Middle  (default: "first name and middle init")
-  f1_15[0]  y=94  x=253  → Last            (default: "last name")
-  f1_16[0]  y=94  x=469  → SSN             (default: "ss#")
-  f1_20[0]  y=142 x=36   → Street          (default: "street address")
-  f1_21[0]  y=142 x=419  → Apt             (default: "Apt no") ← CLEAR always; only write if non-empty
-  f1_22[0]  y=166 x=36   → City            (default: "city")
-  f1_23[0]  y=166 x=332  → State           (default: "state")
-  f1_24[0]  y=166 x=397  → ZIP             (default: "zip code")
-  c1_3[1]               → Single checkbox
-
-P2 sign row (label line y=637):
-  "Your signature" col  x=92–270    → blank signature line drawn at y=650
-  "Date" col            x=278–325   → date text overlay at (278, 650)
-  f2_40[0]              x=325–460 y=646  → HELPER (occupation widget — clear watermark, set value)
-
-P2 bank:
-  f2_32[0]  y=504 x=180  → Routing  (default: "routing #") ← CLEAR first
-  c2_16[0]              → Checking
-  f2_33[0]  y=516 x=180  → Account  (default: "account #") ← CLEAR first
+PAGE 2 BANK:
+  2023 & 2024:  f2_25 Routing, c2_5[0] Checking, f2_26 Account
+  2025:         f2_32 Routing (clear "routing #"), c2_16[0] Checking,
+                f2_33 Account (clear "account #")
 """
 
 import fitz
@@ -180,40 +164,30 @@ def fill_form(template_path, output_path, year, client):
         _set(doc, 0, 'f1_05[0]', last)
         _set(doc, 0, 'f1_06[0]', ssn)
         _set(doc, 0, 'f1_10[0]', street)
-        # APT: always clear the field first, only write if we have a real apt value
-        _clear(doc, 0, 'f1_11[0]')
+        _clear(doc, 0, 'f1_11[0]')           # always clear apt watermark
         if apt:
             _set(doc, 0, 'f1_11[0]', apt)
         _set(doc, 0, 'f1_12[0]', city)
         _set(doc, 0, 'f1_13[0]', state)
         _set(doc, 0, 'f1_14[0]', zip_)
-        _check(doc, 0, 'c1_3[1]')             # Single
+        _check(doc, 0, 'c1_3[1]')            # Single
 
         # ── PAGE 2 — Bank ──────────────────────────────────────
         _set(doc, 1, 'f2_25[0]', routing)
-        _check(doc, 1, 'c2_5[0]')             # Checking
+        _check(doc, 1, 'c2_5[0]')            # Checking
         _set(doc, 1, 'f2_26[0]', account)
 
         # ── PAGE 2 — Sign Row ──────────────────────────────────
-        # Columns confirmed by label positions (y=463):
-        #   Signature col: x=101–270
-        #   Date col:      x=278–325
-        #   Occupation:    x=325–460  → f2_33[0] (has HELPER watermark = occupation widget)
-        #
-        # 1. Signature: draw a thin underline in the signature col
-        sig_y = 476
-        doc[1].draw_line((101, sig_y), (270, sig_y),
-                         color=(0, 0, 0), width=0.5)
-        # 2. Date: text overlay in Date column
-        doc[1].insert_text((278, sig_y - 2), today,
-                           fontname='helv', fontsize=9, color=(0, 0, 0))
-        # 3. Occupation: set the widget value (clear watermark first)
+        # Box 1 (Signature): x=91.6–273.6, y=462–492  → underline at y=488
+        # Box 2 (Date):      x=273.6–324.0, y=462–492 → text at y=488, x=275
+        # Box 3 (Occupation): widget f2_33[0]          → set to HELPER
+        doc[1].draw_line((95, 488), (270, 488), color=(0, 0, 0), width=0.5)
+        doc[1].insert_text((275, 488), today, fontname='helv', fontsize=7, color=(0, 0, 0))
         _clear(doc, 1, 'f2_33[0]')
         _set(doc, 1, 'f2_33[0]', 'HELPER')
 
     else:  # 2025
         # ── PAGE 1 (different layout) ──────────────────────────
-        # Clear all watermark defaults first, then set values
         _clear(doc, 0, 'f1_14[0]')
         _set(doc, 0, 'f1_14[0]', first_m)
         _clear(doc, 0, 'f1_15[0]')
@@ -222,8 +196,7 @@ def fill_form(template_path, output_path, year, client):
         _set(doc, 0, 'f1_16[0]', ssn)
         _clear(doc, 0, 'f1_20[0]')
         _set(doc, 0, 'f1_20[0]', street)
-        # APT: always clear "Apt no" watermark; only write if real value
-        _clear(doc, 0, 'f1_21[0]')
+        _clear(doc, 0, 'f1_21[0]')           # always clear "Apt no" watermark
         if apt:
             _set(doc, 0, 'f1_21[0]', apt)
         _clear(doc, 0, 'f1_22[0]')
@@ -232,30 +205,21 @@ def fill_form(template_path, output_path, year, client):
         _set(doc, 0, 'f1_23[0]', state)
         _clear(doc, 0, 'f1_24[0]')
         _set(doc, 0, 'f1_24[0]', zip_)
-        _check(doc, 0, 'c1_3[1]')             # Single
+        _check(doc, 0, 'c1_3[1]')            # Single
 
         # ── PAGE 2 — Bank ──────────────────────────────────────
-        # Clear "routing #" and "account #" watermarks first
-        _clear(doc, 1, 'f2_32[0]')
+        _clear(doc, 1, 'f2_32[0]')           # clear "routing #" watermark
         _set(doc, 1, 'f2_32[0]', routing)
-        _check(doc, 1, 'c2_16[0]')            # Checking
-        _clear(doc, 1, 'f2_33[0]')
+        _check(doc, 1, 'c2_16[0]')           # Checking
+        _clear(doc, 1, 'f2_33[0]')           # clear "account #" watermark
         _set(doc, 1, 'f2_33[0]', account)
 
         # ── PAGE 2 — Sign Row ──────────────────────────────────
-        # Columns confirmed by label positions (y=637):
-        #   Signature col: x=92–270
-        #   Date col:      x=278–325
-        #   Occupation:    x=325–460  → f2_40[0] (HELPER watermark = occupation widget)
-        #
-        sig_y = 650
-        # 1. Signature line
-        doc[1].draw_line((92, sig_y), (270, sig_y),
-                         color=(0, 0, 0), width=0.5)
-        # 2. Date in Date column
-        doc[1].insert_text((278, sig_y - 2), today,
-                           fontname='helv', fontsize=9, color=(0, 0, 0))
-        # 3. Occupation: clear watermark, set HELPER
+        # Box 1 (Signature): x=91.6–273.6, y=636–666  → underline at y=662
+        # Box 2 (Date):      x=273.6–324.0, y=636–666 → text at y=662, x=275
+        # Box 3 (Occupation): widget f2_40[0]          → set to HELPER
+        doc[1].draw_line((95, 662), (270, 662), color=(0, 0, 0), width=0.5)
+        doc[1].insert_text((275, 662), today, fontname='helv', fontsize=7, color=(0, 0, 0))
         _clear(doc, 1, 'f2_40[0]')
         _set(doc, 1, 'f2_40[0]', 'HELPER')
 
