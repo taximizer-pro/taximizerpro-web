@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaximizerPro — Login</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>body{font-family:'Inter',sans-serif;}</style>
+</head>
+<body class="min-h-screen bg-slate-50 flex items-center justify-center">
+<div class="w-full max-w-md px-6">
+  <div class="text-center mb-8">
+    <div class="inline-flex items-center gap-3 mb-3">
+      <div class="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg">
+        <span class="text-white font-black text-xl">T</span>
+      </div>
+      <div class="text-left">
+        <div class="text-2xl font-black text-slate-800">TaximizerPro</div>
+        <div class="text-xs text-slate-400 font-medium">Admin Portal</div>
+      </div>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
+    {% if error %}
+    <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-5 text-sm flex items-center gap-2">
+      <span>⚠️</span> {{ error }}
+    </div>
+    {% endif %}
+    <form method="POST">
+      <div class="mb-5">
+        <label class="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
+        <input type="email" name="email" required autofocus
+          class="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all text-sm"
+          placeholder="admin@taximizerpro.com">
+      </div>
+      <div class="mb-6">
+        <label class="block text-sm font-semibold text-slate-700 mb-2">Password</label>
+        <input type="password" name="password" required
+          class="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all text-sm"
+          placeholder="••••••••">
+      </div>
+      <button type="submit"
+        class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 text-sm">
+        Sign In →
+      </button>
+    </form>
+    <div class="mt-6 pt-5 border-t border-slate-100 text-center">
+      <p class="text-xs text-slate-400">Authorized personnel only · TaximizerPro © 2026</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

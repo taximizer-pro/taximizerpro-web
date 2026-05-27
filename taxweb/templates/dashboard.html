@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — TaximizerPro{% endblock %}
+{% block content %}
+<div class="p-8">
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-2xl font-black text-slate-800">Good to see you, {{ user.name }} 👋</h1>
+    <p class="text-slate-500 text-sm mt-1">Here's what's happening across your 387 clients today.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-4 gap-5 mb-8" id="stats-grid">
+    <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+      <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Total Clients</div>
+      <div class="text-3xl font-black text-slate-800" id="stat-total">—</div>
+      <div class="text-xs text-slate-400 mt-1">All time</div>
+    </div>
+    <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+      <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Filed</div>
+      <div class="text-3xl font-black text-green-600" id="stat-filed">—</div>
+      <div class="text-xs text-slate-400 mt-1">Forms generated</div>
+    </div>
+    <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+      <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Pending</div>
+      <div class="text-3xl font-black text-amber-600" id="stat-pending">—</div>
+      <div class="text-xs text-slate-400 mt-1">Awaiting forms</div>
+    </div>
+    <div class="bg-white rounded-2xl border border-amber-100 p-5 shadow-sm bg-amber-50">
+      <div class="text-xs font-semibold text-amber-600 uppercase tracking-wide mb-1">💰 Pipeline Value</div>
+      <div class="text-3xl font-black text-amber-700" id="stat-pipeline">—</div>
+      <div class="text-xs text-amber-500 mt-1">Total refunds in system</div>
+    </div>
+  </div>
+
+  <!-- 5-Step Tracker Summary -->
+  <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm mb-6">
+    <h2 class="font-bold text-slate-800 mb-5 text-base">Filing Pipeline — 5 Steps</h2>
+    <div class="flex items-center gap-0">
+      {% set steps = [('📁','Documents','Collected'),('🔍','Under Review','In progress'),('✍️','Ready to Sign','Awaiting signature'),('📤','Filed','Submitted to IRS'),('💸','Funded','Refund received')] %}
+      {% for icon, label, sub in steps %}
+      <div class="flex-1 text-center">
+        <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-xl mx-auto mb-2 font-bold text-amber-700">{{ icon }}</div>
+        <div class="text-xs font-bold text-slate-700">{{ label }}</div>
+        <div class="text-xs text-slate-400">{{ sub }}</div>
+      </div>
+      {% if not loop.last %}
+      <div class="flex-shrink-0 w-6 text-slate-300 text-lg text-center">→</div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Recent Clients -->
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h2 class="font-bold text-slate-800 text-base">Recent Clients</h2>
+      <a href="/clients" class="text-amber-600 text-sm font-semibold hover:text-amber-700">View all →</a>
+    </div>
+    <div id="recent-clients">
+      <div class="px-6 py-8 text-center text-slate-400 text-sm">Loading...</div>
+    </div>
+  </div>
+
+  <!-- Reviews Section -->
+  <div class="mt-6 bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+    <h2 class="font-bold text-slate-800 mb-1 text-base">What Clients Are Saying</h2>
+    <p class="text-xs text-slate-400 mb-5">Nobody controls the IRS — not even Italy, and that says a lot...</p>
+    <div class="grid grid-cols-3 gap-4" id="reviews-grid">
+      <!-- filled by JS -->
+    </div>
+  </div>
+</div>
+
+<script>
+const reviews = [
+  {name:"DeShawn M.", text:"Italy got my refund moving when nobody else could. Real one fr 🙌", stars:5},
+  {name:"Maria G.", text:"Gracias Italy! Mis taxes listas en un día. No hay nadie mejor.", stars:5},
+  {name:"Jean-Pierre B.", text:"Mwen pa janm wè yon moun travay rapid konsa. Merci Italy!", stars:5},
+  {name:"Keisha T.", text:"Been with Italy 3 years. IRS slow but Italy stay on it 💯", stars:5},
+  {name:"Carlos R.", text:"Italy es el mejor. Siempre explica todo con paciencia.", stars:5},
+  {name:"Tanya W.", text:"My whole family comes to Italy now. He don't play about your money.", stars:5},
+  {name:"Marco D.", text:"Italia! Un professionista vero. Ha risolto il mio caso in 24 ore.", stars:5},
+  {name:"Unique J.", text:"IRS had me stressed. Italy said don't worry and handled it 🔥", stars:5},
+  {name:"Rosa L.", text:"Ya llevo 4 años aquí. Nunca un problema. Italy es confiable.", stars:5},
+];
+const grid = document.getElementById("reviews-grid");
+reviews.slice(0,6).forEach(r => {
+  grid.innerHTML += `<div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
+    <div class="text-amber-500 text-sm mb-2">${"★".repeat(r.stars)}</div>
+    <p class="text-slate-600 text-xs leading-relaxed mb-3">"${r.text}"</p>
+    <div class="text-xs font-semibold text-slate-500">— ${r.name}</div>
+  </div>`;
+});
+
+// Load stats
+fetch("/api/stats").then(r=>r.json()).then(d=>{
+  document.getElementById("stat-total").textContent = d.total ?? "—";
+  document.getElementById("stat-filed").textContent = d.filed ?? "—";
+  document.getElementById("stat-pending").textContent = d.pending ?? "—";
+  document.getElementById("stat-pipeline").textContent = d.pipeline ?? "—";
+});
+
+// Load recent clients
+fetch("/api/clients?limit=5").then(r=>r.json()).then(clients=>{
+  const box = document.getElementById("recent-clients");
+  if(!clients.length){box.innerHTML='<div class="px-6 py-6 text-center text-slate-400 text-sm">No clients yet</div>';return;}
+  box.innerHTML = clients.map(c=>`
+    <div class="px-6 py-3 border-b border-slate-50 flex items-center justify-between hover:bg-slate-50 transition-colors">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-sm">${(c.first_name||"?")[0]}</div>
+        <div>
+          <div class="text-sm font-semibold text-slate-700">${c.full_name||c.first_name+' '+c.last_name}</div>
+          <div class="text-xs text-slate-400">${c.tax_year||''} · ${c.email||''}</div>
+        </div>
+      </div>
+      <span class="text-xs px-2 py-1 rounded-full font-semibold ${c.filing_status==='filed'?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700'}">${c.filing_status||'pending'}</span>
+    </div>`).join("");
+});
+</script>
+{% endblock %}

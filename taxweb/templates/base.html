@@ -1,86 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TaximizerPro Admin</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}TaximizerPro{% endblock %}</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  body { font-family: 'Inter', sans-serif; }
-  .sidebar-link { @apply flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-amber-50 hover:text-amber-700 transition-all font-medium; }
-  .sidebar-link.active { @apply bg-amber-100 text-amber-800 font-semibold; }
+body{font-family:'Inter',sans-serif;}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;color:#475569;font-size:14px;font-weight:500;transition:all .15s;text-decoration:none;}
+.nav-link:hover{background:#fef3c7;color:#92400e;}
+.nav-link.active{background:#fef3c7;color:#92400e;font-weight:600;}
+.nav-link svg{width:18px;height:18px;flex-shrink:0;}
 </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
-
-{% if session.user %}
 <div class="flex min-h-screen">
   <!-- Sidebar -->
-  <aside class="w-64 bg-white border-r border-slate-200 flex flex-col fixed h-full z-10">
-    <!-- Logo -->
-    <div class="px-6 py-5 border-b border-slate-100">
+  <aside class="w-60 bg-white border-r border-slate-100 flex flex-col fixed h-full z-10 shadow-sm">
+    <div class="px-5 py-5 border-b border-slate-100">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center">
-          <span class="text-white font-bold text-lg">T</span>
+        <div class="w-9 h-9 bg-amber-500 rounded-xl flex items-center justify-center shadow">
+          <span class="text-white font-black text-base">T</span>
         </div>
         <div>
-          <div class="font-bold text-slate-800 text-sm">TaximizerPro</div>
+          <div class="font-black text-slate-800 text-sm leading-tight">TaximizerPro</div>
           <div class="text-xs text-slate-400">Admin Panel</div>
         </div>
       </div>
     </div>
-
-    <!-- Nav -->
-    <nav class="flex-1 px-3 py-4 space-y-1">
-      <a href="/dashboard" class="sidebar-link {% if request.path == '/dashboard' %}active{% endif %}">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+    <nav class="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+      <a href="/dashboard" class="nav-link {% if request.path=='/dashboard' %}active{% endif %}">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
         Dashboard
       </a>
-      <a href="/clients" class="sidebar-link {% if request.path == '/clients' %}active{% endif %}">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      <a href="/clients" class="nav-link {% if request.path=='/clients' %}active{% endif %}">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         Clients
       </a>
-      <a href="/new-client" class="sidebar-link {% if request.path == '/new-client' %}active{% endif %}">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      <a href="/new-client" class="nav-link {% if request.path=='/new-client' %}active{% endif %}">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
         Add Client
       </a>
+      <a href="/tracker" class="nav-link {% if request.path=='/tracker' %}active{% endif %}">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+        Tracker
+      </a>
+      <a href="/messages" class="nav-link {% if request.path=='/messages' %}active{% endif %}">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+        Messages
+      </a>
+      <a href="/staff" class="nav-link {% if request.path=='/staff' %}active{% endif %}">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        Staff
+      </a>
     </nav>
-
-    <!-- User info -->
     <div class="px-4 py-4 border-t border-slate-100">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 bg-amber-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
-          {{ session.user.name[0] }}
+        <div class="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+          {{ user.name[0] }}
         </div>
         <div class="flex-1 min-w-0">
-          <div class="text-sm font-semibold text-slate-700 truncate">{{ session.user.name }}</div>
-          <div class="text-xs text-slate-400 capitalize">{{ session.user.role }}</div>
+          <div class="text-sm font-semibold text-slate-700 truncate">{{ user.name }}</div>
+          <div class="text-xs text-amber-600 capitalize font-medium">{{ user.role }}</div>
         </div>
-        <a href="/logout" class="text-slate-400 hover:text-red-500 transition-colors" title="Logout">
+        <a href="/logout" class="text-slate-300 hover:text-red-400 transition-colors" title="Sign out">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
         </a>
       </div>
     </div>
   </aside>
-
-  <!-- Main content -->
-  <main class="ml-64 flex-1 p-8">
+  <!-- Content -->
+  <main class="ml-60 flex-1 min-h-screen">
     {% block content %}{% endblock %}
   </main>
 </div>
-
-{% else %}
-{% block auth_content %}{% endblock %}
-{% endif %}
-
-<script>
-  // Flash message auto-dismiss
-  setTimeout(() => {
-    document.querySelectorAll('.flash-msg').forEach(el => el.remove());
-  }, 4000);
-</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>
