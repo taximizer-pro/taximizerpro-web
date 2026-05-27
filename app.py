@@ -66,9 +66,13 @@ _tokens = {
 _tok_lock = _threading.Lock()
 
 def dtok():
-    with _tok_lock: return _tokens.get("drive", "")
+    with _tok_lock:
+        t = _tokens.get("drive", "")
+    return t or os.environ.get("DRIVE_ACCESS_TOKEN", "")
 def gtok():
-    with _tok_lock: return _tokens.get("gmail", "")
+    with _tok_lock:
+        t = _tokens.get("gmail", "")
+    return t or os.environ.get("GMAIL_ACCESS_TOKEN_RENDER", "")
 
 @app.route("/api/refresh-tokens", methods=["POST"])
 def refresh_tokens():
