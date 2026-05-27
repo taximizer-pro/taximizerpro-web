@@ -330,3 +330,45 @@ def api_generate(client_id):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     app.run(host="0.0.0.0", port=port, debug=False)
+
+# ── In-memory client cache (synced by agent automation) ───────────────────────
+import threading
+_client_cache = []
+_cache_lock   = threading.Lock()
+_sync_secret  = "txpro-sync-2026-italy"
+
+@app.route("/api/sync", methods=["POST"])
+def api_sync():
+    """Agent pushes fresh client data here every few minutes."""
+    auth = request.headers.get("X-Sync-Secret","")
+    if auth != _sync_secret:
+        return jsonify({"error":"forbidden"}), 403
+    payload = request.json or {}
+    clients = payload.get("clients", [])
+    with _cache_lock:
+        global _client_cache
+        _client_cache = clients
+    return jsonify({"ok": True, "count": len(clients)})
+
+@app.route("/api/cache-stats")
+def api_cache_stats():
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    with _cache_lock:
+        records = list(_client_cache)
+    total    = len(records)
+    filed    = sum(1 for c in records if c.get("filing_status") == "filed")
+    pending  = sum(1 for c in records if c.get("filing_status") in ("pending", None, ""))
+    pipeline = sum(float(c.get("refund_amount") or 0) for c in records)
+    recent   = sorted(records, key=lambda x: x.get("created_date",""), reverse=True)[:5]
+    return jsonify({"total":total,"filed":filed,"pending":pending,
+                    "pipeline":f"${pipeline:,.0f}","recent":recent})
+
+@app.route("/api/cache-clients")
+def api_cache_clients():
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    with _cache_lock:
+        records = list(_client_cache)
+    for r in records:
+        if not r.get("full_name"):
+            r["full_name"] = ((r.get("first_name") or "") + " " + (r.get("last_name") or "")).strip()
+    return jsonify(records)

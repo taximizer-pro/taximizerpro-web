@@ -108,7 +108,7 @@ function changePage(d){page=Math.max(0,page+d);render();}
 document.getElementById("search").addEventListener("input",e=>{sq=e.target.value;page=0;render();});
 document.getElementById("status-filter").addEventListener("change",e=>{stq=e.target.value;page=0;render();});
 
-fetch("/api/clients").then(r=>r.json()).then(data=>{all=data;render();}).catch(()=>{
+fetch("/api/cache-clients").then(r=>r.json()).then(data=>{all=data;render();}).catch(()=>{
   document.getElementById("clients-tbody").innerHTML='<tr><td colspan="6" style="padding:40px;text-align:center;color:#ef4444;font-size:13px;">Failed to load. Check connection.</td></tr>';
 });
 

@@ -99,14 +99,14 @@ reviews.forEach(r=>{
   </div>`;
 });
 
-fetch("/api/stats").then(r=>r.json()).then(d=>{
+fetch("/api/cache-stats").then(r=>r.json()).then(d=>{
   document.getElementById("stat-total").textContent = d.total ?? "—";
   document.getElementById("stat-filed").textContent = d.filed ?? "—";
   document.getElementById("stat-pending").textContent = d.pending ?? "—";
   document.getElementById("stat-pipeline").textContent = d.pipeline ?? "—";
 }).catch(()=>{});
 
-fetch("/api/clients?limit=6").then(r=>r.json()).then(clients=>{
+fetch("/api/cache-clients?limit=6").then(r=>r.json()).then(clients=>{
   const box = document.getElementById("recent-clients");
   if(!clients.length){box.innerHTML='<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">No clients yet</div>';return;}
   box.innerHTML = clients.slice(0,6).map(c=>`
