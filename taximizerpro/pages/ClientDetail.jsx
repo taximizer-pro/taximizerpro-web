@@ -189,7 +189,8 @@ export default function ClientDetail() {
 
       // 3. Call Render generate
       setStatusMsg("Generating tax forms...");
-      const clientData = await TaxClient.get(id); // fresh copy with sig
+      // Use already-loaded client state (avoids extra entity call)
+      const clientData = { ...client };
       const res = await fetch(`${RENDER_URL}/api/generate/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Sync-Secret": SYNC_SECRET },

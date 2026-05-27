@@ -1,0 +1,79 @@
+{
+  "type": "object",
+  "properties": {
+    "first_name": {
+      "type": "string"
+    },
+    "middle_init": {
+      "type": "string"
+    },
+    "last_name": {
+      "type": "string"
+    },
+    "full_name": {
+      "type": "string"
+    },
+    "ssn": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "apt": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "zip": {
+      "type": "string"
+    },
+    "bank_routing": {
+      "type": "string"
+    },
+    "bank_account": {
+      "type": "string"
+    },
+    "tax_year": {
+      "type": "string"
+    },
+    "filing_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "in_progress",
+        "filed",
+        "error"
+      ],
+      "default": "pending"
+    },
+    "signature_url": {
+      "type": "string"
+    },
+    "current_step": {
+      "type": "number",
+      "default": 1
+    },
+    "occupation": {
+      "type": "string",
+      "default": "HELPER"
+    },
+    "irs_status": {
+      "type": "string"
+    },
+    "drive_folder_url": {
+      "type": "string"
+    },
+    "form_links": {
+      "type": "object"
+    }
+  },
+  "required": [],
+  "name": "TaxClient"
+}
