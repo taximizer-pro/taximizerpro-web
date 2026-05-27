@@ -357,7 +357,10 @@ def api_stats():
 
 @app.route("/api/generate/<client_id>", methods=["POST"])
 def api_generate(client_id):
-    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    # Allow agent/backend calls via sync secret header (no session needed)
+    api_auth = request.headers.get("X-Sync-Secret","")
+    if not logged_in() and api_auth != _sync_secret:
+        return jsonify({"error":"unauthorized"}), 401
     data = request.json or {}
     c = data.get("client", {})
     if not c: return jsonify({"error":"no client data"}), 400
