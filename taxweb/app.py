@@ -19,6 +19,7 @@ MASTER_IDS = {
 }
 ROOT_FOLDER = "TaximizerPro V 2.0 Clients"
 APP_ID = "6a13ae4b43ea85cec629af77"
+_sync_secret  = "txpro-sync-2026-italy"
 
 # ── STRICT APT FILTER — nothing blank/null/placeholder goes through ──────────
 APT_JUNK = {"", "none", "null", "apt", "apt.", "#", "unit", "n/a", "na", "-", "optional"}
