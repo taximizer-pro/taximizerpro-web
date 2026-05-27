@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}TaximizerPro{% endblock %}</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{font-family:'Inter',sans-serif;}
+.sidebar{background:#0f172a;}
+.nav-link{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;color:#94a3b8;font-size:13.5px;font-weight:500;transition:all .15s;text-decoration:none;}
+.nav-link:hover{background:rgba(245,158,11,.12);color:#fbbf24;}
+.nav-link.active{background:rgba(245,158,11,.18);color:#f59e0b;font-weight:600;}
+.nav-link svg{width:17px;height:17px;flex-shrink:0;}
+.stat-card{background:#fff;border-radius:16px;border:1px solid #f1f5f9;padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.btn-primary{background:#f59e0b;color:#fff;font-weight:700;padding:10px 20px;border-radius:10px;border:none;cursor:pointer;font-size:13px;transition:all .15s;}
+.btn-primary:hover{background:#d97706;transform:translateY(-1px);box-shadow:0 4px 12px rgba(245,158,11,.3);}
+.input-field{width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;color:#1e293b;outline:none;transition:all .15s;background:#fafafa;}
+.input-field:focus{border-color:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.12);background:#fff;}
+.badge-pending{background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-filed{background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.card{background:#fff;border-radius:16px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(0,0,0,.05);overflow:hidden;}
+</style>
+</head>
+<body style="background:#f8fafc;min-height:100vh;">
+<div style="display:flex;min-height:100vh;">
+  <!-- Sidebar -->
+  <aside class="sidebar" style="width:220px;position:fixed;height:100%;display:flex;flex-direction:column;z-index:10;">
+    <!-- Logo -->
+    <div style="padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.06);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(245,158,11,.4);">
+          <span style="color:#fff;font-weight:900;font-size:18px;line-height:1;">T</span>
+        </div>
+        <div>
+          <div style="color:#f8fafc;font-weight:800;font-size:14px;letter-spacing:-.3px;">TaximizerPro</div>
+          <div style="color:#f59e0b;font-size:10px;font-weight:500;letter-spacing:.5px;">WE MOVE MONEY.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <nav style="flex:1;padding:14px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;">
+      <a href="/dashboard" class="nav-link {% if request.path=='/dashboard' %}active{% endif %}">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Dashboard
+      </a>
+      <a href="/clients" class="nav-link {% if request.path=='/clients' %}active{% endif %}">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Clients
+      </a>
+      <a href="/new-client" class="nav-link {% if request.path=='/new-client' %}active{% endif %}">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+        New Client
+      </a>
+      <a href="/tracker" class="nav-link {% if request.path=='/tracker' %}active{% endif %}">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Tracker
+      </a>
+      <a href="/messages" class="nav-link {% if request.path=='/messages' %}active{% endif %}">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+        Messages
+      </a>
+      <a href="/staff" class="nav-link {% if request.path=='/staff' %}active{% endif %}">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        Staff
+      </a>
+    </nav>
+
+    <!-- User footer -->
+    <div style="padding:14px 14px;border-top:1px solid rgba(255,255,255,.06);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0;">
+          {{ user.name[0] }}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="color:#f8fafc;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ user.name }}</div>
+          <div style="color:#f59e0b;font-size:10px;font-weight:500;text-transform:capitalize;">{{ user.role }}</div>
+        </div>
+        <a href="/logout" style="color:#475569;transition:color .15s;" title="Sign out">
+          <svg style="width:15px;height:15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main style="margin-left:220px;flex:1;min-height:100vh;">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>
