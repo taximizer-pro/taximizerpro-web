@@ -222,6 +222,27 @@ def fill_form(tmpl_bytes, yr, c):
     clr(1, occ_sn)
     sf(1, occ_sn, "HELPER")
 
+    # ── SSN TEXT OVERLAY (guarantees visibility in all viewers incl. Drive) ──
+    # Comb fields can fail to render in Drive/lightweight PDF viewers.
+    # We draw the SSN as spaced plain text on top of the comb boxes.
+    p1 = doc[0]
+    ssn_rects = {
+        '2023': fitz.Rect(469, 85, 576, 103),
+        '2024': fitz.Rect(469, 85, 576, 103),
+        '2025': fitz.Rect(469, 85, 576, 103),
+    }
+    ssn_rect = ssn_rects.get(yr, fitz.Rect(469, 85, 576, 103))
+    if ssn:
+        # White out the comb field first, then draw clean text
+        p1.draw_rect(ssn_rect, color=(1,1,1), fill=(1,1,1))
+        # Format as XXX-XX-XXXX style spaced across the box
+        formatted = f"{ssn[:3]}-{ssn[3:5]}-{ssn[5:]}" if len(ssn)==9 else ssn
+        p1.insert_text(
+            (ssn_rect.x0 + 4, ssn_rect.y1 - 3),
+            formatted,
+            fontname="helv", fontsize=8, color=(0,0,0)
+        )
+
     doc.save(out_path, garbage=4, deflate=True, incremental=False)
     doc.close()
     with open(out_path,"rb") as f2: result = f2.read()
