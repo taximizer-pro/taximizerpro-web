@@ -57,9 +57,30 @@ P2 = {
 CHK2 = {'2022':'c2_4[0]','2023':'c2_7[0]','2024':'c2_7[0]','2025':'c2_16[0]'}
 DATE_XY = {'2022':(250,651),'2023':None,'2024':None,'2025':None}
 
-# ── Drive helpers ─────────────────────────────────────────────────────────────
-def dtok(): return os.environ.get("GOOGLEDRIVE_ACCESS_TOKEN","")
-def gtok(): return os.environ.get("GMAIL_ACCESS_TOKEN","")
+# ── Token store (refreshed by agent every ~45 min) ───────────────────────────
+import threading as _threading
+_tokens = {
+    "drive": os.environ.get("GOOGLEDRIVE_ACCESS_TOKEN", ""),
+    "gmail": os.environ.get("GMAIL_ACCESS_TOKEN", ""),
+}
+_tok_lock = _threading.Lock()
+
+def dtok():
+    with _tok_lock: return _tokens.get("drive", "")
+def gtok():
+    with _tok_lock: return _tokens.get("gmail", "")
+
+@app.route("/api/refresh-tokens", methods=["POST"])
+def refresh_tokens():
+    """Agent posts fresh OAuth tokens here. Protected by sync secret."""
+    auth = request.headers.get("X-Sync-Secret", "")
+    if auth != _sync_secret:
+        return jsonify({"error": "forbidden"}), 403
+    payload = request.json or {}
+    with _tok_lock:
+        if payload.get("drive"): _tokens["drive"] = payload["drive"]
+        if payload.get("gmail"): _tokens["gmail"] = payload["gmail"]
+    return jsonify({"ok": True})
 
 def drive_get(url):
     req = urllib.request.Request(url, headers={"Authorization":f"Bearer {dtok()}"})
