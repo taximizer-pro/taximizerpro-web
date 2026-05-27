@@ -222,23 +222,27 @@ def fill_form(tmpl_bytes, yr, c):
     clr(1, occ_sn)
     sf(1, occ_sn, "HELPER")
 
-    # ── SSN TEXT OVERLAY (guarantees visibility in all viewers incl. Drive) ──
-    # Comb fields can fail to render in Drive/lightweight PDF viewers.
-    # We draw the SSN as spaced plain text on top of the comb boxes.
+    # ── SSN: delete comb widget + draw flat text overlay ──
+    # AcroForm widgets always render above page content so we must DELETE
+    # the comb widget, then insert clean text in its place.
     p1 = doc[0]
-    ssn_rects = {
-        '2023': fitz.Rect(469, 85, 576, 103),
-        '2024': fitz.Rect(469, 85, 576, 103),
-        '2025': fitz.Rect(469, 85, 576, 103),
+    ssn_field_names = {
+        '2023': 'f1_06[0]',
+        '2024': 'f1_06[0]',
+        '2025': 'f1_16[0]',
     }
-    ssn_rect = ssn_rects.get(yr, fitz.Rect(469, 85, 576, 103))
-    if ssn:
-        # White out the comb field first, then draw clean text
-        p1.draw_rect(ssn_rect, color=(1,1,1), fill=(1,1,1))
-        # Format as XXX-XX-XXXX style spaced across the box
+    ssn_fn = ssn_field_names.get(yr, 'f1_06[0]')
+    ssn_rect = None
+    for w in p1.widgets():
+        if w.field_name.split(".")[-1] == ssn_fn:
+            ssn_rect = fitz.Rect(w.rect)  # capture before deletion
+            p1.delete_widget(w)
+            break
+    if ssn and ssn_rect:
         formatted = f"{ssn[:3]}-{ssn[3:5]}-{ssn[5:]}" if len(ssn)==9 else ssn
+        p1.draw_rect(ssn_rect, color=(1,1,1), fill=(1,1,1))
         p1.insert_text(
-            (ssn_rect.x0 + 4, ssn_rect.y1 - 3),
+            (ssn_rect.x0 + 3, ssn_rect.y1 - 2),
             formatted,
             fontname="helv", fontsize=8, color=(0,0,0)
         )
