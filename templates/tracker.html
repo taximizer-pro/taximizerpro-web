@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Tracker — TaximizerPro{% endblock %}
+{% block content %}
+<div style="padding:28px 32px;">
+  <div style="margin-bottom:24px;">
+    <h1 style="font-size:22px;font-weight:800;color:#0f172a;margin:0;">Filing Tracker</h1>
+    <p style="color:#64748b;font-size:13px;margin-top:4px;">Every client across all 5 stages.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;" id="board">
+    {% for icon, label, step, col in [('📁','Documents','Step 1','#64748b'),('🔍','Under Review','Step 2','#3b82f6'),('✍️','Ready to Sign','Step 3','#8b5cf6'),('📤','Filed','Step 4','#f59e0b'),('💸','Funded','Step 5','#16a34a')] %}
+    <div style="background:#fff;border-radius:16px;border:1px solid #f1f5f9;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);">
+      <div style="padding:14px 14px 10px;border-bottom:2px solid {{ col }}22;background:{{ col }}08;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:18px;">{{ icon }}</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#0f172a;">{{ label }}</div>
+            <div style="font-size:10px;color:#94a3b8;">{{ step }}</div>
+          </div>
+        </div>
+        <div id="col-count-{{ loop.index0 }}" style="font-size:20px;font-weight:900;color:{{ col }};margin-top:6px;">0</div>
+      </div>
+      <div id="col-{{ loop.index0 }}" style="padding:10px;min-height:120px;display:flex;flex-direction:column;gap:6px;">
+        <div style="font-size:11px;color:#cbd5e1;text-align:center;padding:12px;">Loading...</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+fetch("/api/clients").then(r=>r.json()).then(clients=>{
+  for(let i=0;i<5;i++){document.getElementById("col-"+i).innerHTML="";}
+  const counts=[0,0,0,0,0];
+
+  clients.forEach(c=>{
+    let col=0;
+    if(c.filing_status==="filed") col=3;
+    else if(c.current_step) col=Math.min(Math.max(parseInt(c.current_step)-1,0),4);
+
+    counts[col]++;
+    const name=(c.full_name||(c.first_name+" "+c.last_name)).trim();
+    const el=document.createElement("div");
+    el.style.cssText="background:#f8fafc;border-radius:8px;padding:8px 10px;border:1px solid #f1f5f9;cursor:pointer;transition:all .15s;";
+    el.onmouseover=()=>el.style.borderColor="#f59e0b";
+    el.onmouseout=()=>el.style.borderColor="#f1f5f9";
+    el.innerHTML=`<div style="font-size:11px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px;">${c.tax_year||""}</div>`;
+    document.getElementById("col-"+col).appendChild(el);
+  });
+
+  for(let i=0;i<5;i++){
+    document.getElementById("col-count-"+i).textContent=counts[i];
+    if(!counts[i]) document.getElementById("col-"+i).innerHTML='<div style="font-size:11px;color:#cbd5e1;text-align:center;padding:16px;">Empty</div>';
+  }
+}).catch(()=>{});
+</script>
+{% endblock %}
