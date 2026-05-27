@@ -14,9 +14,9 @@ ADMINS = {
 }
 
 MASTER_IDS = {
-    '2023': '1X6LIFErOXnEx9nzOKW-8rBDUN2bfhq4D',
-    '2024': '110bBcABuvofSYrQXLjw3N5DPH1y2Vjan',
-    '2025': '1kQQlQXXTyXjGYtARAP_U5WJ6hWT2Fmc3',
+    '2023': '12oZacU01PFs-GjmTnBeeARCWB8IKiRb0',
+    '2024': '1nHkyzHC-jVryNKbHrkeeb355wPDe3fIC',
+    '2025': '13gBIrUgh-nSZaKZz7yCJ3bDSVT0U8XHz',
 }
 ROOT_FOLDER = "TaximizerPro V 2.0 Clients"
 APP_ID = "6a13ae4b43ea85cec629af77"
