@@ -1,135 +1,109 @@
 import { useState, useEffect } from "react";
-import { ClientMilestone } from "@/api/entities";
+import { TaxClient } from "@/api/entities";
 import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 
-const MILESTONES = ["Documents Received","Under Review","Ready for Signature","Filed","Refund Pending","Funded","Complete"];
-const MILESTONE_ICONS = {"Documents Received":"📥","Under Review":"🔍","Ready for Signature":"✍️","Filed":"📤","Refund Pending":"⏳","Funded":"💰","Complete":"✅"};
-
-const STATUS_STYLE = {
-  approved: "bg-emerald-400/10 text-emerald-400 border-emerald-400/20",
-  pending:  "bg-amber-400/10 text-amber-400 border-amber-400/20",
-  rejected: "bg-red-400/10 text-red-400 border-red-400/20",
-};
+const MILESTONES = [
+  { label: "New Client", color: "slate" },
+  { label: "Docs Collected", color: "blue" },
+  { label: "Forms Generated", color: "indigo" },
+  { label: "Client Signed", color: "violet" },
+  { label: "Submitted to IRS", color: "amber" },
+  { label: "Funded", color: "emerald" },
+  { label: "Complete", color: "green" },
+];
 
 export default function Tracker() {
-  const [milestones, setMilestones] = useState([]);
+  const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [msFilter, setMsFilter] = useState("all");
-  const [yearFilter, setYearFilter] = useState("all");
 
-  useEffect(() => {
-    ClientMilestone.list().then(ms => { setMilestones(ms); setLoading(false); });
-  }, []);
+  useEffect(() => { loadClients(); }, []);
 
-  // Group by client+year, keep latest milestone per group
-  const groups = {};
-  milestones.forEach(m => {
-    const key = `${m.client_id}_${m.tax_year}`;
-    if (!groups[key] || MILESTONES.indexOf(m.milestone) > MILESTONES.indexOf(groups[key].milestone)) {
-      groups[key] = m;
-    }
-  });
+  async function loadClients() {
+    try {
+      const data = await TaxClient.list();
+      setClients(data);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  }
 
-  let rows = Object.values(groups);
-  if (search) rows = rows.filter(r => r.client_name?.toLowerCase().includes(search.toLowerCase()));
-  if (msFilter !== "all") rows = rows.filter(r => r.milestone === msFilter);
-  if (yearFilter !== "all") rows = rows.filter(r => String(r.tax_year) === yearFilter);
-  rows.sort((a,b) => MILESTONES.indexOf(a.milestone) - MILESTONES.indexOf(b.milestone));
+  async function moveStep(client, direction) {
+    const newStep = Math.max(1, Math.min(7, Math.round(client.current_step || 1) + direction));
+    try {
+      await TaxClient.update(client.id, { current_step: newStep });
+      setClients(prev => prev.map(c => c.id === client.id ? { ...c, current_step: newStep } : c));
+    } catch (e) { console.error(e); }
+  }
 
-  const years = [...new Set(milestones.map(m=>m.tax_year))].sort((a,b)=>b-a);
+  if (loading) return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent"></div>
+    </div>
+  );
 
-  // Stats per milestone
-  const msCounts = {};
-  MILESTONES.forEach(ms => { msCounts[ms] = Object.values(groups).filter(g=>g.milestone===ms).length; });
+  const byStep = MILESTONES.map((m, i) => ({
+    ...m,
+    step: i + 1,
+    clients: clients.filter(c => Math.round(c.current_step || 1) === i + 1)
+  }));
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <nav className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
-          <Link to={createPageUrl("Dashboard")} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
-            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
-            </svg>
-          </Link>
-          <div className="flex items-center gap-3">
-            <img src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/883f43554_generated_image.png" alt="TaximizerPro" class="h-8 w-auto" />
-            <span className="font-black text-base">Tracker</span>
-          </div>
-        </div>
-      </nav>
+      <div className="bg-white border-b border-slate-200 px-6 py-4">
+        <h1 className="text-lg font-bold text-slate-900">Client Tracker</h1>
+        <p className="text-xs text-slate-500">Drag clients through the pipeline</p>
+      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Pipeline overview */}
-        <div className="overflow-x-auto pb-2">
-          <div className="flex gap-3 min-w-max">
-            {MILESTONES.map(ms => (
-              <button key={ms} onClick={() => setMsFilter(f => f === ms ? "all" : ms)}
-                className={`flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border transition-all min-w-[100px] ${
-                  msFilter === ms ? "bg-amber-400/10 border-amber-400/30 text-amber-400" : "bg-white border-slate-200 text-slate-400 hover:border-amber-400/20"
-                }`}>
-                <span className="text-xl">{MILESTONE_ICONS[ms]}</span>
-                <span className="text-lg font-black text-slate-800">{msCounts[ms] || 0}</span>
-                <span className="text-[10px] font-medium text-center leading-tight">{ms}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-            <input type="text" placeholder="Search clients..." value={search} onChange={e=>setSearch(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-400/50"/>
-          </div>
-          <div className="flex gap-2">
-            {["all",...years].map(y => (
-              <button key={y} onClick={() => setYearFilter(String(y))}
-                className={`text-xs font-semibold px-3 py-2 rounded-xl border transition-colors ${
-                  yearFilter === String(y) ? "bg-amber-400 border-amber-400 text-[#080F1E]" : "bg-white border-slate-200 text-slate-400 hover:border-amber-400/30"
-                }`}>{y === "all" ? "All Years" : y}</button>
-            ))}
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-          <div className="grid grid-cols-12 px-5 py-3 border-b border-slate-200">
-            <div className="col-span-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Client</div>
-            <div className="col-span-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Year</div>
-            <div className="col-span-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Stage</div>
-            <div className="col-span-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</div>
-          </div>
-          {loading ? (
-            <div className="py-12 text-center text-slate-500 text-sm">Loading...</div>
-          ) : rows.length === 0 ? (
-            <div className="py-12 text-center text-slate-500 text-sm">No results</div>
-          ) : rows.map(r => (
-            <Link key={`${r.client_id}_${r.tax_year}`} to={createPageUrl("ClientDetail")+"?id="+r.client_id}
-              className="grid grid-cols-12 items-center px-5 py-3.5 border-b border-slate-200 last:border-0 hover:bg-white/[0.02] transition-colors group">
-              <div className="col-span-4 flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-full bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 font-bold text-xs flex-shrink-0">
-                  {(r.client_name||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}
+      <div className="overflow-x-auto">
+        <div className="flex gap-4 p-6 min-w-max">
+          {byStep.map((col) => (
+            <div key={col.step} className="w-64 flex-shrink-0">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-800">{col.label}</h3>
+                  <p className="text-xs text-slate-400">{col.clients.length} clients</p>
                 </div>
-                <span className="text-sm font-medium text-white truncate">{r.client_name}</span>
-              </div>
-              <div className="col-span-2 text-sm text-slate-400">{r.tax_year}</div>
-              <div className="col-span-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">{MILESTONE_ICONS[r.milestone]}</span>
-                  <span className="text-sm text-slate-300 truncate">{r.milestone}</span>
+                <div className={`w-6 h-6 rounded-full bg-${col.color}-100 flex items-center justify-center`}>
+                  <span className={`text-xs font-bold text-${col.color}-700`}>{col.step}</span>
                 </div>
               </div>
-              <div className="col-span-2">
-                <span className={`text-xs font-semibold px-2 py-1 rounded-full border ${STATUS_STYLE[r.status] || "bg-slate-700/50 text-slate-400 border-slate-600/50"}`}>
-                  {r.status}
-                </span>
+              <div className="space-y-2 min-h-[200px]">
+                {col.clients.map(client => (
+                  <div key={client.id} className="bg-white rounded-lg border border-slate-200 shadow-sm p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-semibold text-blue-700">
+                          {(client.first_name?.[0] || "") + (client.last_name?.[0] || "")}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-slate-900 truncate">{client.full_name}</p>
+                        <p className="text-xs text-slate-400">{client.tax_year}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Link to={`/clients/${client.id}`} className="text-xs text-blue-700 hover:underline">View</Link>
+                      <div className="flex gap-1">
+                        <button onClick={() => moveStep(client, -1)}
+                          disabled={Math.round(client.current_step || 1) === 1}
+                          className="w-5 h-5 rounded border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-30 text-xs flex items-center justify-center">
+                          ←
+                        </button>
+                        <button onClick={() => moveStep(client, 1)}
+                          disabled={Math.round(client.current_step || 1) === 7}
+                          className="w-5 h-5 rounded border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-30 text-xs flex items-center justify-center">
+                          →
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {col.clients.length === 0 && (
+                  <div className="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center">
+                    <p className="text-xs text-slate-300">No clients</p>
+                  </div>
+                )}
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       </div>

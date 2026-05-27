@@ -1,293 +1,228 @@
 import { useState, useEffect, useRef } from "react";
-import { Message, StaffMember, ClientMilestone } from "@/api/entities";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import { useUser } from "@/hooks/useUser";
+import { Message } from "@/api/entities";
+import { useCurrentUser } from "@/api/users";
 
 export default function Messenger() {
-  const { data: user } = useUser();
-  const [myStaff, setMyStaff]       = useState(null);
-  const [threads, setThreads]       = useState([]);
-  const [active, setActive]         = useState(null);
-  const [messages, setMessages]     = useState([]);
-  const [body, setBody]             = useState("");
-  const [sending, setSending]       = useState(false);
-  const [loading, setLoading]       = useState(true);
-  const [contacts, setContacts]     = useState([]);
-  const [showNew, setShowNew]       = useState(false);
-  const [newTo, setNewTo]           = useState("");
-  const [newSubj, setNewSubj]       = useState("");
+  const currentUser = useCurrentUser();
+  const [messages, setMessages] = useState([]);
+  const [threads, setThreads] = useState([]);
+  const [selectedThread, setSelectedThread] = useState(null);
+  const [compose, setCompose] = useState(false);
+  const [newMsg, setNewMsg] = useState({ to: "", subject: "", body: "" });
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(true);
   const bottomRef = useRef(null);
 
-  const isAdmin = ["super_admin","admin","manager","agent"].includes(myStaff?.role);
-
+  useEffect(() => { loadMessages(); }, []);
   useEffect(() => {
-    if (!user) return;
-    async function load() {
-      const [sm, sent, recv] = await Promise.all([
-        StaffMember.filter({ email: user.email }),
-        Message.filter({ sender_email: user.email }),
-        Message.filter({ recipient_email: user.email }),
-      ]);
-      setMyStaff(sm[0] || null);
-      const role = sm[0]?.role;
-      const isAdm = ["super_admin","admin","manager","agent"].includes(role);
+    if (selectedThread) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [selectedThread, messages]);
 
-      // Build thread list
-      const all = [...sent, ...recv];
-      const threadMap = {};
+  async function loadMessages() {
+    try {
+      const all = await Message.list();
+      setMessages(all);
+      // Group by thread_id
+      const tMap = {};
       all.forEach(m => {
         const tid = m.thread_id || m.id;
-        if (!threadMap[tid]) threadMap[tid] = { id: tid, subject: m.subject, messages: [], other: "" };
-        threadMap[tid].messages.push(m);
-        if (m.sender_email !== user.email) threadMap[tid].other = m.sender_email;
-        if (m.recipient_email !== user.email) threadMap[tid].other = m.recipient_email;
+        if (!tMap[tid]) tMap[tid] = [];
+        tMap[tid].push(m);
       });
-      Object.values(threadMap).forEach(t => t.messages.sort((a,b)=>new Date(a.created_date)-new Date(b.created_date)));
-      setThreads(Object.values(threadMap).sort((a,b)=>{
-        const la = a.messages[a.messages.length-1]?.created_date;
-        const lb = b.messages[b.messages.length-1]?.created_date;
-        return new Date(lb)-new Date(la);
+      const tArr = Object.entries(tMap).map(([tid, msgs]) => ({
+        id: tid,
+        subject: msgs[0]?.subject || "No subject",
+        messages: msgs.sort((a, b) => new Date(a.created_date) - new Date(b.created_date)),
+        lastMsg: msgs[msgs.length - 1],
+        unread: msgs.some(m => !m.read_by?.includes(currentUser?.email)),
       }));
-
-      // Contacts
-      if (isAdm) {
-        // Admins can message any client (from milestones) or staff
-        const [ms, staff] = await Promise.all([ClientMilestone.list(), StaffMember.list()]);
-        const clientEmails = [...new Set(ms.map(m => {
-          try { return JSON.parse(m.notes||"{}").email; } catch { return null; }
-        }).filter(Boolean))];
-        const staffEmails = staff.map(s=>({ email: s.email, name: s.full_name||s.email, role: s.role }));
-        setContacts([
-          ...staffEmails,
-          ...clientEmails.map(e=>({ email: e, name: e, role: "client" })),
-        ]);
-      } else {
-        // Clients can only message admin
-        setContacts([{ email: "taximizerpro@gmail.com", name: "TaximizerPro Support", role: "admin" }]);
-      }
-
-      setLoading(false);
-    }
-    load();
-  }, [user]);
-
-  useEffect(() => {
-    if (!active) return;
-    const t = threads.find(t=>t.id===active);
-    if (t) {
-      setMessages(t.messages);
-      // Mark as read
-      t.messages.filter(m=>m.recipient_email===user?.email && !m.read_by?.includes(user?.email)).forEach(m=>{
-        Message.update(m.id, { read_by: [...(m.read_by||[]), user.email] }).catch(()=>{});
-      });
-    }
-    setTimeout(()=>bottomRef.current?.scrollIntoView({behavior:"smooth"}), 100);
-  }, [active, threads]);
-
-  async function send() {
-    if (!body.trim() || !active) return;
-    setSending(true);
-    const t = threads.find(t=>t.id===active);
-    const recipientEmail = t?.other;
-    try {
-      const msg = await Message.create({
-        sender_email:    user.email,
-        sender_name:     user.full_name || user.email,
-        sender_role:     myStaff?.role || "client",
-        recipient_email: recipientEmail,
-        thread_id:       active,
-        subject:         t?.subject || "Message",
-        body:            body.trim(),
-        channel:         "app",
-        message_type:    "direct",
-        read_by:         [user.email],
-        status:          "sent",
-      });
-      setMessages(prev => [...prev, msg]);
-      setThreads(prev => prev.map(th => th.id===active ? {...th, messages:[...th.messages,msg]} : th));
-      setBody("");
-    } catch(e) { console.error(e); }
-    setSending(false);
-    setTimeout(()=>bottomRef.current?.scrollIntoView({behavior:"smooth"}), 100);
+      tArr.sort((a, b) => new Date(b.lastMsg?.created_date) - new Date(a.lastMsg?.created_date));
+      setThreads(tArr);
+    } catch (e) { console.error(e); }
+    setLoading(false);
   }
 
-  async function startNewThread() {
-    if (!newTo || !newSubj.trim()) return;
+  async function sendMessage() {
+    if (!newMsg.to || !newMsg.body) return;
     setSending(true);
     try {
       const tid = `thread_${Date.now()}`;
-      const msg = await Message.create({
-        sender_email:    user.email,
-        sender_name:     user.full_name || user.email,
-        sender_role:     myStaff?.role || "client",
-        recipient_email: newTo,
-        thread_id:       tid,
-        subject:         newSubj.trim(),
-        body:            body.trim() || "(New conversation)",
-        channel:         "app",
-        message_type:    "direct",
-        read_by:         [user.email],
-        status:          "sent",
+      await Message.create({
+        sender_email: currentUser?.email || "taximizerpro@gmail.com",
+        sender_name: currentUser?.full_name || "Italy",
+        sender_role: "admin",
+        recipient_email: newMsg.to,
+        subject: newMsg.subject || "(no subject)",
+        body: newMsg.body,
+        thread_id: tid,
+        channel: "app",
+        message_type: "outbound",
+        status: "sent",
+        read_by: [currentUser?.email],
       });
-      const newThread = { id: tid, subject: newSubj.trim(), messages: [msg], other: newTo };
-      setThreads(prev => [newThread, ...prev]);
-      setActive(tid);
-      setShowNew(false);
-      setNewTo(""); setNewSubj(""); setBody("");
-    } catch(e) { console.error(e); }
+      setNewMsg({ to: "", subject: "", body: "" });
+      setCompose(false);
+      loadMessages();
+    } catch (e) { console.error(e); }
     setSending(false);
   }
 
-  const unreadCount = threads.reduce((acc, t) =>
-    acc + t.messages.filter(m => m.recipient_email===user?.email && !m.read_by?.includes(user?.email)).length, 0);
+  async function sendReply() {
+    if (!reply.trim() || !selectedThread) return;
+    setSending(true);
+    const thread = threads.find(t => t.id === selectedThread);
+    const lastMsg = thread?.lastMsg;
+    try {
+      await Message.create({
+        sender_email: currentUser?.email || "taximizerpro@gmail.com",
+        sender_name: currentUser?.full_name || "Italy",
+        sender_role: "admin",
+        recipient_email: lastMsg?.sender_email !== currentUser?.email ? lastMsg?.sender_email : lastMsg?.recipient_email,
+        subject: "Re: " + (lastMsg?.subject || ""),
+        body: reply,
+        thread_id: selectedThread,
+        channel: "app",
+        message_type: "outbound",
+        status: "sent",
+        read_by: [currentUser?.email],
+        reply_to: lastMsg?.id,
+      });
+      setReply("");
+      loadMessages();
+    } catch (e) { console.error(e); }
+    setSending(false);
+  }
+
+  const selectedThreadData = threads.find(t => t.id === selectedThread);
 
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"/>
+      <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent"></div>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
-          <Link to={createPageUrl("Dashboard")} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
-            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
-            </svg>
-          </Link>
-          <div className="flex items-center gap-2 flex-1">
-            <img src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/883f43554_generated_image.png" alt="TaximizerPro" class="h-8 w-auto" />
-            <span className="font-black text-sm text-slate-800">Messages</span>
-            {unreadCount > 0 && <span className="text-xs bg-red-500 text-white rounded-full px-2 py-0.5 font-bold">{unreadCount} new</span>}
-          </div>
-          <button onClick={()=>setShowNew(true)} className="bg-amber-400 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors shadow-sm">
-            + New
-          </button>
+      <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-bold text-slate-900">Messages</h1>
+          <p className="text-xs text-slate-500">{threads.length} conversations</p>
         </div>
-      </nav>
+        <button onClick={() => setCompose(true)}
+          className="bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium px-4 py-2 rounded-lg">
+          + New Message
+        </button>
+      </div>
 
-      {/* New Thread Modal */}
-      {showNew && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md space-y-4 shadow-xl border border-slate-100">
-            <div className="flex items-center justify-between">
-              <h3 className="font-black text-slate-800">New Message</h3>
-              <button onClick={()=>setShowNew(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+      <div className="flex flex-1 max-w-6xl mx-auto w-full px-4 py-6 gap-4 h-[calc(100vh-70px)]">
+        {/* Thread List */}
+        <div className="w-72 flex-shrink-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+          <div className="px-4 py-3 border-b border-slate-100">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Inbox</p>
+          </div>
+          <div className="overflow-y-auto flex-1 divide-y divide-slate-100">
+            {threads.map(t => (
+              <button key={t.id} onClick={() => setSelectedThread(t.id)}
+                className={`w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors ${selectedThread === t.id ? "bg-blue-50 border-r-2 border-blue-600" : ""}`}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <p className={`text-sm truncate ${t.unread ? "font-semibold text-slate-900" : "text-slate-700"}`}>
+                    {t.lastMsg?.sender_email === (currentUser?.email || "taximizerpro@gmail.com") ? t.lastMsg?.recipient_email : t.lastMsg?.sender_email}
+                  </p>
+                  {t.unread && <div className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0"></div>}
+                </div>
+                <p className="text-xs text-slate-500 truncate">{t.subject}</p>
+                <p className="text-xs text-slate-400 truncate mt-0.5">{t.lastMsg?.body}</p>
+              </button>
+            ))}
+            {threads.length === 0 && (
+              <div className="p-6 text-center text-slate-400 text-sm">No messages yet</div>
+            )}
+          </div>
+        </div>
+
+        {/* Message View */}
+        <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+          {selectedThreadData ? (
+            <>
+              <div className="px-5 py-3 border-b border-slate-100">
+                <p className="font-semibold text-slate-900 text-sm">{selectedThreadData.subject}</p>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {selectedThreadData.messages.map(m => {
+                  const isMe = m.sender_email === (currentUser?.email || "taximizerpro@gmail.com");
+                  return (
+                    <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-sm rounded-2xl px-4 py-2.5 text-sm ${isMe ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-800"}`}>
+                        {!isMe && <p className="text-xs font-medium mb-1 opacity-70">{m.sender_name || m.sender_email}</p>}
+                        <p>{m.body}</p>
+                        <p className={`text-xs mt-1 opacity-60`}>
+                          {new Date(m.created_date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={bottomRef} />
+              </div>
+              <div className="px-4 py-3 border-t border-slate-100 flex gap-2">
+                <textarea
+                  rows={2}
+                  placeholder="Type a reply..."
+                  className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={reply}
+                  onChange={e => setReply(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
+                />
+                <button onClick={sendReply} disabled={sending || !reply.trim()}
+                  className="bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-800 disabled:opacity-40 self-end">
+                  Send
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center text-slate-400">
+                <p className="text-4xl mb-3">💬</p>
+                <p className="text-sm">Select a conversation to read</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Compose Modal */}
+      {compose && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <h2 className="text-base font-semibold text-slate-900">New Message</h2>
+            <div>
+              <label className="text-xs font-medium text-slate-600">To</label>
+              <input type="email" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={newMsg.to} onChange={e => setNewMsg(p => ({...p, to: e.target.value}))} />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1">To</label>
-              <select value={newTo} onChange={e=>setNewTo(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-amber-400">
-                <option value="">Select recipient...</option>
-                {contacts.map(c => (
-                  <option key={c.email} value={c.email}>{c.name} ({c.role})</option>
-                ))}
-              </select>
+              <label className="text-xs font-medium text-slate-600">Subject</label>
+              <input className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={newMsg.subject} onChange={e => setNewMsg(p => ({...p, subject: e.target.value}))} />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1">Subject</label>
-              <input value={newSubj} onChange={e=>setNewSubj(e.target.value)} placeholder="What's this about?"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-amber-400"/>
+              <label className="text-xs font-medium text-slate-600">Message</label>
+              <textarea rows={4} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mt-1 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={newMsg.body} onChange={e => setNewMsg(p => ({...p, body: e.target.value}))} />
             </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1">Message</label>
-              <textarea value={body} onChange={e=>setBody(e.target.value)} rows={3} placeholder="Write your message..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-amber-400 resize-none"/>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={()=>setShowNew(false)} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-semibold transition-colors">Cancel</button>
-              <button onClick={startNewThread} disabled={!newTo||!newSubj.trim()||sending}
-                className="flex-1 py-2.5 bg-amber-400 hover:bg-amber-500 text-white rounded-xl text-sm font-black transition-colors disabled:opacity-50 shadow-sm">
-                Send
+            <div className="flex justify-end gap-3 pt-2">
+              <button onClick={() => setCompose(false)} className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2">Cancel</button>
+              <button onClick={sendMessage} disabled={sending}
+                className="bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-blue-800 disabled:opacity-40">
+                {sending ? "Sending..." : "Send"}
               </button>
             </div>
           </div>
         </div>
       )}
-
-      <div className="flex-1 flex max-w-7xl mx-auto w-full">
-        {/* Thread list */}
-        <div className="w-72 flex-shrink-0 border-r border-slate-200 bg-white overflow-y-auto hidden sm:block">
-          {threads.length === 0 ? (
-            <div className="p-6 text-center text-slate-400 text-sm">No messages yet.<br/>Start a conversation!</div>
-          ) : threads.map(t => {
-            const last = t.messages[t.messages.length-1];
-            const hasUnread = t.messages.some(m=>m.recipient_email===user?.email && !m.read_by?.includes(user?.email));
-            return (
-              <button key={t.id} onClick={()=>setActive(t.id)}
-                className={`w-full text-left px-4 py-3.5 border-b border-slate-50 hover:bg-slate-50 transition-colors ${active===t.id ? "bg-amber-50 border-l-2 border-l-amber-400" : ""}`}>
-                <div className="flex items-center justify-between mb-0.5">
-                  <div className="text-sm font-semibold text-slate-800 truncate flex-1">{t.subject}</div>
-                  {hasUnread && <div className="w-2 h-2 bg-amber-400 rounded-full flex-shrink-0 ml-2"/>}
-                </div>
-                <div className="text-xs text-slate-400 truncate">{t.other}</div>
-                <div className="text-xs text-slate-400 mt-0.5 truncate">{last?.body?.slice(0,50)}</div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Message view */}
-        <div className="flex-1 flex flex-col bg-slate-50">
-          {!active ? (
-            <div className="flex-1 flex items-center justify-center flex-col gap-3 text-slate-400">
-              <div className="text-4xl">💬</div>
-              <div className="text-sm">Select a conversation or start a new one</div>
-              <button onClick={()=>setShowNew(true)} className="mt-2 bg-amber-400 hover:bg-amber-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors shadow-sm">
-                + New Message
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* Thread header */}
-              <div className="bg-white border-b border-slate-200 px-5 py-4">
-                <div className="font-bold text-slate-800">{threads.find(t=>t.id===active)?.subject}</div>
-                <div className="text-xs text-slate-400">{threads.find(t=>t.id===active)?.other}</div>
-              </div>
-
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {messages.map(m => {
-                  const mine = m.sender_email === user?.email;
-                  return (
-                    <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-sm px-4 py-3 rounded-2xl text-sm shadow-sm ${
-                        mine ? "bg-amber-400 text-white rounded-br-sm" : "bg-white border border-slate-200 text-slate-800 rounded-bl-sm"
-                      }`}>
-                        {!mine && <div className="text-xs font-bold mb-1 opacity-60">{m.sender_name || m.sender_email}</div>}
-                        <div className="leading-relaxed">{m.body}</div>
-                        <div className={`text-xs mt-1.5 opacity-60 ${mine ? "text-right" : ""}`}>
-                          {new Date(m.created_date).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div ref={bottomRef}/>
-              </div>
-
-              {/* Input */}
-              <div className="bg-white border-t border-slate-200 p-4">
-                <div className="flex gap-3">
-                  <input
-                    value={body} onChange={e=>setBody(e.target.value)}
-                    onKeyDown={e=>{ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();} }}
-                    placeholder="Type a message..."
-                    className="flex-1 bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-400 transition-colors"
-                  />
-                  <button onClick={send} disabled={!body.trim()||sending}
-                    className="bg-amber-400 hover:bg-amber-500 text-white rounded-xl px-4 py-2.5 font-bold text-sm transition-colors disabled:opacity-50 shadow-sm">
-                    {sending ? "..." : "Send"}
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

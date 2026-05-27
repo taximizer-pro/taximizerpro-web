@@ -1,133 +1,159 @@
 import { useState, useEffect } from "react";
-import { ClientMilestone, StaffMember } from "@/api/entities";
+import { TaxClient } from "@/api/entities";
 import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import { useUser } from "@/hooks/useUser";
 
-const STATUS_STYLE = {
-  approved: "bg-emerald-400/10 text-emerald-400 border-emerald-400/20",
-  pending:  "bg-amber-400/10 text-amber-400 border-amber-400/20",
-  rejected: "bg-red-400/10 text-red-400 border-red-400/20",
-  active:   "bg-blue-400/10 text-blue-400 border-blue-400/20",
+const STATUS_COLORS = {
+  pending: "bg-amber-100 text-amber-800",
+  active: "bg-blue-100 text-blue-800",
+  filed: "bg-green-100 text-green-800",
+  complete: "bg-emerald-100 text-emerald-800",
+  funded: "bg-purple-100 text-purple-800",
 };
 
 export default function Clients() {
-  const { data: user } = useUser();
-  const [milestones, setMilestones] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [filtered, setFiltered] = useState([]);
   const [search, setSearch] = useState("");
-  const [yearFilter, setYearFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    ClientMilestone.list().then(ms => { setMilestones(ms); setLoading(false); });
-  }, []);
+  useEffect(() => { loadClients(); }, []);
+  useEffect(() => { applyFilters(); }, [clients, search, statusFilter]);
 
-  // Group by client
-  const clientMap = {};
-  milestones.forEach(m => {
-    if (!clientMap[m.client_id]) clientMap[m.client_id] = { id: m.client_id, name: m.client_name, years: {}, latest: m };
-    if (!clientMap[m.client_id].years[m.tax_year]) clientMap[m.client_id].years[m.tax_year] = [];
-    clientMap[m.client_id].years[m.tax_year].push(m);
-    if (new Date(m.updated_date) > new Date(clientMap[m.client_id].latest.updated_date)) {
-      clientMap[m.client_id].latest = m;
+  async function loadClients() {
+    try {
+      const data = await TaxClient.list();
+      setClients(data);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  }
+
+  function applyFilters() {
+    let result = [...clients];
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(c =>
+        (c.full_name || "").toLowerCase().includes(q) ||
+        (c.email || "").toLowerCase().includes(q) ||
+        (c.phone || "").includes(q)
+      );
     }
-  });
+    if (statusFilter !== "all") {
+      result = result.filter(c => c.filing_status === statusFilter);
+    }
+    setFiltered(result);
+  }
 
-  let clients = Object.values(clientMap);
-  if (search) clients = clients.filter(c => c.name?.toLowerCase().includes(search.toLowerCase()));
-  if (yearFilter !== "all") clients = clients.filter(c => c.years[yearFilter]);
-  clients.sort((a,b) => new Date(b.latest.updated_date) - new Date(a.latest.updated_date));
-
-  const years = [...new Set(milestones.map(m=>m.tax_year))].sort((a,b)=>b-a);
+  if (loading) return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent"></div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
-          <Link to={createPageUrl("Dashboard")} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
-            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
-            </svg>
-          </Link>
-          <div className="flex items-center gap-3">
-            <img src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/883f43554_generated_image.png" alt="TaximizerPro" class="h-8 w-auto" />
-            <span className="font-black text-base">Clients</span>
-          </div>
-          <div className="ml-auto">
-            <Link to={createPageUrl("NewClient")} className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-[#080F1E] font-bold px-4 py-2 rounded-xl transition-colors text-sm">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/>
-              </svg>
-              New Client
-            </Link>
-          </div>
+      <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-bold text-slate-900">Clients</h1>
+          <p className="text-xs text-slate-500">{clients.length} total clients</p>
         </div>
-      </nav>
+        <Link to="/clients/new"
+          className="bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+          + New Client
+        </Link>
+      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5">
-        {/* Search + Filter */}
+      <div className="max-w-7xl mx-auto px-6 py-6 space-y-4">
+        {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-            <input type="text" placeholder="Search clients..." value={search} onChange={e=>setSearch(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-400/50"/>
-          </div>
-          <div className="flex gap-2 overflow-x-auto">
-            {["all",...years].map(y => (
-              <button key={y} onClick={() => setYearFilter(String(y))}
-                className={`flex-shrink-0 text-xs font-semibold px-3 py-2 rounded-xl border transition-colors ${
-                  yearFilter === String(y) ? "bg-amber-400 border-amber-400 text-[#080F1E]" : "bg-white border-slate-200 text-slate-400 hover:border-amber-400/30"
-                }`}>
-                {y === "all" ? "All Years" : y}
-              </button>
-            ))}
-          </div>
+          <input
+            type="text"
+            placeholder="Search by name, email, or phone..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="flex-1 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="border border-slate-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="active">Active</option>
+            <option value="filed">Filed</option>
+            <option value="funded">Funded</option>
+            <option value="complete">Complete</option>
+          </select>
         </div>
 
-        {/* Count */}
-        <div className="text-sm text-slate-500">{clients.length} client{clients.length !== 1 ? 's' : ''}</div>
-
-        {/* List */}
-        <div className="space-y-2">
-          {loading ? (
-            <div className="bg-white border border-slate-200 rounded-2xl py-16 text-center text-slate-500 text-sm">Loading...</div>
-          ) : clients.length === 0 ? (
-            <div className="bg-white border border-slate-200 rounded-2xl py-16 text-center">
-              <div className="text-4xl mb-3">👥</div>
-              <div className="text-slate-500 text-sm">No clients yet. Add your first one!</div>
-            </div>
-          ) : clients.map(c => {
-            const yrs = Object.keys(c.years).sort((a,b)=>b-a);
-            const latestMilestone = c.latest.milestone;
-            return (
-              <Link key={c.id} to={createPageUrl("ClientDetail")+"?id="+c.id}
-                className="flex items-center gap-4 bg-white border border-slate-200 hover:border-amber-400/20 rounded-2xl px-5 py-4 transition-all group">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400/20 to-orange-500/20 border border-amber-400/20 flex items-center justify-center text-amber-400 font-black text-sm flex-shrink-0">
-                  {(c.name||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-slate-800 text-sm">{c.name}</div>
-                  <div className="text-xs text-slate-500 mt-0.5">
-                    {yrs.join(", ")} · {Object.values(c.years).flat().length} filing{Object.values(c.years).flat().length !== 1 ? 's' : ''}
-                  </div>
-                </div>
-                <div className="hidden sm:flex items-center gap-2">
-                  {yrs.slice(0,3).map(y => (
-                    <span key={y} className="text-xs font-medium px-2 py-1 rounded-lg bg-slate-100 text-slate-400">{y}</span>
-                  ))}
-                </div>
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border flex-shrink-0 ${STATUS_STYLE[c.latest.status] || "bg-slate-700/50 text-slate-400 border-slate-600/50"}`}>
-                  {latestMilestone}
-                </span>
-                <svg className="w-4 h-4 text-slate-600 group-hover:text-amber-400 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
-                </svg>
-              </Link>
-            );
-          })}
+        {/* Table */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Client</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide hidden md:table-cell">Contact</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide hidden md:table-cell">Tax Year(s)</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Status</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide hidden lg:table-cell">Step</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map(client => (
+                <tr key={client.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-semibold text-blue-700">
+                          {(client.first_name?.[0] || "") + (client.last_name?.[0] || "")}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900">{client.full_name}</p>
+                        <p className="text-xs text-slate-400">{client.city}, {client.state}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 hidden md:table-cell">
+                    <p className="text-slate-700">{client.email}</p>
+                    <p className="text-xs text-slate-400">{client.phone}</p>
+                  </td>
+                  <td className="px-4 py-3 hidden md:table-cell text-slate-700">{client.tax_year || "—"}</td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_COLORS[client.filing_status] || STATUS_COLORS.pending}`}>
+                      {client.filing_status || "pending"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    <div className="flex items-center gap-2">
+                      <div className="w-24 bg-slate-200 rounded-full h-1.5">
+                        <div
+                          className="bg-blue-600 h-1.5 rounded-full"
+                          style={{ width: `${((Math.round(client.current_step || 1)) / 7) * 100}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-xs text-slate-500">{Math.round(client.current_step || 1)}/7</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Link to={`/clients/${client.id}`}
+                      className="text-blue-700 hover:text-blue-900 text-xs font-medium">
+                      View →
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-12 text-center text-slate-400 text-sm">
+                    No clients found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
