@@ -72,9 +72,9 @@ export default function NewClient() {
       const fullName = [form.first_name, form.middle_init, form.last_name].filter(Boolean).join(" ");
 
       // Build address — append apt directly if present
-      const fullAddress = form.apt
-        ? `${form.address} ${form.apt}`.trim()
-        : form.address;
+      // Only append apt if it's a real non-empty value
+      const aptClean = (form.apt || "").trim().replace(/^(apt\.?|unit|#)\s*/i, "");
+      const fullAddress = aptClean ? `${form.address} ${aptClean}`.trim() : form.address;
 
       // Format SSN as digits only
       const ssnClean = (form.ssn || "").replace(/\D/g, "");

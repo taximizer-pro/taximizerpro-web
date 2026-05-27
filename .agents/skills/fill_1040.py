@@ -71,7 +71,8 @@ def fill_1040(template_path, output_path, year, client, signature_image_path=Non
     today   = date.today().strftime('%m/%d/%Y')
     ssn     = client.get('ssn','').replace('-','').replace(' ','')
     first_m = (client['first_name'] + ' ' + client.get('middle_init','')).strip()
-    apt_val = (client.get('apt') or '').strip()
+    apt_raw = str(client.get("apt") or "").strip()
+    apt_val = apt_raw if apt_raw and apt_raw.lower() not in ("none","null","apt","apt.","#","unit","") else ""
     address = (client.get('address','') + (' ' + apt_val if apt_val else '')).strip()
 
     tokens = {
