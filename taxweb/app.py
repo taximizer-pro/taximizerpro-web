@@ -14,9 +14,9 @@ ADMINS = {
 
 MASTER_IDS = {
     '2022': '1iLxjqGceVwVcLtb8w5UW1-FHTQRR8hyy',
-    '2023': '1JiPyLqgPC0yZg70BuJz9WeW1zauCxdp3',
-    '2024': '1PO0Mh-Mo8f9M_FVPfxLq2h8AKWw_L4fl',
-    '2025': '1Q2CIM4rnIjQ4TVAlhpoZc5iUFdamAClM',
+    '2023': '11EliCV6RXer1bA_eqnFLB5esDZsJefiu',
+    '2024': '1jeO8jBbrjHg7IkTfQyv7eJiTPuP-3d_W',
+    '2025': '1YrqK6Y3p-QgxzlIi0b7ph3XNAfmDX6mc',
 }
 ROOT_FOLDER = "TaximizerPro V 2.0 Clients"
 APP_ID = "6a13ae4b43ea85cec629af77"
@@ -30,19 +30,32 @@ def clean_apt(val):
     return "" if v.lower() in APT_JUNK else v
 
 # ── Field maps (verified against IRS templates) ───────────────────────────────
+# ── VERIFIED FIELD MAPS (from FILLABLE_ Drive templates, confirmed 2026-05-27) ─
+# 2023/2024: f1_04=FirstMid, f1_05=Last, f1_06=SSN, f1_10=Addr, f1_11=Apt,
+#            f1_12=City, f1_13=State, f1_14=ZIP
+#            P2: f2_37=Routing(x=135), f2_38=Account(x=324), c2_7=Checking,
+#                f2_39=Occupation(x=92), f2_40=Date(x=447)
+# 2025:      f1_14=FirstMid, f1_15=Last, f1_16=SSN, f1_20=Addr, f1_21=Apt,
+#            f1_22=City, f1_23=State, f1_24=ZIP
+#            P2: f2_32=Routing(x=180), f2_33=Account(x=180), c2_16=Checking,
+#                f2_40=Date(x=325)  — HELPER as text overlay at (347,654)
 P1 = {
     '2022': {'f1_04[0]':'FM','f1_05[0]':'LN','f1_06[0]':'SSN','f1_11[0]':'ADDR','f1_14[0]':'CITY','f1_15[0]':'ST','f1_16[0]':'ZIP'},
     '2023': {'f1_04[0]':'FM','f1_05[0]':'LN','f1_06[0]':'SSN','f1_10[0]':'ADDR','f1_12[0]':'CITY','f1_13[0]':'ST','f1_14[0]':'ZIP'},
     '2024': {'f1_04[0]':'FM','f1_05[0]':'LN','f1_06[0]':'SSN','f1_10[0]':'ADDR','f1_12[0]':'CITY','f1_13[0]':'ST','f1_14[0]':'ZIP'},
-    '2025': {'f1_04[0]':'FM','f1_05[0]':'LN','f1_06[0]':'SSN','f1_11[0]':'ADDR','f1_14[0]':'CITY','f1_15[0]':'ST','f1_16[0]':'ZIP'},
+    '2025': {'f1_14[0]':'FM','f1_15[0]':'LN','f1_16[0]':'SSN','f1_20[0]':'ADDR','f1_22[0]':'CITY','f1_23[0]':'ST','f1_24[0]':'ZIP'},
 }
+APT_FIELD = {'2022':'f1_12[0]','2023':'f1_11[0]','2024':'f1_11[0]','2025':'f1_21[0]'}
+SINGLE_CHK = {'2022':'c1_3[0]','2023':'c1_3[1]','2024':'c1_3[0]','2025':'c1_8[0]'}
+DIGITAL_NO = {'2023':'c1_4[1]','2024':'c1_5[1]','2025':'c1_10[1]'}
 P2 = {
-    '2022': {'f2_32[0]':'RT','f2_33[0]':'AC','f2_40[0]':'OCC'},
-    '2023': {'f2_33[0]':'RT','f2_35[0]':'AC','f2_39[0]':'OCC'},
-    '2024': {'f2_33[0]':'RT','f2_35[0]':'AC','f2_39[0]':'OCC'},
-    '2025': {'f2_32[0]':'RT','f2_33[0]':'AC','f2_40[0]':'OCC'},
+    '2022': {'f2_32[0]':'RT','f2_33[0]':'AC'},
+    '2023': {'f2_37[0]':'RT','f2_38[0]':'AC','f2_39[0]':'OCC','f2_40[0]':'DATE'},
+    '2024': {'f2_37[0]':'RT','f2_38[0]':'AC','f2_39[0]':'OCC','f2_40[0]':'DATE'},
+    '2025': {'f2_32[0]':'RT','f2_33[0]':'AC','f2_40[0]':'DATE'},
 }
-DATE_XY = {'2022':(250,651),'2023':(250,551),'2024':(250,551),'2025':(250,651)}
+CHK2 = {'2022':'c2_4[0]','2023':'c2_7[0]','2024':'c2_7[0]','2025':'c2_16[0]'}
+DATE_XY = {'2022':(250,651),'2023':None,'2024':None,'2025':None}
 
 # ── Drive helpers ─────────────────────────────────────────────────────────────
 def dtok(): return os.environ.get("GOOGLEDRIVE_ACCESS_TOKEN","")
@@ -86,25 +99,20 @@ def fill_form(tmpl_bytes, yr, c):
     today = date.today().strftime("%m/%d/%Y")
     ssn   = (c.get("ssn") or "").replace("-","").replace(" ","")
     fm    = (c.get("first_name","") + " " + (c.get("middle_init") or "")).strip()
-
-    # ── APT FIX: use clean_apt() — never let blank/junk through ──────────────
     apt   = clean_apt(c.get("apt",""))
-    addr  = c.get("address","").strip()
-    if apt:
-        addr = addr + " " + apt   # e.g. "123 Main St 4B"
-    addr = addr.strip()
 
-    tok = {
+    vals = {
         "FM":   fm,
-        "LN":   c.get("last_name",""),
+        "LN":   c.get("last_name","").strip(),
         "SSN":  ssn,
-        "ADDR": addr,
-        "CITY": c.get("city",""),
-        "ST":   c.get("state",""),
-        "ZIP":  c.get("zip",""),
-        "RT":   c.get("bank_routing",""),
-        "AC":   c.get("bank_account",""),
-        "OCC":  "HELPER",   # HARDCODED — NEVER CHANGE
+        "ADDR": c.get("address","").strip(),
+        "CITY": c.get("city","").strip(),
+        "ST":   c.get("state","").strip(),
+        "ZIP":  c.get("zip","").strip(),
+        "RT":   c.get("bank_routing","").strip(),
+        "AC":   c.get("bank_account","").strip(),
+        "OCC":  "HELPER",
+        "DATE": today,
     }
 
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tf:
@@ -114,42 +122,64 @@ def fill_form(tmpl_bytes, yr, c):
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tf:
         out_path = tf.name
 
-    # Repair PDF first
     doc = fitz.open(tmpl_path)
     doc.save(tmp_path, garbage=4, deflate=True, incremental=False)
     doc.close()
-
     doc = fitz.open(tmp_path)
 
+    def sf(pg, sn, val):
+        for w in doc[pg].widgets():
+            if w.field_name.split(".")[-1] == sn and w.field_type_string == "Text":
+                w.field_value = str(val); w.update(); return True
+        return False
+
+    def chk(pg, sn):
+        for w in doc[pg].widgets():
+            if w.field_name.split(".")[-1] == sn and w.field_type_string == "CheckBox":
+                w.field_value = True; w.update(); return True
+        return False
+
     # Page 1 — personal info
-    for w in doc[0].widgets():
-        sn = w.field_name.split(".")[-1]
-        if w.field_type_string == "Text" and sn in P1.get(yr,{}):
-            val = tok.get(P1[yr][sn], "")
-            if val:
-                w.field_value = val
-                w.update()
+    for sn, key in P1.get(yr, {}).items():
+        sf(0, sn, vals.get(key, ""))
 
-    # Page 2 — bank + occupation
-    for w in doc[1].widgets():
-        sn = w.field_name.split(".")[-1]
-        if w.field_type_string == "Text" and sn in P2.get(yr,{}):
-            val = tok.get(P2[yr][sn], "")
-            if val:
-                w.field_value = val
-                w.update()
+    # Apt — only if real value
+    apt_sn = APT_FIELD.get(yr)
+    if apt_sn and apt:
+        sf(0, apt_sn, apt)
 
-    # Date stamp
-    dx, dy = DATE_XY[yr]
-    doc[1].insert_text((dx, dy), today, fontname="helv", fontsize=7, color=(0,0,0))
+    # Single filing status checkbox
+    single_sn = SINGLE_CHK.get(yr)
+    if single_sn:
+        chk(0, single_sn)
+
+    # Digital assets NO checkbox
+    dig_sn = DIGITAL_NO.get(yr)
+    if dig_sn:
+        chk(0, dig_sn)
+
+    # Page 2 — bank + date
+    for sn, key in P2.get(yr, {}).items():
+        sf(1, sn, vals.get(key, ""))
+
+    # Checking checkbox
+    chk2_sn = CHK2.get(yr)
+    if chk2_sn:
+        chk(1, chk2_sn)
+
+    # HELPER occupation — always text overlay
+    if yr in ("2023", "2024"):
+        doc[1].insert_text((92, 548), "HELPER", fontname="helv", fontsize=9, color=(0,0,0))
+    else:  # 2025
+        doc[1].insert_text((347, 654), "HELPER", fontname="helv", fontsize=9, color=(0,0,0))
 
     # Signature image
     sig_data = c.get("signature_data","")
     if sig_data and sig_data.startswith("data:image"):
         try:
             b64 = sig_data.split(",")[1]
-            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as sf:
-                sf.write(base64.b64decode(b64)); sig_path = sf.name
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as sf2:
+                sf2.write(base64.b64decode(b64)); sig_path = sf2.name
             if yr in ("2023","2024"):
                 sr = fitz.Rect(91.6, 536.0, 240.0, 556.0)
             else:
@@ -161,7 +191,7 @@ def fill_form(tmpl_bytes, yr, c):
 
     doc.save(out_path, garbage=4, deflate=True, incremental=False)
     doc.close()
-    with open(out_path,"rb") as f: result = f.read()
+    with open(out_path,"rb") as f2: result = f2.read()
     for p in [tmpl_path, tmp_path, out_path]:
         try: os.unlink(p)
         except: pass
