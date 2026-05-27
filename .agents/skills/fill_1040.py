@@ -345,3 +345,31 @@ def generate_forms_for_client(c):
     
     folder_url = f"https://drive.google.com/drive/folders/{client_folder_id}"
     return links, folder_url
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+if __name__ == '__main__':
+    import sys
+    
+    # Read clients from stdin (JSON array)
+    try:
+        raw = sys.stdin.read().strip()
+        if not raw:
+            print("No input provided")
+            sys.exit(0)
+        clients = json.loads(raw)
+        if not isinstance(clients, list):
+            clients = [clients]
+    except json.JSONDecodeError as e:
+        print(f"❌ Invalid JSON: {e}")
+        sys.exit(1)
+    
+    print(f"Processing {len(clients)} client(s)...\n")
+    for c in clients:
+        name = f"{c.get('first_name','')} {c.get('last_name','')}"
+        print(f"→ {name}")
+        links, folder_url = generate_forms_for_client(c)
+        if links:
+            print(f"  📁 Folder: {folder_url}")
+            for yr in sorted(links.keys()):
+                print(f"    {yr}: {links[yr]}")
+        print()
