@@ -1,0 +1,85 @@
+{
+  "type": "object",
+  "properties": {
+    "partner_id": {
+      "type": "string"
+    },
+    "partner_email": {
+      "type": "string"
+    },
+    "partner_name": {
+      "type": "string"
+    },
+    "deal_id": {
+      "type": "string",
+      "description": "ReferralDeal that governs this referral"
+    },
+    "referred_first_name": {
+      "type": "string"
+    },
+    "referred_last_name": {
+      "type": "string"
+    },
+    "referred_email": {
+      "type": "string"
+    },
+    "referred_phone": {
+      "type": "string"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "Linked Client record once they sign up"
+    },
+    "referral_code": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "submitted",
+        "contacted",
+        "in_progress",
+        "filed",
+        "funded",
+        "paid_out",
+        "rejected"
+      ],
+      "default": "submitted"
+    },
+    "tax_year": {
+      "type": "number"
+    },
+    "refund_amount": {
+      "type": "number",
+      "description": "Actual refund amount when funded"
+    },
+    "payout_amount": {
+      "type": "number",
+      "description": "Calculated payout to partner"
+    },
+    "payout_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "paid"
+      ],
+      "default": "pending"
+    },
+    "payout_date": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "referred_by_chain": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Full referral tree chain of partner IDs"
+    }
+  },
+  "required": [],
+  "name": "Referral"
+}

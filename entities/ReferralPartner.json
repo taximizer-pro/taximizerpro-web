@@ -1,0 +1,63 @@
+{
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string"
+    },
+    "full_name": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "client",
+        "partner"
+      ],
+      "description": "client = existing client referring, partner = external referral partner"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "pending"
+      ],
+      "default": "pending"
+    },
+    "referral_code": {
+      "type": "string",
+      "description": "Unique code to share"
+    },
+    "default_deal_type": {
+      "type": "string",
+      "enum": [
+        "flat",
+        "percentage"
+      ],
+      "default": "flat"
+    },
+    "default_deal_value": {
+      "type": "number",
+      "description": "Default $ or % per funded referral"
+    },
+    "total_referrals": {
+      "type": "number",
+      "default": 0
+    },
+    "total_earned": {
+      "type": "number",
+      "default": 0
+    },
+    "notes": {
+      "type": "string"
+    },
+    "invited_by": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "name": "ReferralPartner"
+}

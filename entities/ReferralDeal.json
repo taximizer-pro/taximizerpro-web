@@ -1,0 +1,82 @@
+{
+  "type": "object",
+  "properties": {
+    "partner_id": {
+      "type": "string",
+      "description": "ReferralPartner record ID"
+    },
+    "partner_email": {
+      "type": "string"
+    },
+    "partner_name": {
+      "type": "string"
+    },
+    "deal_type": {
+      "type": "string",
+      "enum": [
+        "flat",
+        "percentage"
+      ]
+    },
+    "deal_value": {
+      "type": "number",
+      "description": "$ amount or % (e.g. 50 = $50 or 10 = 10%)"
+    },
+    "terms_text": {
+      "type": "string",
+      "description": "Full plain-English terms of the deal"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "proposed",
+        "countered",
+        "agreed",
+        "signed",
+        "voided"
+      ],
+      "default": "proposed"
+    },
+    "proposed_by": {
+      "type": "string",
+      "description": "email of who proposed"
+    },
+    "agreed_by_partner": {
+      "type": "boolean",
+      "default": false
+    },
+    "agreed_by_admin": {
+      "type": "boolean",
+      "default": false
+    },
+    "partner_signed_at": {
+      "type": "string"
+    },
+    "admin_signed_at": {
+      "type": "string"
+    },
+    "partner_signature": {
+      "type": "string",
+      "description": "base64 signature image"
+    },
+    "admin_signature": {
+      "type": "string",
+      "description": "base64 signature image"
+    },
+    "effective_date": {
+      "type": "string"
+    },
+    "expiry_date": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "version": {
+      "type": "number",
+      "default": 1
+    }
+  },
+  "required": [],
+  "name": "ReferralDeal"
+}
