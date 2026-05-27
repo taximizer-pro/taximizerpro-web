@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Tracker — TaximizerPro{% endblock %}
+{% block content %}
+<div class="p-8">
+  <div class="mb-6">
+    <h1 class="text-2xl font-black text-slate-800">Filing Tracker</h1>
+    <p class="text-slate-500 text-sm mt-1">Track every client through all 5 stages of the filing process.</p>
+  </div>
+
+  <!-- Pipeline Steps -->
+  <div class="grid grid-cols-5 gap-4 mb-8" id="pipeline-cols">
+    {% set steps = [('📁','Documents','Step 1','slate'),('🔍','Under Review','Step 2','blue'),('✍️','Ready to Sign','Step 3','purple'),('📤','Filed','Step 4','amber'),('💸','Funded','Step 5','green')] %}
+    {% for icon, label, step, color in steps %}
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-50 flex items-center gap-2">
+        <span class="text-lg">{{ icon }}</span>
+        <div>
+          <div class="text-xs font-bold text-slate-700">{{ label }}</div>
+          <div class="text-xs text-slate-400">{{ step }}</div>
+        </div>
+      </div>
+      <div class="p-3 space-y-2 min-h-32" id="col-{{ loop.index0 }}">
+        <div class="text-xs text-slate-300 text-center py-4">Loading...</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+const stepMap = {
+  1: 0, // Documents
+  2: 1, // Under Review
+  3: 2, // Ready to Sign
+  4: 3, // Filed → also filing_status filed
+  5: 4, // Funded
+};
+
+fetch("/api/clients").then(r=>r.json()).then(clients=>{
+  // Clear
+  for(let i=0;i<5;i++) document.getElementById("col-"+i).innerHTML="";
+
+  clients.forEach(c=>{
+    let col = 0;
+    if(c.filing_status === "filed") col = 3;
+    else if(c.current_step) col = Math.min(Math.max(Math.floor(c.current_step)-1, 0), 4);
+
+    const el = document.createElement("div");
+    el.className = "bg-slate-50 rounded-xl p-2.5 border border-slate-100 cursor-pointer hover:border-amber-300 transition-colors";
+    el.innerHTML = `<div class="text-xs font-semibold text-slate-700 truncate">${c.full_name||c.first_name+' '+c.last_name}</div>
+      <div class="text-xs text-slate-400 truncate mt-0.5">${c.tax_year||''}</div>`;
+    document.getElementById("col-"+col).appendChild(el);
+  });
+
+  // Show empty state
+  for(let i=0;i<5;i++){
+    const col = document.getElementById("col-"+i);
+    if(!col.children.length) col.innerHTML='<div class="text-xs text-slate-300 text-center py-3">Empty</div>';
+  }
+});
+</script>
+{% endblock %}

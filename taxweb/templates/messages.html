@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Messages — TaximizerPro{% endblock %}
+{% block content %}
+<div class="flex h-screen">
+  <!-- Client list -->
+  <div class="w-72 bg-white border-r border-slate-100 flex flex-col">
+    <div class="px-4 py-4 border-b border-slate-100">
+      <h2 class="font-bold text-slate-800 text-sm">Messages</h2>
+      <input type="text" placeholder="Search clients..." id="msg-search" class="mt-2 w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-amber-300">
+    </div>
+    <div class="flex-1 overflow-y-auto" id="thread-list">
+      <div class="px-4 py-6 text-center text-slate-400 text-xs">Loading...</div>
+    </div>
+  </div>
+
+  <!-- Chat area -->
+  <div class="flex-1 flex flex-col bg-slate-50">
+    <div id="chat-header" class="bg-white border-b border-slate-100 px-6 py-4 flex items-center gap-3">
+      <div class="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center text-amber-700 font-bold" id="chat-avatar">—</div>
+      <div>
+        <div class="font-semibold text-slate-800 text-sm" id="chat-name">Select a client</div>
+        <div class="text-xs text-slate-400" id="chat-email">to start messaging</div>
+      </div>
+    </div>
+    <div class="flex-1 overflow-y-auto p-6 space-y-3" id="chat-messages">
+      <div class="text-center text-slate-300 text-xs mt-20">Select a client to view messages</div>
+    </div>
+    <div class="bg-white border-t border-slate-100 p-4 flex gap-3" id="chat-input-area">
+      <input type="text" id="msg-input" placeholder="Type a message..." disabled
+        class="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-300 disabled:opacity-50">
+      <button id="send-btn" onclick="sendMessage()" disabled
+        class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-5 py-2.5 rounded-xl transition-colors disabled:opacity-50 text-sm">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let clients = [], selectedClient = null, messages = {};
+
+fetch("/api/clients").then(r=>r.json()).then(data=>{
+  clients = data;
+  renderThreadList(clients);
+});
+
+function renderThreadList(list){
+  const box = document.getElementById("thread-list");
+  if(!list.length){ box.innerHTML='<div class="px-4 py-6 text-center text-slate-400 text-xs">No clients</div>'; return; }
+  box.innerHTML = list.map(c=>`
+    <div onclick='selectClient(${JSON.stringify(c)})' id="thread-${c.id}"
+      class="px-4 py-3 border-b border-slate-50 hover:bg-amber-50 cursor-pointer transition-colors">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-xs flex-shrink-0">${(c.first_name||"?")[0]}</div>
+        <div class="min-w-0">
+          <div class="text-xs font-semibold text-slate-700 truncate">${c.full_name||c.first_name+' '+c.last_name}</div>
+          <div class="text-xs text-slate-400 truncate">${c.email||''}</div>
+        </div>
+      </div>
+    </div>`).join("");
+}
+
+document.getElementById("msg-search").addEventListener("input",e=>{
+  const q=e.target.value.toLowerCase();
+  renderThreadList(clients.filter(c=>(c.full_name||"").toLowerCase().includes(q)||(c.email||"").toLowerCase().includes(q)));
+});
+
+function selectClient(c){
+  selectedClient = c;
+  document.getElementById("chat-avatar").textContent = (c.first_name||"?")[0];
+  document.getElementById("chat-name").textContent = c.full_name||c.first_name+" "+c.last_name;
+  document.getElementById("chat-email").textContent = c.email||"";
+  document.getElementById("msg-input").disabled = false;
+  document.getElementById("send-btn").disabled = false;
+  renderMessages(c.id);
+}
+
+function renderMessages(cid){
+  const box = document.getElementById("chat-messages");
+  const msgs = messages[cid] || [];
+  if(!msgs.length){ box.innerHTML='<div class="text-center text-slate-300 text-xs mt-12">No messages yet. Say hello!</div>'; return; }
+  box.innerHTML = msgs.map(m=>`
+    <div class="flex ${m.from==='admin'?'justify-end':'justify-start'}">
+      <div class="max-w-xs px-4 py-2.5 rounded-2xl text-sm ${m.from==='admin'?'bg-amber-500 text-white rounded-br-sm':'bg-white text-slate-700 border border-slate-100 rounded-bl-sm shadow-sm'}">
+        ${m.text}
+        <div class="text-xs mt-1 ${m.from==='admin'?'text-amber-100':'text-slate-400'}">${m.time}</div>
+      </div>
+    </div>`).join("");
+  box.scrollTop = box.scrollHeight;
+}
+
+function sendMessage(){
+  const input = document.getElementById("msg-input");
+  const text = input.value.trim();
+  if(!text||!selectedClient) return;
+  const cid = selectedClient.id;
+  if(!messages[cid]) messages[cid]=[];
+  messages[cid].push({from:'admin',text,time:new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})});
+  input.value="";
+  renderMessages(cid);
+}
+
+document.getElementById("msg-input").addEventListener("keydown",e=>{ if(e.key==="Enter") sendMessage(); });
+</script>
+{% endblock %}
