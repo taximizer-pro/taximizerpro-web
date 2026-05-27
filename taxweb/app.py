@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-import os, json, urllib.request, urllib.parse, fitz, base64, io, tempfile
+import os, json, re, urllib.request, urllib.parse, fitz, base64, io, tempfile
 from datetime import date
 
 app = Flask(__name__)
@@ -13,10 +13,9 @@ ADMINS = {
 }
 
 MASTER_IDS = {
-    '2022': '1iLxjqGceVwVcLtb8w5UW1-FHTQRR8hyy',
-    '2023': '11EliCV6RXer1bA_eqnFLB5esDZsJefiu',
-    '2024': '1jeO8jBbrjHg7IkTfQyv7eJiTPuP-3d_W',
-    '2025': '1YrqK6Y3p-QgxzlIi0b7ph3XNAfmDX6mc',
+    '2023': '1X6LIFErOXnEx9nzOKW-8rBDUN2bfhq4D',
+    '2024': '110bBcABuvofSYrQXLjw3N5DPH1y2Vjan',
+    '2025': '1kQQlQXXTyXjGYtARAP_U5WJ6hWT2Fmc3',
 }
 ROOT_FOLDER = "TaximizerPro V 2.0 Clients"
 APP_ID = "6a13ae4b43ea85cec629af77"
@@ -30,32 +29,31 @@ def clean_apt(val):
     return "" if v.lower() in APT_JUNK else v
 
 # ── Field maps (verified against IRS templates) ───────────────────────────────
-# ── VERIFIED FIELD MAPS (from FILLABLE_ Drive templates, confirmed 2026-05-27) ─
-# 2023/2024: f1_04=FirstMid, f1_05=Last, f1_06=SSN, f1_10=Addr, f1_11=Apt,
-#            f1_12=City, f1_13=State, f1_14=ZIP
-#            P2: f2_37=Routing(x=135), f2_38=Account(x=324), c2_7=Checking,
-#                f2_39=Occupation(x=92), f2_40=Date(x=447)
-# 2025:      f1_14=FirstMid, f1_15=Last, f1_16=SSN, f1_20=Addr, f1_21=Apt,
-#            f1_22=City, f1_23=State, f1_24=ZIP
-#            P2: f2_32=Routing(x=180), f2_33=Account(x=180), c2_16=Checking,
-#                f2_40=Date(x=325)  — HELPER as text overlay at (347,654)
+# ── V16 LOCKED FIELD MAPS (verified 2026-05-27 from new templates) ─────────────
+# Sign row boxes (from get_drawings()):
+#   2023/2024: Box1 Sig x=91.6-273.6 y=462-492 | Box2 Date x=273.6-324 | Box3 Occ f2_33[0]
+#   2025:      Box1 Sig x=91.6-273.6 y=636-666 | Box2 Date x=273.6-324 | Box3 Occ f2_40[0]
 P1 = {
-    '2022': {'f1_04[0]':'FM','f1_05[0]':'LN','f1_06[0]':'SSN','f1_11[0]':'ADDR','f1_14[0]':'CITY','f1_15[0]':'ST','f1_16[0]':'ZIP'},
     '2023': {'f1_04[0]':'FM','f1_05[0]':'LN','f1_06[0]':'SSN','f1_10[0]':'ADDR','f1_12[0]':'CITY','f1_13[0]':'ST','f1_14[0]':'ZIP'},
     '2024': {'f1_04[0]':'FM','f1_05[0]':'LN','f1_06[0]':'SSN','f1_10[0]':'ADDR','f1_12[0]':'CITY','f1_13[0]':'ST','f1_14[0]':'ZIP'},
     '2025': {'f1_14[0]':'FM','f1_15[0]':'LN','f1_16[0]':'SSN','f1_20[0]':'ADDR','f1_22[0]':'CITY','f1_23[0]':'ST','f1_24[0]':'ZIP'},
 }
-APT_FIELD = {'2022':'f1_12[0]','2023':'f1_11[0]','2024':'f1_11[0]','2025':'f1_21[0]'}
-SINGLE_CHK = {'2022':'c1_3[0]','2023':'c1_3[1]','2024':'c1_3[0]','2025':'c1_8[0]'}
-DIGITAL_NO = {'2023':'c1_4[1]','2024':'c1_5[1]','2025':'c1_10[1]'}
-P2 = {
-    '2022': {'f2_32[0]':'RT','f2_33[0]':'AC'},
-    '2023': {'f2_37[0]':'RT','f2_38[0]':'AC','f2_39[0]':'OCC','f2_40[0]':'DATE'},
-    '2024': {'f2_37[0]':'RT','f2_38[0]':'AC','f2_39[0]':'OCC','f2_40[0]':'DATE'},
-    '2025': {'f2_32[0]':'RT','f2_33[0]':'AC','f2_40[0]':'DATE'},
+APT_FIELD  = {'2023':'f1_11[0]','2024':'f1_11[0]','2025':'f1_21[0]'}
+SINGLE_CHK = {'2023':'c1_3[1]', '2024':'c1_3[1]', '2025':'c1_3[1]'}
+P2_BANK = {
+    '2023': {'f2_25[0]':'RT','f2_26[0]':'AC'},
+    '2024': {'f2_25[0]':'RT','f2_26[0]':'AC'},
+    '2025': {'f2_32[0]':'RT','f2_33[0]':'AC'},
 }
-CHK2 = {'2022':'c2_4[0]','2023':'c2_7[0]','2024':'c2_7[0]','2025':'c2_16[0]'}
-DATE_XY = {'2022':(250,651),'2023':None,'2024':None,'2025':None}
+P2_BANK_CLEAR_2025 = ['f2_32[0]','f2_33[0]']   # clear "routing #"/"account #" watermarks
+CHK2 = {'2023':'c2_5[0]','2024':'c2_5[0]','2025':'c2_16[0]'}
+# Sign row — locked pixel coords
+SIGN_CFG = {
+    '2023': {'sig_y':488, 'sig_x0':95,  'sig_x1':270, 'date_x':275, 'occ_sn':'f2_33[0]'},
+    '2024': {'sig_y':488, 'sig_x0':95,  'sig_x1':270, 'date_x':275, 'occ_sn':'f2_33[0]'},
+    '2025': {'sig_y':662, 'sig_x0':95,  'sig_x1':270, 'date_x':275, 'occ_sn':'f2_40[0]'},
+}
+BAD_APT = {"","none","null","apt","apt.","#","unit","n/a","na","apt no","apt no.","-","optional"}
 
 # ── Token store (refreshed by agent every ~45 min) ───────────────────────────
 import threading as _threading
@@ -117,24 +115,19 @@ def upload_pdf(data, name, folder_id):
     return d.get("webViewLink", f"https://drive.google.com/file/d/{d['id']}/view")
 
 def fill_form(tmpl_bytes, yr, c):
-    today = date.today().strftime("%m/%d/%Y")
-    ssn   = (c.get("ssn") or "").replace("-","").replace(" ","")
-    fm    = (c.get("first_name","") + " " + (c.get("middle_init") or "")).strip()
-    apt   = clean_apt(c.get("apt",""))
-
-    vals = {
-        "FM":   fm,
-        "LN":   c.get("last_name","").strip(),
-        "SSN":  ssn,
-        "ADDR": c.get("address","").strip(),
-        "CITY": c.get("city","").strip(),
-        "ST":   c.get("state","").strip(),
-        "ZIP":  c.get("zip","").strip(),
-        "RT":   c.get("bank_routing","").strip(),
-        "AC":   c.get("bank_account","").strip(),
-        "OCC":  "HELPER",
-        "DATE": today,
-    }
+    """V16 — locked coordinates verified 2026-05-27."""
+    today  = date.today().strftime("%m/%d/%Y")
+    ssn    = re.sub(r"\D", "", str(c.get("ssn") or ""))
+    fm     = (c.get("first_name","") + " " + (c.get("middle_init") or "")).strip()
+    last   = (c.get("last_name") or "").strip()
+    apt_raw = str(c.get("apt") or "").strip()
+    apt    = "" if apt_raw.lower() in BAD_APT else apt_raw
+    street = (c.get("address") or "").strip()
+    city   = (c.get("city") or "").strip()
+    state  = (c.get("state") or "").strip()
+    zip_   = (c.get("zip") or "").strip()
+    routing = (c.get("bank_routing") or "").strip()
+    account = (c.get("bank_account") or "").strip()
 
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tf:
         tf.write(tmpl_bytes); tmpl_path = tf.name
@@ -154,61 +147,78 @@ def fill_form(tmpl_bytes, yr, c):
                 w.field_value = str(val); w.update(); return True
         return False
 
+    def clr(pg, sn):
+        for w in doc[pg].widgets():
+            if w.field_name.split(".")[-1] == sn and w.field_type_string == "Text":
+                w.field_value = ""; w.update(); return True
+        return False
+
     def chk(pg, sn):
         for w in doc[pg].widgets():
             if w.field_name.split(".")[-1] == sn and w.field_type_string == "CheckBox":
                 w.field_value = True; w.update(); return True
         return False
 
-    # Page 1 — personal info
+    vals = {"FM":fm,"LN":last,"SSN":ssn,"ADDR":street,"CITY":city,"ST":state,"ZIP":zip_}
+
+    # ── PAGE 1 ──────────────────────────────────────────────────
+    if yr == "2025":
+        # Clear watermarks first on 2025
+        for sn in ["f1_14[0]","f1_15[0]","f1_16[0]","f1_20[0]","f1_21[0]","f1_22[0]","f1_23[0]","f1_24[0]"]:
+            clr(0, sn)
     for sn, key in P1.get(yr, {}).items():
         sf(0, sn, vals.get(key, ""))
-
-    # Apt — only if real value
+    # Apt: always clear first, only write if real value
     apt_sn = APT_FIELD.get(yr)
-    if apt_sn and apt:
-        sf(0, apt_sn, apt)
-
-    # Single filing status checkbox
+    if apt_sn:
+        clr(0, apt_sn)
+        if apt:
+            sf(0, apt_sn, apt)
+    # Single checkbox
     single_sn = SINGLE_CHK.get(yr)
     if single_sn:
         chk(0, single_sn)
 
-    # Digital assets NO checkbox
-    dig_sn = DIGITAL_NO.get(yr)
-    if dig_sn:
-        chk(0, dig_sn)
-
-    # Page 2 — bank + date
-    for sn, key in P2.get(yr, {}).items():
-        sf(1, sn, vals.get(key, ""))
-
-    # Checking checkbox
+    # ── PAGE 2 — Bank ───────────────────────────────────────────
+    # Clear 2025 watermarks
+    if yr == "2025":
+        for sn in P2_BANK_CLEAR_2025:
+            clr(1, sn)
+    for sn, key in P2_BANK.get(yr, {}).items():
+        sf(1, sn, {"RT":routing,"AC":account}.get(key,""))
     chk2_sn = CHK2.get(yr)
     if chk2_sn:
         chk(1, chk2_sn)
 
-    # HELPER occupation — always text overlay
-    if yr in ("2023", "2024"):
-        doc[1].insert_text((92, 548), "HELPER", fontname="helv", fontsize=9, color=(0,0,0))
-    else:  # 2025
-        doc[1].insert_text((347, 654), "HELPER", fontname="helv", fontsize=9, color=(0,0,0))
+    # ── PAGE 2 — Sign Row (v16 locked coords) ───────────────────
+    cfg = SIGN_CFG.get(yr, {})
+    sig_y   = cfg.get("sig_y", 488)
+    sig_x0  = cfg.get("sig_x0", 95)
+    sig_x1  = cfg.get("sig_x1", 270)
+    date_x  = cfg.get("date_x", 275)
+    occ_sn  = cfg.get("occ_sn", "f2_33[0]")
 
-    # Signature image
-    sig_data = c.get("signature_data","")
+    # Signature: embed image if provided, else draw underline
+    sig_data = c.get("signature_data","") or c.get("signature_url","")
     if sig_data and sig_data.startswith("data:image"):
         try:
             b64 = sig_data.split(",")[1]
             with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as sf2:
                 sf2.write(base64.b64decode(b64)); sig_path = sf2.name
-            if yr in ("2023","2024"):
-                sr = fitz.Rect(91.6, 536.0, 240.0, 556.0)
-            else:
-                sr = fitz.Rect(91.6, 636.0, 240.0, 656.0)
-            doc[1].insert_image(sr, filename=sig_path, keep_proportion=True)
+            sig_rect = fitz.Rect(sig_x0, sig_y - 16, sig_x1, sig_y + 2)
+            doc[1].insert_image(sig_rect, filename=sig_path, keep_proportion=True)
             os.unlink(sig_path)
         except:
-            pass
+            doc[1].draw_line((sig_x0, sig_y), (sig_x1, sig_y), color=(0,0,0), width=0.5)
+    else:
+        doc[1].draw_line((sig_x0, sig_y), (sig_x1, sig_y), color=(0,0,0), width=0.5)
+
+    # Date in Date column (Box 2)
+    doc[1].insert_text((date_x, sig_y), today, fontname="helv", fontsize=7, color=(0,0,0))
+
+    # Occupation: clear watermark, set HELPER
+    clr(1, occ_sn)
+    sf(1, occ_sn, "HELPER")
 
     doc.save(out_path, garbage=4, deflate=True, incremental=False)
     doc.close()
