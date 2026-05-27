@@ -129,7 +129,7 @@ def fill_1040(template_path: str, output_path: str, year: str,
         'ZIP':          client.get('zip', ''),
         'ROUTING':      client.get('routing', ''),
         'ACCOUNT':      client.get('account', ''),
-        'SIGNATURE':    signature_text or f"{client['first_name']} {client['last_name']}",
+        'SIGNATURE':    signature_text or '',  # blank if no pad — don't type name in sig field
         'SIG_DATE':     today,               # ONE date, ONE field
         'OCCUPATION':   'HELPER',
     }
