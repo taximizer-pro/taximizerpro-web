@@ -1,120 +1,125 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — TaximizerPro{% endblock %}
 {% block content %}
-<div class="p-8">
+<div style="padding:28px 32px;">
+
   <!-- Header -->
-  <div class="mb-8">
-    <h1 class="text-2xl font-black text-slate-800">Good to see you, {{ user.name }} 👋</h1>
-    <p class="text-slate-500 text-sm mt-1">Here's what's happening across your 387 clients today.</p>
-  </div>
-
-  <!-- Stats -->
-  <div class="grid grid-cols-4 gap-5 mb-8" id="stats-grid">
-    <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-      <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Total Clients</div>
-      <div class="text-3xl font-black text-slate-800" id="stat-total">—</div>
-      <div class="text-xs text-slate-400 mt-1">All time</div>
+  <div style="margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <h1 style="font-size:22px;font-weight:800;color:#0f172a;margin:0;letter-spacing:-.3px;">Welcome back, {{ user.name }} 👊</h1>
+      <p style="color:#64748b;font-size:13px;margin-top:4px;">Here's your money pipeline right now.</p>
     </div>
-    <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-      <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Filed</div>
-      <div class="text-3xl font-black text-green-600" id="stat-filed">—</div>
-      <div class="text-xs text-slate-400 mt-1">Forms generated</div>
-    </div>
-    <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-      <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Pending</div>
-      <div class="text-3xl font-black text-amber-600" id="stat-pending">—</div>
-      <div class="text-xs text-slate-400 mt-1">Awaiting forms</div>
-    </div>
-    <div class="bg-white rounded-2xl border border-amber-100 p-5 shadow-sm bg-amber-50">
-      <div class="text-xs font-semibold text-amber-600 uppercase tracking-wide mb-1">💰 Pipeline Value</div>
-      <div class="text-3xl font-black text-amber-700" id="stat-pipeline">—</div>
-      <div class="text-xs text-amber-500 mt-1">Total refunds in system</div>
+    <div style="text-align:right;">
+      <div style="font-size:11px;color:#94a3b8;font-weight:500;text-transform:uppercase;letter-spacing:.5px;">Today</div>
+      <div style="font-size:14px;color:#1e293b;font-weight:700;" id="today-date">—</div>
     </div>
   </div>
 
-  <!-- 5-Step Tracker Summary -->
-  <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm mb-6">
-    <h2 class="font-bold text-slate-800 mb-5 text-base">Filing Pipeline — 5 Steps</h2>
-    <div class="flex items-center gap-0">
-      {% set steps = [('📁','Documents','Collected'),('🔍','Under Review','In progress'),('✍️','Ready to Sign','Awaiting signature'),('📤','Filed','Submitted to IRS'),('💸','Funded','Refund received')] %}
-      {% for icon, label, sub in steps %}
-      <div class="flex-1 text-center">
-        <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-xl mx-auto mb-2 font-bold text-amber-700">{{ icon }}</div>
-        <div class="text-xs font-bold text-slate-700">{{ label }}</div>
-        <div class="text-xs text-slate-400">{{ sub }}</div>
+  <!-- Stats Row -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+    <div class="stat-card">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Total Clients</div>
+      <div style="font-size:32px;font-weight:900;color:#0f172a;line-height:1;" id="stat-total">—</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px;">All time</div>
+    </div>
+    <div class="stat-card">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Filed ✓</div>
+      <div style="font-size:32px;font-weight:900;color:#16a34a;line-height:1;" id="stat-filed">—</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Forms generated</div>
+    </div>
+    <div class="stat-card">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Pending</div>
+      <div style="font-size:32px;font-weight:900;color:#d97706;line-height:1;" id="stat-pending">—</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Awaiting forms</div>
+    </div>
+    <div class="stat-card" style="background:linear-gradient(135deg,#0f172a,#1e293b);border-color:#0f172a;">
+      <div style="font-size:11px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">💰 Pipeline Value</div>
+      <div style="font-size:28px;font-weight:900;color:#fbbf24;line-height:1;" id="stat-pipeline">—</div>
+      <div style="font-size:11px;color:#475569;margin-top:4px;">Total refunds tracked</div>
+    </div>
+  </div>
+
+  <!-- Filing Pipeline -->
+  <div class="card" style="margin-bottom:20px;padding:22px 24px;">
+    <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:18px;display:flex;align-items:center;gap:8px;">
+      <span>Filing Pipeline</span>
+      <span style="font-size:11px;color:#94a3b8;font-weight:500;">Documents → Funded</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:0;">
+      {% for icon, label, sub, col in [('📁','Documents','Step 1','#64748b'),('🔍','Under Review','Step 2','#3b82f6'),('✍️','Ready to Sign','Step 3','#8b5cf6'),('📤','Filed','Step 4','#f59e0b'),('💸','Funded','Step 5','#16a34a')] %}
+      <div style="flex:1;text-align:center;padding:0 8px;">
+        <div style="width:44px;height:44px;border-radius:12px;background:{{ col }}18;display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto 8px;">{{ icon }}</div>
+        <div style="font-size:12px;font-weight:700;color:#1e293b;">{{ label }}</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:2px;">{{ sub }}</div>
       </div>
       {% if not loop.last %}
-      <div class="flex-shrink-0 w-6 text-slate-300 text-lg text-center">→</div>
+      <div style="color:#e2e8f0;font-size:18px;flex-shrink:0;">›</div>
       {% endif %}
       {% endfor %}
     </div>
   </div>
 
-  <!-- Recent Clients -->
-  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-      <h2 class="font-bold text-slate-800 text-base">Recent Clients</h2>
-      <a href="/clients" class="text-amber-600 text-sm font-semibold hover:text-amber-700">View all →</a>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <!-- Recent Clients -->
+    <div class="card">
+      <div style="padding:18px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:13px;font-weight:700;color:#0f172a;">Recent Clients</span>
+        <a href="/clients" style="font-size:12px;color:#f59e0b;font-weight:600;text-decoration:none;">View all →</a>
+      </div>
+      <div id="recent-clients"><div style="padding:32px;text-align:center;color:#94a3b8;font-size:13px;">Loading...</div></div>
     </div>
-    <div id="recent-clients">
-      <div class="px-6 py-8 text-center text-slate-400 text-sm">Loading...</div>
-    </div>
-  </div>
 
-  <!-- Reviews Section -->
-  <div class="mt-6 bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-    <h2 class="font-bold text-slate-800 mb-1 text-base">What Clients Are Saying</h2>
-    <p class="text-xs text-slate-400 mb-5">Nobody controls the IRS — not even Italy, and that says a lot...</p>
-    <div class="grid grid-cols-3 gap-4" id="reviews-grid">
-      <!-- filled by JS -->
+    <!-- Reviews -->
+    <div class="card">
+      <div style="padding:18px 20px;border-bottom:1px solid #f1f5f9;">
+        <div style="font-size:13px;font-weight:700;color:#0f172a;">Client Reviews</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;font-style:italic;">Nobody controls the IRS — not even Italy, and that says a lot...</div>
+      </div>
+      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;" id="reviews-box"></div>
     </div>
   </div>
 </div>
 
 <script>
+document.getElementById("today-date").textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+
 const reviews = [
-  {name:"DeShawn M.", text:"Italy got my refund moving when nobody else could. Real one fr 🙌", stars:5},
-  {name:"Maria G.", text:"Gracias Italy! Mis taxes listas en un día. No hay nadie mejor.", stars:5},
-  {name:"Jean-Pierre B.", text:"Mwen pa janm wè yon moun travay rapid konsa. Merci Italy!", stars:5},
-  {name:"Keisha T.", text:"Been with Italy 3 years. IRS slow but Italy stay on it 💯", stars:5},
-  {name:"Carlos R.", text:"Italy es el mejor. Siempre explica todo con paciencia.", stars:5},
-  {name:"Tanya W.", text:"My whole family comes to Italy now. He don't play about your money.", stars:5},
-  {name:"Marco D.", text:"Italia! Un professionista vero. Ha risolto il mio caso in 24 ore.", stars:5},
-  {name:"Unique J.", text:"IRS had me stressed. Italy said don't worry and handled it 🔥", stars:5},
-  {name:"Rosa L.", text:"Ya llevo 4 años aquí. Nunca un problema. Italy es confiable.", stars:5},
+  {n:"DeShawn M.",t:"Italy got my refund moving when nobody else could. Real one fr 🙌",s:5},
+  {n:"Maria G.",t:"Gracias Italy! Mis taxes listas en un día. No hay nadie mejor.",s:5},
+  {n:"Jean-Pierre B.",t:"Mwen pa janm wè yon moun travay rapid konsa. Merci Italy!",s:5},
+  {n:"Keisha T.",t:"Been with Italy 3 years. IRS slow but Italy stay on it 💯",s:5},
+  {n:"Marco D.",t:"Italia! Un professionista vero. Ha risolto il mio caso in 24 ore.",s:5},
 ];
-const grid = document.getElementById("reviews-grid");
-reviews.slice(0,6).forEach(r => {
-  grid.innerHTML += `<div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
-    <div class="text-amber-500 text-sm mb-2">${"★".repeat(r.stars)}</div>
-    <p class="text-slate-600 text-xs leading-relaxed mb-3">"${r.text}"</p>
-    <div class="text-xs font-semibold text-slate-500">— ${r.name}</div>
+const rb = document.getElementById("reviews-box");
+reviews.forEach(r=>{
+  rb.innerHTML += `<div style="background:#f8fafc;border-radius:10px;padding:12px 14px;border:1px solid #f1f5f9;">
+    <div style="color:#f59e0b;font-size:12px;margin-bottom:4px;">${"★".repeat(r.s)}</div>
+    <p style="color:#475569;font-size:12px;line-height:1.5;margin:0 0 6px;">"${r.t}"</p>
+    <div style="font-size:11px;font-weight:600;color:#94a3b8;">— ${r.n}</div>
   </div>`;
 });
 
-// Load stats
 fetch("/api/stats").then(r=>r.json()).then(d=>{
   document.getElementById("stat-total").textContent = d.total ?? "—";
   document.getElementById("stat-filed").textContent = d.filed ?? "—";
   document.getElementById("stat-pending").textContent = d.pending ?? "—";
   document.getElementById("stat-pipeline").textContent = d.pipeline ?? "—";
-});
+}).catch(()=>{});
 
-// Load recent clients
-fetch("/api/clients?limit=5").then(r=>r.json()).then(clients=>{
+fetch("/api/clients?limit=6").then(r=>r.json()).then(clients=>{
   const box = document.getElementById("recent-clients");
-  if(!clients.length){box.innerHTML='<div class="px-6 py-6 text-center text-slate-400 text-sm">No clients yet</div>';return;}
-  box.innerHTML = clients.map(c=>`
-    <div class="px-6 py-3 border-b border-slate-50 flex items-center justify-between hover:bg-slate-50 transition-colors">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-sm">${(c.first_name||"?")[0]}</div>
+  if(!clients.length){box.innerHTML='<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">No clients yet</div>';return;}
+  box.innerHTML = clients.slice(0,6).map(c=>`
+    <div style="padding:12px 20px;border-bottom:1px solid #f8fafc;display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#fef3c7,#fde68a);display:flex;align-items:center;justify-content:center;color:#92400e;font-weight:700;font-size:13px;flex-shrink:0;">${(c.first_name||"?")[0]}</div>
         <div>
-          <div class="text-sm font-semibold text-slate-700">${c.full_name||c.first_name+' '+c.last_name}</div>
-          <div class="text-xs text-slate-400">${c.tax_year||''} · ${c.email||''}</div>
+          <div style="font-size:13px;font-weight:600;color:#1e293b;">${c.full_name||((c.first_name||"")+" "+(c.last_name||"")).trim()}</div>
+          <div style="font-size:11px;color:#94a3b8;">${c.tax_year||''}</div>
         </div>
       </div>
-      <span class="text-xs px-2 py-1 rounded-full font-semibold ${c.filing_status==='filed'?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700'}">${c.filing_status||'pending'}</span>
+      <span class="${c.filing_status==='filed'?'badge-filed':'badge-pending'}">${c.filing_status||'pending'}</span>
     </div>`).join("");
-});
+}).catch(()=>{});
 </script>
 {% endblock %}
