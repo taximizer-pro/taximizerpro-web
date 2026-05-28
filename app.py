@@ -262,7 +262,7 @@ BASE44_HEADERS = {
     "Content-Type": "application/json",
     "x-api-key": os.environ.get("BASE44_API_KEY", ""),
 }
-B44_BASE = f"https://api.base44.com/api/apps/{APP_ID}/entities/TaxClient"
+B44_BASE = f"https://app.base44.com/api/apps/{APP_ID}/entities/TaxClient"
 
 @app.route("/api/clients")
 def api_clients():
