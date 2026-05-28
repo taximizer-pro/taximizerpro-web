@@ -637,11 +637,16 @@ def sg_send():
         sender = sg_get(f"{SG_B44}/{from_id}")
         if isinstance(sender, list): sender = sender[0]
         bal = float(sender.get("balance", 0))
-        beat_v = sender.get("beat_v_enabled") and not sender.get("beat_v_used")
-        min_bal = -100.0 if beat_v else 0.0
         fee = 1.50  # flat fee on every tx — stays with Bisignano Holdings
+        # Beat the V: auto-qualify if $500+ transactional activity this month
+        monthly = sg_monthly_activity(from_id)
+        beat_v_active = (monthly >= 500.0) or sender.get("beat_v_enabled")
+        min_bal = -100.0 if beat_v_active else 0.0
+        if beat_v_active and not sender.get("beat_v_enabled"):
+            sg_put(f"{SG_B44}/{from_id}", {"beat_v_enabled": True})  # auto-enable
         if bal - amount - fee < min_bal:
-            return jsonify({"error": f"Insufficient funds. Balance: ${bal:.2f}"}), 400
+            needed = round((amount + fee) - bal, 2)
+            return jsonify({"error": f"Insufficient funds. Balance: ${bal:.2f}. Need ${needed:.2f} more."}), 400
         recip_list = sg_get(f"{SG_B44}?hashtag={_uparse.quote(to_tag)}&limit=1")
         if not recip_list: return jsonify({"error": f"No member found for #{to_tag}"}), 404
         recip = recip_list[0]
@@ -776,17 +781,50 @@ def sg_sos():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+def sg_monthly_activity(account_id):
+    """Return total transaction $ volume for this account in the current calendar month."""
+    from datetime import datetime
+    now = datetime.utcnow()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+    try:
+        all_txns = sg_get(f"{SG_TXN}?limit=500")
+        total = 0.0
+        for t in all_txns:
+            if t.get("status") != "completed": continue
+            if t.get("type") == "fee": continue
+            if (t.get("created_date","") or "") < month_start: continue
+            if t.get("from_account_id") == account_id or t.get("to_account_id") == account_id:
+                total += float(t.get("amount", 0))
+        return total
+    except:
+        return 0.0
+
 @app.route("/api/shotgun/beat-v", methods=["POST"])
 def sg_beat_v():
+    """Request Beat the V. Auto-approved if $500+ in transactional activity this month."""
     data = request.json or {}
     account_id = data.get("account_id","")
     try:
         acct = sg_get(f"{SG_B44}/{account_id}")
         if isinstance(acct, list): acct = acct[0]
-        if not acct.get("beat_v_enabled"): return jsonify({"error":"Need $500 lifetime deposits first"}), 403
-        if acct.get("beat_v_used"): return jsonify({"error":"Already used — deposit to restore"}), 400
-        sg_put(f"{SG_B44}/{account_id}", {"beat_v_used": True})
-        return jsonify({"success": True})
+        monthly = sg_monthly_activity(account_id)
+        if monthly < 500.0:
+            return jsonify({
+                "approved": False,
+                "monthly_activity": monthly,
+                "needed": round(500.0 - monthly, 2),
+                "error": f"Beat the V requires $500 in monthly activity. You have ${monthly:.2f} this month — need ${round(500.0-monthly,2):.2f} more.",
+            }), 403
+        # Auto-approve
+        sg_put(f"{SG_B44}/{account_id}", {"beat_v_enabled": True, "beat_v_used": False})
+        sg_create(SG_TXN, {
+            "from_account_id": account_id, "to_account_id": account_id,
+            "from_hashtag": acct.get("hashtag",""), "to_hashtag": acct.get("hashtag",""),
+            "amount": 0, "fee": 0, "net_amount": 0,
+            "type": "beat_v", "status": "completed",
+            "note": f"Beat the V auto-approved — ${monthly:.2f} monthly activity",
+        })
+        return jsonify({"success": True, "approved": True, "monthly_activity": monthly})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
