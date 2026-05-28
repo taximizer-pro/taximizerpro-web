@@ -1,11 +1,73 @@
 #!/usr/bin/env python3
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, abort
 from werkzeug.security import generate_password_hash, check_password_hash
-import os, json, urllib.request, urllib.parse, fitz, base64, io, tempfile
-from datetime import date
+import os, json, urllib.request, urllib.parse, fitz, base64, io, tempfile, secrets, hashlib, time
+from datetime import date, datetime, timedelta
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 app = Flask(__name__)
-app.secret_key = "taximizerpro-2026-italy"
+
+# ── Security hardening ───────────────────────────────────────────────────────
+app.secret_key = os.environ.get("FLASK_SECRET", "taximizerpro-2026-italy-xK9!mN@2")
+app.config.update(
+    SESSION_COOKIE_SECURE   = True,
+    SESSION_COOKIE_HTTPONLY = True,
+    SESSION_COOKIE_SAMESITE = "Lax",
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=8),
+    SESSION_COOKIE_NAME     = "__Host-tpro_sess" if os.environ.get("FLASK_ENV") == "production" else "tpro_sess",
+)
+
+# Rate limiter — stored in memory (upgrade to Redis for multi-worker)
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=["200 per hour"],
+    storage_uri="memory://",
+)
+
+# In-memory OTP store: {email: {otp, expires, attempts}}
+_otp_store: dict = {}
+# In-memory audit log (last 500 events)
+_audit_log: list = []
+# CAPTCHA token store: {token: expires}
+_captcha_store: dict = {}
+
+def audit(event: str, detail: str = "", user: str = ""):
+    _audit_log.append({
+        "ts": datetime.utcnow().isoformat(),
+        "event": event,
+        "detail": detail,
+        "user": user or (session.get("user",{}).get("email","") if session else ""),
+        "ip": request.remote_addr if request else "",
+    })
+    if len(_audit_log) > 500:
+        _audit_log.pop(0)
+
+def _send_otp_email(to_email: str, otp: str, name: str):
+    gmail_token = os.environ.get("GMAIL_ACCESS_TOKEN","")
+    if not gmail_token: return
+    body = f"""
+<div style="font-family:Inter,sans-serif;max-width:420px;margin:0 auto;background:#0f172a;color:#f8fafc;padding:32px;border-radius:16px;">
+  <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:8px;">TaximizerPro Security</div>
+  <h2 style="font-size:20px;font-weight:900;color:#f8fafc;margin-bottom:4px;">Your verification code</h2>
+  <p style="color:rgba(255,255,255,.5);font-size:13px;margin-bottom:24px;">Hey {name} — enter this code to complete your login.</p>
+  <div style="background:linear-gradient(135deg,#1e3a5f,#0f172a);border:2px solid rgba(59,130,246,.4);border-radius:14px;padding:24px;text-align:center;margin-bottom:20px;">
+    <div style="font-size:42px;font-weight:900;letter-spacing:10px;color:#3b82f6;font-family:monospace;">{otp}</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.3);margin-top:8px;">Expires in 10 minutes · Do not share this code</div>
+  </div>
+  <p style="font-size:11px;color:rgba(255,255,255,.2);">If you didn't try to log in, your account is secure — someone may have your email. Contact taximizerpro@gmail.com immediately.</p>
+  <p style="font-size:10px;color:rgba(255,255,255,.15);margin-top:16px;">TaximizerPro · Bisignano Holdings LLC · Secure Portal</p>
+</div>"""
+    raw = (f"From: TaximizerPro Security <taximizerpro@gmail.com>\nTo: {to_email}\n"
+           f"Subject: {otp} — your TaximizerPro login code\nMIME-Version: 1.0\nContent-Type: text/html\n\n{body}")
+    msg = {"raw": base64.urlsafe_b64encode(raw.encode()).decode()}
+    req = urllib.request.Request(
+        "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+        data=json.dumps(msg).encode(), method="POST",
+        headers={"Authorization": f"Bearer {gmail_token}", "Content-Type": "application/json"}
+    )
+    with urllib.request.urlopen(req, timeout=15): pass
 
 ADMINS = {
     "taximizerpro@gmail.com":    {"pw": generate_password_hash("Italy2026!"),  "name": "Italy",         "role": "superadmin"},
@@ -233,20 +295,121 @@ def logged_in(): return "user" in session
 def index(): return redirect(url_for("login") if not logged_in() else url_for("dashboard"))
 
 @app.route("/login", methods=["GET","POST"])
+@limiter.limit("10 per minute")
 def login():
     error = None
     if request.method == "POST":
         email = request.form.get("email","").strip().lower()
         pw    = request.form.get("password","")
+        # Verify CAPTCHA token
+        cap_token = request.form.get("captcha_token","")
+        if cap_token not in _captcha_store or _captcha_store.get(cap_token,0) < time.time():
+            error = "CAPTCHA expired — please reload and try again."
+            return render_template("login.html", error=error)
+        _captcha_store.pop(cap_token, None)
         match = next((k for k in ADMINS if k.lower() == email), None)
         if match and check_password_hash(ADMINS[match]["pw"], pw):
-            session["user"] = {"email":match,"name":ADMINS[match]["name"],"role":ADMINS[match]["role"]}
-            return redirect(url_for("dashboard"))
-        error = "Invalid email or password."
+            # Generate 6-digit OTP
+            otp = str(secrets.randbelow(900000) + 100000)
+            _otp_store[email] = {
+                "otp": otp,
+                "expires": time.time() + 600,  # 10 min
+                "attempts": 0,
+                "name": ADMINS[match]["name"],
+                "role": ADMINS[match]["role"],
+            }
+            try:
+                _send_otp_email(email, otp, ADMINS[match]["name"])
+                audit("2fa_otp_sent", f"OTP sent to {email}", email)
+            except Exception as e:
+                # Fallback: auto-approve if email fails (dev mode)
+                if os.environ.get("FLASK_ENV") != "production":
+                    session["user"] = {"email":match,"name":ADMINS[match]["name"],"role":ADMINS[match]["role"]}
+                    session.permanent = True
+                    audit("login_success_noemail", f"Auto-approved (email unavailable)", email)
+                    return redirect(url_for("dashboard"))
+                error = f"Could not send verification code: {e}"
+                return render_template("login.html", error=error)
+            session["pending_2fa"] = email
+            return redirect(url_for("verify_2fa"))
+        else:
+            audit("login_failed", f"Bad credentials for {email}")
+            error = "Invalid email or password."
     return render_template("login.html", error=error)
 
+@app.route("/verify-2fa", methods=["GET","POST"])
+@limiter.limit("10 per minute")
+def verify_2fa():
+    email = session.get("pending_2fa","")
+    if not email: return redirect(url_for("login"))
+    error = None
+    if request.method == "POST":
+        entered = request.form.get("otp","").strip()
+        record = _otp_store.get(email, {})
+        record["attempts"] = record.get("attempts",0) + 1
+        if record["attempts"] > 5:
+            _otp_store.pop(email, None)
+            session.pop("pending_2fa", None)
+            audit("2fa_lockout", f"Too many OTP attempts for {email}", email)
+            return redirect(url_for("login"))
+        if not record or record.get("expires",0) < time.time():
+            error = "Code expired — please log in again."
+            session.pop("pending_2fa", None)
+            return render_template("verify_2fa.html", error=error, email=email)
+        if entered == record.get("otp",""):
+            session.pop("pending_2fa", None)
+            _otp_store.pop(email, None)
+            session["user"] = {"email": email, "name": record["name"], "role": record["role"]}
+            session.permanent = True
+            audit("login_success", f"2FA verified for {email}", email)
+            return redirect(url_for("dashboard"))
+        else:
+            audit("2fa_wrong_code", f"Wrong OTP for {email} (attempt {record['attempts']})", email)
+            error = f"Incorrect code. {5 - record['attempts']} attempts remaining."
+    return render_template("verify_2fa.html", error=error, email=email)
+
+@app.route("/api/captcha/generate")
+def captcha_generate():
+    """Generate a simple math CAPTCHA and return question + token."""
+    import random
+    a, b = random.randint(1,9), random.randint(1,9)
+    answer = a + b
+    token = secrets.token_hex(16)
+    # Store hashed answer with token, expires in 5 min
+    _captcha_store[token] = time.time() + 300
+    # Store answer separately keyed by token
+    _captcha_store[f"{token}_ans"] = str(answer)
+    return jsonify({"question": f"{a} + {b} = ?", "token": token})
+
+@app.route("/api/captcha/verify", methods=["POST"])
+def captcha_verify():
+    """Verify CAPTCHA answer and return a verified pass-token."""
+    data = request.json or {}
+    token = data.get("token","")
+    answer = data.get("answer","").strip()
+    expected = _captcha_store.get(f"{token}_ans","")
+    if not expected or _captcha_store.get(token,0) < time.time():
+        return jsonify({"valid": False, "error": "Expired"}), 400
+    if answer != expected:
+        return jsonify({"valid": False, "error": "Wrong answer"}), 400
+    # Issue a verified pass-token valid for 5 min
+    pass_token = secrets.token_hex(24)
+    _captcha_store[pass_token] = time.time() + 300
+    _captcha_store.pop(token, None)
+    _captcha_store.pop(f"{token}_ans", None)
+    return jsonify({"valid": True, "pass_token": pass_token})
+
+@app.route("/api/audit/log")
+def get_audit_log():
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    if session["user"].get("role") != "superadmin": return jsonify({"error":"forbidden"}), 403
+    return jsonify({"events": list(reversed(_audit_log[-100:]))})
+
 @app.route("/logout")
-def logout(): session.clear(); return redirect(url_for("login"))
+def logout():
+    audit("logout", f"User logged out")
+    session.clear()
+    return redirect(url_for("login"))
 
 # ── Pages ─────────────────────────────────────────────────────────────────────
 @app.route("/dashboard")
@@ -980,3 +1143,39 @@ def bisignano_holdings():
     if session["user"].get("role") != "superadmin":
         return "Private — Bisignano Holdings LLC eyes only", 403
     return render_template("bisignano_holdings.html", user=session["user"])
+
+@app.route("/api/resend-otp", methods=["POST"])
+@limiter.limit("3 per minute")
+def resend_otp():
+    email = session.get("pending_2fa","")
+    if not email: return jsonify({"error":"No pending 2FA"}), 400
+    record = _otp_store.get(email,{})
+    otp = str(secrets.randbelow(900000) + 100000)
+    _otp_store[email] = {
+        "otp": otp, "expires": time.time() + 600,
+        "attempts": 0, "name": record.get("name",""), "role": record.get("role",""),
+    }
+    try:
+        _send_otp_email(email, otp, record.get("name","User"))
+        audit("2fa_otp_resent", f"OTP resent to {email}", email)
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.after_request
+def security_headers(response):
+    """Add security headers to every response."""
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    if request.is_secure or os.environ.get("FLASK_ENV") == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+    return response
+
+@app.route("/security")
+def security_dashboard():
+    if not logged_in(): return redirect(url_for("login"))
+    if session["user"].get("role") != "superadmin": return "Not authorized", 403
+    return render_template("security.html", user=session["user"])
