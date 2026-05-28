@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Identity — TaximizerPro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .card { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); backdrop-filter: blur(20px); border-radius: 24px; padding: 40px 36px; width: 100%; max-width: 420px; }
+    .otp-input { display: flex; gap: 10px; justify-content: center; margin: 24px 0; }
+    .otp-box { width: 52px; height: 60px; border: 2px solid rgba(255,255,255,.15); border-radius: 12px; background: rgba(255,255,255,.05); color: #f8fafc; font-size: 26px; font-weight: 900; text-align: center; outline: none; transition: all .2s; font-family: monospace; }
+    .otp-box:focus { border-color: #3b82f6; background: rgba(59,130,246,.1); box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+    .otp-box.filled { border-color: rgba(59,130,246,.5); }
+    .btn { width: 100%; padding: 14px; border-radius: 12px; font-size: 15px; font-weight: 800; border: none; cursor: pointer; transition: all .2s; }
+    .btn-primary { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(59,130,246,.4); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .error { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); border-radius: 10px; padding: 12px 16px; color: #fca5a5; font-size: 13px; margin-bottom: 16px; }
+    .label { font-size: 11px; font-weight: 700; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .5px; }
+    #timer { font-size: 12px; color: rgba(255,255,255,.3); text-align: center; margin-top: 12px; }
+    #timer.urgent { color: #ef4444; }
+    .resend-btn { background: none; border: none; color: #3b82f6; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; text-decoration: underline; }
+    .resend-btn:disabled { color: rgba(255,255,255,.3); cursor: not-allowed; text-decoration: none; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div style="text-align:center;margin-bottom:28px;">
+    <div style="width:56px;height:56px;background:linear-gradient(135deg,#1e3a5f,#0f172a);border:2px solid rgba(59,130,246,.4);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 16px;">🔐</div>
+    <div style="font-size:22px;font-weight:900;color:#f8fafc;margin-bottom:6px;">Verify your identity</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.4);">We sent a 6-digit code to</div>
+    <div style="font-size:13px;color:#60a5fa;font-weight:700;margin-top:3px;">{{ email }}</div>
+  </div>
+
+  {% if error %}
+  <div class="error">⚠️ {{ error }}</div>
+  {% endif %}
+
+  <form method="POST" id="otp-form">
+    <div class="label" style="text-align:center;margin-bottom:8px;">Enter your 6-digit code</div>
+    <div class="otp-input">
+      <input class="otp-box" type="text" inputmode="numeric" maxlength="1" id="d1" autofocus>
+      <input class="otp-box" type="text" inputmode="numeric" maxlength="1" id="d2">
+      <input class="otp-box" type="text" inputmode="numeric" maxlength="1" id="d3">
+      <input class="otp-box" type="text" inputmode="numeric" maxlength="1" id="d4">
+      <input class="otp-box" type="text" inputmode="numeric" maxlength="1" id="d5">
+      <input class="otp-box" type="text" inputmode="numeric" maxlength="1" id="d6">
+    </div>
+    <input type="hidden" name="otp" id="otp-hidden">
+    <button type="submit" class="btn btn-primary" id="verify-btn" disabled>Verify →</button>
+  </form>
+
+  <div id="timer">Code expires in <span id="countdown">10:00</span></div>
+
+  <div style="text-align:center;margin-top:16px;">
+    <button class="resend-btn" id="resend-btn" disabled onclick="resendCode()">Resend code</button>
+    <span id="resend-timer" style="font-size:12px;color:rgba(255,255,255,.3);"></span>
+  </div>
+
+  <div style="text-align:center;margin-top:20px;">
+    <a href="/login" style="font-size:12px;color:rgba(255,255,255,.3);text-decoration:none;">← Back to login</a>
+  </div>
+</div>
+
+<script>
+const boxes = document.querySelectorAll('.otp-box');
+const verifyBtn = document.getElementById('verify-btn');
+const hiddenInput = document.getElementById('otp-hidden');
+
+// Auto-advance between boxes
+boxes.forEach((box, i) => {
+  box.addEventListener('input', e => {
+    const val = e.target.value.replace(/\D/g,'');
+    e.target.value = val.slice(-1);
+    if (val && i < 5) boxes[i+1].focus();
+    updateOTP();
+  });
+  box.addEventListener('keydown', e => {
+    if (e.key === 'Backspace' && !box.value && i > 0) boxes[i-1].focus();
+    if (e.key === 'ArrowLeft' && i > 0) boxes[i-1].focus();
+    if (e.key === 'ArrowRight' && i < 5) boxes[i+1].focus();
+  });
+  box.addEventListener('paste', e => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'').slice(0,6);
+    text.split('').forEach((c,j) => { if (boxes[j]) boxes[j].value = c; });
+    if (boxes[Math.min(text.length, 5)]) boxes[Math.min(text.length, 5)].focus();
+    updateOTP();
+  });
+});
+
+function updateOTP() {
+  const code = Array.from(boxes).map(b=>b.value).join('');
+  hiddenInput.value = code;
+  verifyBtn.disabled = code.length < 6;
+  boxes.forEach(b => b.classList.toggle('filled', b.value.length > 0));
+}
+
+// Countdown timer — 10 minutes
+let secs = 600;
+const cdEl = document.getElementById('countdown');
+const timerEl = document.getElementById('timer');
+const resendTimer = document.getElementById('resend-timer');
+const resendBtn = document.getElementById('resend-btn');
+let resendCooldown = 60;
+
+const tick = setInterval(() => {
+  secs--;
+  const m = Math.floor(secs/60), s = secs%60;
+  cdEl.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  if (secs <= 60) timerEl.classList.add('urgent');
+  if (secs <= 0) { clearInterval(tick); timerEl.textContent = 'Code expired — go back and log in again.'; verifyBtn.disabled = true; }
+}, 1000);
+
+// Resend cooldown
+const resendTick = setInterval(() => {
+  resendCooldown--;
+  resendTimer.textContent = resendCooldown > 0 ? `(${resendCooldown}s)` : '';
+  if (resendCooldown <= 0) { resendBtn.disabled = false; clearInterval(resendTick); }
+}, 1000);
+
+async function resendCode() {
+  resendBtn.disabled = true;
+  resendBtn.textContent = 'Sending...';
+  try {
+    await fetch('/api/resend-otp', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    resendBtn.textContent = 'Resend code';
+    resendTimer.textContent = '✓ Sent!';
+    secs = 600; timerEl.classList.remove('urgent');
+    setTimeout(()=>resendTimer.textContent='', 3000);
+  } catch(e) { resendBtn.textContent = 'Resend code'; resendBtn.disabled = false; }
+}
+</script>
+</body>
+</html>
