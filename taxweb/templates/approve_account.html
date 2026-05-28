@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaximizerPro — Account Approval</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>*{font-family:'Inter',sans-serif;}</style>
+</head>
+<body style="min-height:100vh;background:linear-gradient(135deg,#0f172a 0%,#1e293b 60%,#0f172a 100%);display:flex;align-items:center;justify-content:center;padding:20px;">
+
+<div style="position:fixed;inset:0;overflow:hidden;pointer-events:none;">
+  <div style="position:absolute;top:20%;left:10%;width:300px;height:300px;background:rgba(245,158,11,.06);border-radius:50%;filter:blur(80px);"></div>
+</div>
+
+<div style="width:100%;max-width:440px;position:relative;">
+  <div style="text-align:center;margin-bottom:32px;">
+    <div style="display:inline-flex;align-items:center;gap:14px;margin-bottom:12px;">
+      <div style="width:52px;height:52px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(245,158,11,.4);">
+        <span style="color:#fff;font-weight:900;font-size:26px;line-height:1;">T</span>
+      </div>
+      <div style="text-align:left;">
+        <div style="color:#f8fafc;font-weight:900;font-size:24px;letter-spacing:-.5px;line-height:1.1;">TaximizerPro</div>
+        <div style="color:#f59e0b;font-size:11px;font-weight:600;letter-spacing:2px;margin-top:2px;">WE MOVE MONEY. YOU MOVE ON.™</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;backdrop-filter:blur(20px);">
+
+    {% if status == "expired" %}
+    <div style="text-align:center;">
+      <div style="font-size:44px;margin-bottom:16px;">⏰</div>
+      <h2 style="color:#f8fafc;font-size:18px;font-weight:700;margin:0 0 10px;">Link Expired</h2>
+      <p style="color:#64748b;font-size:13px;">This approval link has expired or was already used.</p>
+    </div>
+
+    {% elif status == "rejected" %}
+    <div style="text-align:center;">
+      <div style="font-size:44px;margin-bottom:16px;">❌</div>
+      <h2 style="color:#f8fafc;font-size:18px;font-weight:700;margin:0 0 10px;">Request Rejected</h2>
+      <p style="color:#64748b;font-size:13px;">Account request for <strong style="color:#f8fafc;">{{ name }}</strong> ({{ email }}) has been rejected and removed.</p>
+    </div>
+
+    {% elif status == "approved" %}
+    <div style="text-align:center;">
+      <div style="font-size:44px;margin-bottom:16px;">✅</div>
+      <h2 style="color:#f8fafc;font-size:18px;font-weight:700;margin:0 0 10px;">Account Approved!</h2>
+      <p style="color:#64748b;font-size:13px;margin:0 0 16px;"><strong style="color:#f8fafc;">{{ name }}</strong> ({{ email }}) has been approved as <strong style="color:#f59e0b;">{{ role|title }}</strong>.</p>
+      <p style="color:#64748b;font-size:12px;">They've been emailed a login link.</p>
+    </div>
+
+    {% elif status == "pending" %}
+    <h2 style="color:#f8fafc;font-size:18px;font-weight:700;margin:0 0 6px;">Approve Account</h2>
+    <p style="color:#64748b;font-size:13px;margin:0 0 20px;">Assign a role to activate this account.</p>
+
+    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;margin-bottom:24px;">
+      <div style="color:#f8fafc;font-weight:700;font-size:15px;">{{ name }}</div>
+      <div style="color:#94a3b8;font-size:13px;margin-top:2px;">{{ email }}</div>
+    </div>
+
+    <form method="POST">
+      <div style="margin-bottom:24px;">
+        <label style="display:block;color:#94a3b8;font-size:12px;font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">Assign Role</label>
+        <div style="display:flex;gap:10px;">
+          <label style="flex:1;cursor:pointer;">
+            <input type="radio" name="role" value="agent" checked style="display:none;" onchange="document.querySelectorAll('.role-card').forEach(el=>el.style.borderColor='rgba(255,255,255,.1)');this.closest('label').querySelector('.role-card').style.borderColor='#f59e0b';">
+            <div class="role-card" style="background:rgba(255,255,255,.04);border:2px solid #f59e0b;border-radius:10px;padding:14px;text-align:center;transition:all .15s;">
+              <div style="font-size:22px;margin-bottom:4px;">👤</div>
+              <div style="color:#f8fafc;font-weight:600;font-size:13px;">Agent</div>
+              <div style="color:#64748b;font-size:11px;margin-top:2px;">Manage clients</div>
+            </div>
+          </label>
+          <label style="flex:1;cursor:pointer;">
+            <input type="radio" name="role" value="admin" style="display:none;" onchange="document.querySelectorAll('.role-card').forEach(el=>el.style.borderColor='rgba(255,255,255,.1)');this.closest('label').querySelector('.role-card').style.borderColor='#f59e0b';">
+            <div class="role-card" style="background:rgba(255,255,255,.04);border:2px solid rgba(255,255,255,.1);border-radius:10px;padding:14px;text-align:center;transition:all .15s;">
+              <div style="font-size:22px;margin-bottom:4px;">🛡️</div>
+              <div style="color:#f8fafc;font-weight:600;font-size:13px;">Admin</div>
+              <div style="color:#64748b;font-size:11px;margin-top:2px;">Full access</div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <button type="submit"
+        style="width:100%;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-weight:700;padding:13px;border-radius:10px;border:none;cursor:pointer;font-size:14px;box-shadow:0 4px 16px rgba(34,197,94,.3);">
+        ✅ Approve &amp; Activate Account
+      </button>
+    </form>
+    {% endif %}
+
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,.06);text-align:center;color:#475569;font-size:11px;">
+      TaximizerPro © 2026 · All rights reserved
+    </div>
+  </div>
+</div>
+</body>
+</html>

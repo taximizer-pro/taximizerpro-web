@@ -16,6 +16,11 @@ ADMINS = {
 # In-memory reset tokens: {token: {email, expires}}
 RESET_TOKENS = {}
 
+# Pending account requests: {token: {email, name, password_hash, requested_at}}
+PENDING_ACCOUNTS = {}
+
+ADMIN_EMAILS = ["taximizerpro@gmail.com", "mike.hennigan44@gmail.com"]
+
 MASTER_IDS = {
     '2023': '12oZacU01PFs-GjmTnBeeARCWB8IKiRb0',
     '2024': '1nHkyzHC-jVryNKbHrkeeb355wPDe3fIC',
@@ -389,6 +394,123 @@ def reset_password(token):
             del RESET_TOKENS[token]
             success = True
     return render_template("reset_password.html", expired=False, token=token, error=error, success=success)
+
+@app.route("/request-account", methods=["GET","POST"])
+def request_account():
+    submitted = False
+    error = None
+    if request.method == "POST":
+        name  = request.form.get("name","").strip()
+        email = request.form.get("email","").strip().lower()
+        pw    = request.form.get("password","")
+        pw2   = request.form.get("confirm","")
+        if not name or not email or not pw:
+            error = "All fields are required."
+        elif pw != pw2:
+            error = "Passwords do not match."
+        elif len(pw) < 6:
+            error = "Password must be at least 6 characters."
+        elif email in [k.lower() for k in ADMINS]:
+            error = "An account with that email already exists."
+        else:
+            token = secrets.token_urlsafe(32)
+            PENDING_ACCOUNTS[token] = {
+                "email": email,
+                "name": name,
+                "pw_hash": generate_password_hash(pw),
+                "requested_at": time.time()
+            }
+            # Email both admins
+            gmail_token = _tokens.get("gmail","")
+            if gmail_token:
+                approve_url = request.host_url.rstrip("/") + f"/approve-account/{token}/approve"
+                reject_url  = request.host_url.rstrip("/") + f"/approve-account/{token}/reject"
+                html_body = f"""<div style="font-family:Arial,sans-serif;max-width:520px;padding:32px;background:#080F1E;color:#fff;border-radius:16px;">
+                  <div style="font-size:22px;font-weight:900;margin-bottom:4px;">Taximizer<span style="color:#F59E0B">Pro</span></div>
+                  <div style="color:#F59E0B;font-size:10px;font-weight:600;letter-spacing:2px;margin-bottom:24px;">NEW ACCOUNT REQUEST</div>
+                  <p style="color:#94A3B8;margin:0 0 8px;">A new user is requesting access to TaximizerPro:</p>
+                  <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:16px;margin:16px 0;">
+                    <div style="color:#fff;font-weight:700;font-size:15px;">{name}</div>
+                    <div style="color:#94A3B8;font-size:13px;">{email}</div>
+                  </div>
+                  <p style="color:#64748B;font-size:12px;margin-bottom:24px;">You must also assign their role after approving (Agent or Admin).</p>
+                  <table style="width:100%;"><tr>
+                    <td style="padding-right:8px;"><a href="{approve_url}" style="display:block;text-align:center;background:#22c55e;color:#fff;padding:12px;border-radius:8px;font-weight:700;text-decoration:none;font-size:13px;">✅ Approve</a></td>
+                    <td style="padding-left:8px;"><a href="{reject_url}" style="display:block;text-align:center;background:#ef4444;color:#fff;padding:12px;border-radius:8px;font-weight:700;text-decoration:none;font-size:13px;">❌ Reject</a></td>
+                  </tr></table>
+                  <p style="color:#475569;font-size:11px;margin-top:24px;">This request will expire in 48 hours.</p>
+                </div>"""
+                import urllib.request as ur
+                for admin_email in ADMIN_EMAILS:
+                    msg_parts = [
+                        f"To: {admin_email}",
+                        "Subject: TaximizerPro — New Account Request",
+                        "MIME-Version: 1.0",
+                        "Content-Type: text/html; charset=UTF-8",
+                        "",
+                        html_body
+                    ]
+                    raw = base64.urlsafe_b64encode("\r\n".join(msg_parts).encode()).decode()
+                    req = ur.Request(
+                        "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                        data=json.dumps({"raw": raw}).encode(),
+                        headers={"Authorization": f"Bearer {gmail_token}", "Content-Type": "application/json"},
+                        method="POST"
+                    )
+                    try: ur.urlopen(req)
+                    except: pass
+            submitted = True
+    return render_template("request_account.html", submitted=submitted, error=error)
+
+@app.route("/approve-account/<token>/<action>", methods=["GET","POST"])
+def approve_account(token, action):
+    entry = PENDING_ACCOUNTS.get(token)
+    if not entry:
+        return render_template("approve_account.html", status="expired")
+    if time.time() - entry["requested_at"] > 172800:  # 48 hours
+        del PENDING_ACCOUNTS[token]
+        return render_template("approve_account.html", status="expired")
+
+    if action == "reject":
+        del PENDING_ACCOUNTS[token]
+        return render_template("approve_account.html", status="rejected", name=entry["name"], email=entry["email"])
+
+    # action == "approve" — show role picker on GET, process on POST
+    if request.method == "POST":
+        role = request.form.get("role","agent")
+        email = entry["email"]
+        ADMINS[email] = {"pw": entry["pw_hash"], "name": entry["name"], "role": role}
+        del PENDING_ACCOUNTS[token]
+        # Notify the new user
+        gmail_token = _tokens.get("gmail","")
+        if gmail_token:
+            import urllib.request as ur
+            html_body = f"""<div style="font-family:Arial,sans-serif;max-width:500px;padding:32px;background:#080F1E;color:#fff;border-radius:16px;">
+              <div style="font-size:22px;font-weight:900;margin-bottom:16px;">Taximizer<span style="color:#F59E0B">Pro</span></div>
+              <p style="color:#94A3B8;">Hi {entry['name']}, your account has been approved!</p>
+              <p style="color:#94A3B8;">Your role: <strong style="color:#F59E0B;">{role.title()}</strong></p>
+              <p style="margin:24px 0;"><a href="{request.host_url.rstrip('/')}/login" style="background:#F59E0B;color:#080F1E;padding:12px 24px;border-radius:8px;font-weight:700;text-decoration:none;font-size:14px;">Log In Now →</a></p>
+            </div>"""
+            msg_parts = [
+                f"To: {email}",
+                "Subject: TaximizerPro — Your Account is Approved",
+                "MIME-Version: 1.0",
+                "Content-Type: text/html; charset=UTF-8",
+                "",
+                html_body
+            ]
+            raw = base64.urlsafe_b64encode("\r\n".join(msg_parts).encode()).decode()
+            req = ur.Request(
+                "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                data=json.dumps({"raw": raw}).encode(),
+                headers={"Authorization": f"Bearer {gmail_token}", "Content-Type": "application/json"},
+                method="POST"
+            )
+            try: ur.urlopen(req)
+            except: pass
+        return render_template("approve_account.html", status="approved", name=entry["name"], email=entry["email"], role=role)
+
+    return render_template("approve_account.html", status="pending", token=token, name=entry["name"], email=entry["email"])
 
 @app.route("/logout")
 def logout(): session.clear(); return redirect(url_for("login"))
