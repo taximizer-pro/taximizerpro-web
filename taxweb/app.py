@@ -2,7 +2,7 @@
 #!/usr/bin/env python3
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-import os, json, re, urllib.request, urllib.parse, fitz, base64, io, tempfile
+import os, json, re, urllib.request, urllib.parse, fitz, base64, io, tempfile, secrets, time
 from datetime import date
 
 app = Flask(__name__)
@@ -12,6 +12,9 @@ ADMINS = {
     "taximizerpro@gmail.com":    {"pw": generate_password_hash("Italy2026!"),  "name": "Italy",         "role": "superadmin"},
     "mike.hennigan44@gmail.com": {"pw": generate_password_hash("Admin2026!"),  "name": "Mike Hennigan", "role": "admin"},
 }
+
+# In-memory reset tokens: {token: {email, expires}}
+RESET_TOKENS = {}
 
 MASTER_IDS = {
     '2023': '12oZacU01PFs-GjmTnBeeARCWB8IKiRb0',
@@ -321,6 +324,71 @@ def login():
             return redirect(url_for("dashboard"))
         error = "Invalid email or password."
     return render_template("login.html", error=error)
+
+@app.route("/forgot-password", methods=["GET","POST"])
+def forgot_password():
+    sent = False
+    error = None
+    if request.method == "POST":
+        email = request.form.get("email","").strip().lower()
+        match = next((k for k in ADMINS if k.lower() == email), None)
+        if match:
+            token = secrets.token_urlsafe(32)
+            RESET_TOKENS[token] = {"email": match, "expires": time.time() + 3600}
+            reset_url = request.host_url.rstrip("/") + f"/reset-password/{token}"
+            # Send email via Gmail API using stored token
+            gmail_token = _tokens.get("gmail","")
+            if gmail_token:
+                html_body = f"""<div style="font-family:Arial,sans-serif;max-width:500px;padding:32px;background:#080F1E;color:#fff;border-radius:16px">
+                  <div style="font-size:22px;font-weight:900;margin-bottom:16px">Taximizer<span style="color:#F59E0B">Pro</span></div>
+                  <p style="color:#94A3B8;">A password reset was requested for your account.</p>
+                  <p style="margin:24px 0;"><a href="{reset_url}" style="background:#F59E0B;color:#080F1E;padding:12px 24px;border-radius:8px;font-weight:700;text-decoration:none;font-size:14px">Reset My Password</a></p>
+                  <p style="color:#475569;font-size:12px;">This link expires in 1 hour. If you didn't request this, ignore this email.</p>
+                </div>"""
+                msg_parts = [
+                    f"To: {match}",
+                    "Subject: TaximizerPro — Password Reset",
+                    "MIME-Version: 1.0",
+                    "Content-Type: text/html; charset=UTF-8",
+                    "",
+                    html_body
+                ]
+                raw = base64.urlsafe_b64encode("\r\n".join(msg_parts).encode()).decode()
+                import urllib.request as ur
+                req = ur.Request(
+                    "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                    data=json.dumps({"raw": raw}).encode(),
+                    headers={"Authorization": f"Bearer {gmail_token}", "Content-Type": "application/json"},
+                    method="POST"
+                )
+                try: ur.urlopen(req)
+                except: pass
+            sent = True
+        else:
+            # Don't reveal if email exists — always show sent message
+            sent = True
+    return render_template("forgot_password.html", sent=sent, error=error)
+
+@app.route("/reset-password/<token>", methods=["GET","POST"])
+def reset_password(token):
+    entry = RESET_TOKENS.get(token)
+    if not entry or time.time() > entry["expires"]:
+        return render_template("reset_password.html", expired=True, token=token)
+    error = None
+    success = False
+    if request.method == "POST":
+        pw1 = request.form.get("password","")
+        pw2 = request.form.get("confirm","")
+        if len(pw1) < 6:
+            error = "Password must be at least 6 characters."
+        elif pw1 != pw2:
+            error = "Passwords do not match."
+        else:
+            email = entry["email"]
+            ADMINS[email]["pw"] = generate_password_hash(pw1)
+            del RESET_TOKENS[token]
+            success = True
+    return render_template("reset_password.html", expired=False, token=token, error=error, success=success)
 
 @app.route("/logout")
 def logout(): session.clear(); return redirect(url_for("login"))
