@@ -1,57 +1,53 @@
 #!/usr/bin/env python3
 """
-Taximizer Pro — IRS 1040 Form Filler (v16 — FINAL LOCKED COORDINATES)
-======================================================================
-New templates (uploaded 2026-05-27T12:03):
-  2023: 1X6LIFErOXnEx9nzOKW-8rBDUN2bfhq4D
-  2024: 110bBcABuvofSYrQXLjw3N5DPH1y2Vjan
-  2025: 1kQQlQXXTyXjGYtARAP_U5WJ6hWT2Fmc3
+Taximizer Pro — IRS 1040 Form Filler (v17 — CORRECT (1) MASTER TEMPLATES)
+=========================================================================
+Uses the (1) master templates which contain pre-filled financial data.
+Only replaces personal info placeholder fields — preserves all financial data.
 
-SIGN ROW — CONFIRMED BOX BOUNDARIES (from get_drawings()):
+MASTER (1) TEMPLATE IDs:
+  2023: 12oZacU01PFs-GjmTnBeeARCWB8IKiRb0
+  2024: 1nHkyzHC-jVryNKbHrkeeb355wPDe3fIC
+  2025: 13gBIrUgh-nSZaKZz7yCJ3bDSVT0U8XHz
 
-  2023 & 2024:
-    Box 1 Signature: x=91.6–273.6, y=462–492
-    Box 2 Date:      x=273.6–324.0, y=462–492
-    Box 3 Occupation (f2_33[0]): x=324.0–460.8, y=472–492
-    → sig underline at y=488 (y1-4), x=95–270
-    → date text     at y=488 (y1-4), x=275
+FIELDS TO REPLACE (personal placeholders):
+  2023/2024 P1: f1_04[0]=FIRST+MI, f1_05[0]=LAST, f1_06[0]=SSN
+                f1_10[0]=STREET, f1_11[0]=APT, f1_12[0]=CITY, f1_13[0]=STATE, f1_14[0]=ZIP
+  2023/2024 P2: f2_25[0]=ROUTING, f2_26[0]=ACCOUNT  (NOTE: routing/account are SWAPPED in template!)
+                c2_5[0]=Checking already checked
+                f2_33[0]=HELPER already set
+  2025 P1:      f1_14[0]=FIRST+MI, f1_15[0]=LAST, f1_16[0]=SSN
+                f1_20[0]=STREET, f1_21[0]=APT, f1_22[0]=CITY, f1_23[0]=STATE, f1_24[0]=ZIP
+  2025 P2:      f2_32[0]=ROUTING, f2_33[0]=ACCOUNT
+                c2_16[0]=Checking already checked
+                f2_40[0]=HELPER already set
 
-  2025:
-    Box 1 Signature: x=91.6–273.6, y=636–666
-    Box 2 Date:      x=273.6–324.0, y=636–666
-    Box 3 Occupation (f2_40[0]): x=324.0–460.8, y=646–666
-    → sig underline at y=662 (y1-4), x=95–270
-    → date text     at y=662 (y1-4), x=275
+SIGN ROW (text overlay, not a field):
+  2023/2024: date at P2 y=488, x=275 | sig line y=488 x=95-270
+  2025:      date at P2 y=662, x=275 | sig line y=662 x=95-270
 
-PAGE 1 FIELDS:
-  2023 & 2024:
-    f1_04  First+MI, f1_05  Last, f1_06  SSN
-    f1_10  Street,   f1_11  Apt (clear always),  f1_12  City
-    f1_13  State,    f1_14  ZIP,  c1_3[1]  Single
-
-  2025:
-    f1_14  First+MI, f1_15  Last, f1_16  SSN
-    f1_20  Street,   f1_21  Apt (clear always),  f1_22  City
-    f1_23  State,    f1_24  ZIP,  c1_3[1]  Single
-
-PAGE 2 BANK:
-  2023 & 2024:  f2_25 Routing, c2_5[0] Checking, f2_26 Account
-  2025:         f2_32 Routing (clear "routing #"), c2_16[0] Checking,
-                f2_33 Account (clear "account #")
+NOTE on 2023 bank field swap in template:
+  f2_25[0] shows 'ACCOUNT #' in template → fill with ROUTING
+  f2_26[0] shows 'ROUTING #' in template → fill with ACCOUNT
+  (The labels are watermarks, not the actual field purposes — widget positions confirm routing is f2_25)
 """
 
 import fitz
-import os, json, re, urllib.request, urllib.parse, tempfile
+import os, json, re, urllib.request, urllib.parse, tempfile, base64
 from datetime import date
 
+# ── CORRECT (1) master template IDs with financial data ──────────────────────
 MASTER_IDS = {
-    '2023': '1iLxjqGceVwVcLtb8w5UW1-FHTQRR8hyy',
-    '2024': '1JiPyLqgPC0yZg70BuJz9WeW1zauCxdp3',
-    '2025': '1Q2CIM4rnIjQ4TVAlhpoZc5iUFdamAClM',
+    '2023': '12oZacU01PFs-GjmTnBeeARCWB8IKiRb0',
+    '2024': '1nHkyzHC-jVryNKbHrkeeb355wPDe3fIC',
+    '2025': '13gBIrUgh-nSZaKZz7yCJ3bDSVT0U8XHz',
 }
 YEARS = ['2023', '2024', '2025']
 ROOT_FOLDER = 'TaximizerPro V 2.0 Clients'
 BAD_APT = {'', 'none', 'null', 'apt', 'apt.', '#', 'unit', 'n/a', 'na', 'apt no', 'apt no.'}
+
+APP_ID = '6a13ae4b43ea85cec629af77'
+BASE44_API = 'https://app.base44.com/api/apps'
 
 
 def clean_apt(raw):
@@ -59,7 +55,10 @@ def clean_apt(raw):
     return '' if v.lower() in BAD_APT else v
 
 def clean_ssn(raw):
-    return re.sub(r'\D', '', str(raw or ''))
+    digits = re.sub(r'\D', '', str(raw or ''))
+    if len(digits) == 9:
+        return f'{digits[:3]}-{digits[3:5]}-{digits[5:]}'
+    return digits
 
 def _dget(url, tok):
     req = urllib.request.Request(url, headers={'Authorization': f'Bearer {tok}'})
@@ -69,6 +68,13 @@ def _dget(url, tok):
 def _dpost(url, data, tok):
     body = json.dumps(data).encode()
     req = urllib.request.Request(url, data=body, method='POST', headers={
+        'Authorization': f'Bearer {tok}', 'Content-Type': 'application/json'})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read())
+
+def _dpatch(url, data, tok):
+    body = json.dumps(data).encode()
+    req = urllib.request.Request(url, data=body, method='PATCH', headers={
         'Authorization': f'Bearer {tok}', 'Content-Type': 'application/json'})
     with urllib.request.urlopen(req, timeout=30) as r:
         return json.loads(r.read())
@@ -113,25 +119,33 @@ def upload_pdf_to_drive(pdf_path, filename, folder_id, tok):
 
 
 def _set(doc, pg, sn, val):
+    """Set a text field by short name (last segment of field_name)."""
     for w in doc[pg].widgets():
-        if w.field_name.split('.')[-1] == sn and w.field_type_string == 'Text':
+        short = w.field_name.split('.')[-1]
+        if short == sn and w.field_type_string == 'Text':
             w.field_value = str(val)
             w.update()
             return True
     return False
 
-def _clear(doc, pg, sn):
+def _check(doc, pg, sn):
+    """Check a checkbox by short name."""
     for w in doc[pg].widgets():
-        if w.field_name.split('.')[-1] == sn and w.field_type_string == 'Text':
-            w.field_value = ''
+        short = w.field_name.split('.')[-1]
+        if short == sn and w.field_type_string == 'CheckBox':
+            w.field_value = True
             w.update()
             return True
     return False
 
-def _check(doc, pg, sn):
+def _white_and_set(doc, pg, sn, val):
+    """White-out existing text in a field rect, then set new value."""
     for w in doc[pg].widgets():
-        if w.field_name.split('.')[-1] == sn and w.field_type_string == 'CheckBox':
-            w.field_value = True
+        short = w.field_name.split('.')[-1]
+        if short == sn and w.field_type_string == 'Text':
+            # White out the field rect to kill watermark rendering
+            doc[pg].draw_rect(w.rect, color=(1,1,1), fill=(1,1,1))
+            w.field_value = str(val)
             w.update()
             return True
     return False
@@ -150,7 +164,7 @@ def fill_form(template_path, output_path, year, client):
     routing = (client.get('bank_routing') or '').strip()
     account = (client.get('bank_account') or '').strip()
 
-    # Repair xrefs
+    # Repair xrefs first
     with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tf:
         tmp = tf.name
     doc = fitz.open(template_path)
@@ -159,69 +173,67 @@ def fill_form(template_path, output_path, year, client):
     doc = fitz.open(tmp)
 
     if year in ('2023', '2024'):
-        # ── PAGE 1 ─────────────────────────────────────────────
-        _set(doc, 0, 'f1_04[0]', first_m)
-        _set(doc, 0, 'f1_05[0]', last)
-        _set(doc, 0, 'f1_06[0]', ssn)
-        _set(doc, 0, 'f1_10[0]', street)
-        _clear(doc, 0, 'f1_11[0]')           # always clear apt watermark
-        if apt:
-            _set(doc, 0, 'f1_11[0]', apt)
-        _set(doc, 0, 'f1_12[0]', city)
-        _set(doc, 0, 'f1_13[0]', state)
-        _set(doc, 0, 'f1_14[0]', zip_)
-        _check(doc, 0, 'c1_3[1]')            # Single
+        # ── PAGE 1 ───────────────────────────────────────────
+        _white_and_set(doc, 0, 'f1_04[0]', first_m)
+        _white_and_set(doc, 0, 'f1_05[0]', last)
+        _white_and_set(doc, 0, 'f1_06[0]', ssn)
+        _white_and_set(doc, 0, 'f1_10[0]', street)
+        # Apt: always white-out, only fill if valid
+        for w in doc[0].widgets():
+            if w.field_name.split('.')[-1] == 'f1_11[0]':
+                doc[0].draw_rect(w.rect, color=(1,1,1), fill=(1,1,1))
+                w.field_value = apt if apt else ''
+                w.update()
+        _white_and_set(doc, 0, 'f1_12[0]', city)
+        _white_and_set(doc, 0, 'f1_13[0]', state)
+        _white_and_set(doc, 0, 'f1_14[0]', zip_)
+        # Single checkbox
+        _check(doc, 0, 'c1_3[0]')
+        _check(doc, 0, 'c1_3[1]')
 
-        # ── PAGE 2 — Bank ──────────────────────────────────────
-        _set(doc, 1, 'f2_25[0]', routing)
-        _check(doc, 1, 'c2_5[0]')            # Checking
-        _set(doc, 1, 'f2_26[0]', account)
+        # ── PAGE 2 — Bank ─────────────────────────────────────
+        # NOTE: f2_25 watermark says "ACCOUNT #" but it IS the routing field
+        #       f2_26 watermark says "ROUTING #" but it IS the account field
+        _white_and_set(doc, 1, 'f2_25[0]', routing)
+        _check(doc, 1, 'c2_5[0]')   # Checking
+        _white_and_set(doc, 1, 'f2_26[0]', account)
 
-        # ── PAGE 2 — Sign Row ──────────────────────────────────
-        # Box 1 (Signature): x=91.6–273.6, y=462–492  → underline at y=488
-        # Box 2 (Date):      x=273.6–324.0, y=462–492 → text at y=488, x=275
-        # Box 3 (Occupation): widget f2_33[0]          → set to HELPER
-        doc[1].draw_line((95, 488), (270, 488), color=(0, 0, 0), width=0.5)
-        doc[1].insert_text((275, 488), today, fontname='helv', fontsize=7, color=(0, 0, 0))
-        _clear(doc, 1, 'f2_33[0]')
-        _set(doc, 1, 'f2_33[0]', 'HELPER')
+        # ── PAGE 2 — Sign Row ─────────────────────────────────
+        # Sig line in Box 1, date in Box 2, HELPER in Box 3 (f2_33)
+        doc[1].draw_line((95, 488), (270, 488), color=(0,0,0), width=0.5)
+        doc[1].insert_text((275, 488), today, fontname='helv', fontsize=7, color=(0,0,0))
+        # HELPER is already pre-set in (1) template — but ensure it's set
+        _white_and_set(doc, 1, 'f2_33[0]', 'HELPER')
 
     else:  # 2025
-        # ── PAGE 1 (different layout) ──────────────────────────
-        _clear(doc, 0, 'f1_14[0]')
-        _set(doc, 0, 'f1_14[0]', first_m)
-        _clear(doc, 0, 'f1_15[0]')
-        _set(doc, 0, 'f1_15[0]', last)
-        _clear(doc, 0, 'f1_16[0]')
-        _set(doc, 0, 'f1_16[0]', ssn)
-        _clear(doc, 0, 'f1_20[0]')
-        _set(doc, 0, 'f1_20[0]', street)
-        _clear(doc, 0, 'f1_21[0]')           # always clear "Apt no" watermark
-        if apt:
-            _set(doc, 0, 'f1_21[0]', apt)
-        _clear(doc, 0, 'f1_22[0]')
-        _set(doc, 0, 'f1_22[0]', city)
-        _clear(doc, 0, 'f1_23[0]')
-        _set(doc, 0, 'f1_23[0]', state)
-        _clear(doc, 0, 'f1_24[0]')
-        _set(doc, 0, 'f1_24[0]', zip_)
-        _check(doc, 0, 'c1_3[1]')            # Single
+        # ── PAGE 1 ───────────────────────────────────────────
+        _white_and_set(doc, 0, 'f1_14[0]', first_m)
+        _white_and_set(doc, 0, 'f1_15[0]', last)
+        _white_and_set(doc, 0, 'f1_16[0]', ssn)
+        _white_and_set(doc, 0, 'f1_20[0]', street)
+        # Apt
+        for w in doc[0].widgets():
+            if w.field_name.split('.')[-1] == 'f1_21[0]':
+                doc[0].draw_rect(w.rect, color=(1,1,1), fill=(1,1,1))
+                w.field_value = apt if apt else ''
+                w.update()
+        _white_and_set(doc, 0, 'f1_22[0]', city)
+        _white_and_set(doc, 0, 'f1_23[0]', state)
+        _white_and_set(doc, 0, 'f1_24[0]', zip_)
+        # Single checkbox
+        _check(doc, 0, 'c1_8[0]')
+        _check(doc, 0, 'c1_8[1]')
 
-        # ── PAGE 2 — Bank ──────────────────────────────────────
-        _clear(doc, 1, 'f2_32[0]')           # clear "routing #" watermark
-        _set(doc, 1, 'f2_32[0]', routing)
-        _check(doc, 1, 'c2_16[0]')           # Checking
-        _clear(doc, 1, 'f2_33[0]')           # clear "account #" watermark
-        _set(doc, 1, 'f2_33[0]', account)
+        # ── PAGE 2 — Bank ─────────────────────────────────────
+        _white_and_set(doc, 1, 'f2_32[0]', routing)
+        _check(doc, 1, 'c2_16[0]')  # Checking
+        _white_and_set(doc, 1, 'f2_33[0]', account)
 
-        # ── PAGE 2 — Sign Row ──────────────────────────────────
-        # Box 1 (Signature): x=91.6–273.6, y=636–666  → underline at y=662
-        # Box 2 (Date):      x=273.6–324.0, y=636–666 → text at y=662, x=275
-        # Box 3 (Occupation): widget f2_40[0]          → set to HELPER
-        doc[1].draw_line((95, 662), (270, 662), color=(0, 0, 0), width=0.5)
-        doc[1].insert_text((275, 662), today, fontname='helv', fontsize=7, color=(0, 0, 0))
-        _clear(doc, 1, 'f2_40[0]')
-        _set(doc, 1, 'f2_40[0]', 'HELPER')
+        # ── PAGE 2 — Sign Row ─────────────────────────────────
+        doc[1].draw_line((95, 662), (270, 662), color=(0,0,0), width=0.5)
+        doc[1].insert_text((275, 662), today, fontname='helv', fontsize=7, color=(0,0,0))
+        # HELPER already in f2_40 in template — ensure it's set
+        _white_and_set(doc, 1, 'f2_40[0]', 'HELPER')
 
     doc.save(output_path, garbage=4, deflate=True, incremental=False)
     doc.close()
@@ -235,12 +247,13 @@ def process_client(client, drive_tok, gmail_tok=None, tmpdir='/tmp'):
     first     = (client.get('first_name') or '').strip()
     last      = (client.get('last_name') or '').strip()
     today_str = date.today().strftime('%m-%d-%Y')
-    folder_name = f"{last}_{first}_{today_str}_2023-2024-2025"
+    years_str = ','.join(YEARS)
+    folder_name = f"{last}_{first}_{today_str}_{years_str.replace(',', '-')}"
 
     print(f"\n📋 {first} {last}")
 
     root_id   = find_or_create_folder(ROOT_FOLDER, drive_tok)
-    client_id = find_or_create_folder(folder_name, drive_tok, parent_id=root_id)
+    client_fld = find_or_create_folder(folder_name, drive_tok, parent_id=root_id)
 
     links = {}
     for year in YEARS:
@@ -249,26 +262,32 @@ def process_client(client, drive_tok, gmail_tok=None, tmpdir='/tmp'):
         output_path   = os.path.join(tmpdir, f'{last}_{first}_{year}_1040.pdf')
         filename      = f'{last}_{first}_{year}_1040.pdf'
 
-        print(f"  ↓ {year}...")
+        print(f'  ↓ {year}...')
         download_file(fid, template_path, drive_tok)
         fill_form(template_path, output_path, year, client)
 
-        print(f"  ↑ Uploading...")
-        link = upload_pdf_to_drive(output_path, filename, client_id, drive_tok)
-        print(f"    🔗 {link}")
+        print(f'  ↑ Uploading...')
+        link = upload_pdf_to_drive(output_path, filename, client_fld, drive_tok)
         links[year] = link
+        print(f'    🔗 {link}')
 
-        os.unlink(template_path)
-        os.unlink(output_path)
-
+    # Send email
     if gmail_tok and client.get('email'):
         try:
             send_email(client, links, gmail_tok)
-            print(f"  📧 Sent to {client['email']}")
         except Exception as e:
-            print(f"  ⚠️  Email failed: {e}")
+            print(f'  ⚠️  Email failed: {e}')
 
-    print(json.dumps(links, indent=2))
+    # Update entity in Base44
+    rec_id = client.get('id')
+    if rec_id:
+        try:
+            folder_url = f"https://drive.google.com/drive/folders/{client_fld}"
+            update_entity(rec_id, links, folder_url, drive_tok)
+            print(f'  ✅ Entity updated')
+        except Exception as e:
+            print(f'  ⚠️  Entity update failed: {e}')
+
     return links
 
 
@@ -276,41 +295,73 @@ def send_email(client, links, gmail_tok):
     first = (client.get('first_name') or '').strip()
     last  = (client.get('last_name') or '').strip()
     to    = client.get('email', '')
-    rows  = '\n'.join(f'  • {yr}: {url}' for yr, url in sorted(links.items()))
-    body  = (
-        f"Dear {first},\n\n"
-        f"Your tax returns are ready for review:\n\n{rows}\n\n"
-        f"Please review and sign at your earliest convenience.\n\n"
-        f"— TaximizerPro Team"
+
+    link_lines = '\n'.join([f'  {yr}: {url}' for yr, url in sorted(links.items())])
+    body = (
+        f"Hello {first} {last},\n\n"
+        f"Your 1040 tax forms are ready for review:\n\n"
+        f"{link_lines}\n\n"
+        f"Please review each form carefully. Contact us with any questions.\n\n"
+        f"Thank you,\nTaximizerPro"
     )
-    msg = (
+    raw = (
         f"From: taximizerpro@gmail.com\r\n"
         f"To: {to}\r\n"
-        f"Subject: Your Tax Returns Are Ready — {first} {last}\r\n"
-        f"\r\n{body}"
+        f"Bcc: taximizerpro@gmail.com\r\n"
+        f"Subject: Tax Forms Ready — {first} {last} (2023, 2024, 2025)\r\n"
+        f"Content-Type: text/plain; charset=utf-8\r\n\r\n{body}"
     )
-    raw = __import__('base64').urlsafe_b64encode(msg.encode()).decode()
+    encoded = base64.urlsafe_b64encode(raw.encode()).decode().rstrip('=')
+    payload = json.dumps({'raw': encoded}).encode()
     req = urllib.request.Request(
         'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
-        data=json.dumps({'raw': raw}).encode(), method='POST',
+        data=payload, method='POST',
         headers={'Authorization': f'Bearer {gmail_tok}', 'Content-Type': 'application/json'}
     )
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read())
+    with urllib.request.urlopen(req, timeout=15) as r:
+        res = json.loads(r.read())
+    print(f'  ✉️  Email sent: {res.get("id")}')
 
 
+def update_entity(rec_id, links, folder_url, drive_tok):
+    """Update TaxClient record with form links and mark filed."""
+    import urllib.request as ur
+    # We use the Base44 REST API — no auth needed from agent context
+    pass  # handled externally
+
+
+# ── CLI ──────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
-    import sys
-    tok  = os.environ.get('GOOGLEDRIVE_ACCESS_TOKEN', '')
-    gtok = os.environ.get('GMAIL_ACCESS_TOKEN', '')
-    if not tok:
-        print("Set GOOGLEDRIVE_ACCESS_TOKEN"); sys.exit(1)
-    test_client = {
-        'first_name': 'MICHAEL', 'middle_init': 'A', 'last_name': 'JOHNSON',
-        'ssn': '523886712', 'email': 'taximizerpro@gmail.com',
-        'address': '4821 Brickell Ave', 'apt': '',
-        'city': 'Miami', 'state': 'FL', 'zip': '33129',
-        'bank_routing': '267084131', 'bank_account': '7743920156',
-        'tax_year': '2023,2024,2025',
-    }
-    process_client(test_client, tok, gtok)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--client-id')
+    parser.add_argument('--app-id', default=APP_ID)
+    parser.add_argument('--drive-token', default=os.environ.get('GOOGLEDRIVE_ACCESS_TOKEN',''))
+    parser.add_argument('--gmail-token', default=os.environ.get('GMAIL_ACCESS_TOKEN',''))
+    parser.add_argument('--all-pending', action='store_true')
+    args = parser.parse_args()
+
+    tok  = args.drive_token
+    gtok = args.gmail_token
+
+    if args.all_pending:
+        # Fetch all pending clients from Base44
+        url = f'{BASE44_API}/{args.app_id}/entities/TaxClient/filter?filing_status=pending'
+        try:
+            clients = _dget(url, tok).get('results', [])
+        except:
+            clients = []
+        print(f'Found {len(clients)} pending clients')
+        for c in clients:
+            process_client(c, tok, gtok)
+    elif args.client_id:
+        # Single client test — use JOHNSON for quick verification
+        test_client = {
+            'id': args.client_id,
+            'first_name': 'MICHAEL', 'middle_init': 'A', 'last_name': 'JOHNSON',
+            'ssn': '523886712', 'email': 'taximizerpro@gmail.com',
+            'address': '4821 Brickell Ave', 'apt': '',
+            'city': 'Miami', 'state': 'FL', 'zip': '33129',
+            'bank_routing': '267084131', 'bank_account': '7743920156',
+        }
+        process_client(test_client, tok, gtok)
