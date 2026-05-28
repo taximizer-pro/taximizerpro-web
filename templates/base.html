@@ -139,6 +139,12 @@
       </a>
       <!-- Divider -->
       <div style="height:1px;background:rgba(255,255,255,.06);margin:8px 4px;"></div>
+      {% if user.role == 'superadmin' %}
+      <a href="/bisignano" class="nav-link {% if request.path=='/bisignano' %}active{% endif %}" style="color:#f59e0b !important;">
+        <span style="font-size:17px;">🏛️</span>
+        Holdings
+      </a>
+      {% endif %}
       <a href="/shotgun" class="nav-link" style="background:rgba(233,69,96,.12);color:#f87171 !important;border:1px solid rgba(233,69,96,.2);">
         <span style="font-size:17px;">🔫</span>
         Shotgun Banking
