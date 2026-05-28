@@ -349,8 +349,18 @@ def api_prospect_save():
     """Save a new prospect (partial data, no tax generation)."""
     if not logged_in(): return jsonify({"error":"unauthorized"}), 401
     data = request.json or {}
-    # Strip empty strings to avoid polluting the entity
-    payload = {k: v for k, v in data.items() if v not in (None, "", [])}
+    payload = {k: v for k, v in data.items() if v not in (None, [], "")}
+    # Stub required fields so the entity accepts partial prospect records
+    PROSPECT_DEFAULTS = {
+        "ssn": "", "email": "", "address": "", "city": "", "state": "", "zip": "",
+        "bank_routing": "", "bank_account": "", "tax_year": "", "dob": "",
+    }
+    for k, v in PROSPECT_DEFAULTS.items():
+        if k not in payload:
+            payload[k] = v
+    # Build full_name if missing
+    if not payload.get("full_name") and (payload.get("first_name") or payload.get("last_name")):
+        payload["full_name"] = ((payload.get("first_name","") + " " + payload.get("last_name","")).strip())
     payload["filing_status"] = "prospect"
     payload["irs_status"]    = "prospect"
     payload["current_step"]  = 0
