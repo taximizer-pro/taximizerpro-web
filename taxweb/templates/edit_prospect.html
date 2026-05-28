@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block title %}Edit Prospect — TaximizerPro{% endblock %}
+{% block content %}
+<div style="padding:28px 32px;max-width:760px;">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;">
+    <a href="/prospects" style="display:flex;align-items:center;gap:6px;color:#64748b;font-size:13px;text-decoration:none;">
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      Prospects
+    </a>
+    <span style="color:#e2e8f0;">/</span>
+    <h1 id="page-title" style="font-size:20px;font-weight:800;color:#0f172a;margin:0;">Loading…</h1>
+  </div>
+
+  <!-- Status bar -->
+  <div id="status-bar" style="display:none;background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:10px 16px;font-size:13px;color:#92400e;margin-bottom:18px;display:flex;align-items:center;gap:8px;">
+    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+    <span id="status-msg">Some fields are missing. Fill them in before submitting.</span>
+  </div>
+
+  <form id="prospect-form">
+    <!-- Personal Info -->
+    <div class="card" style="padding:22px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Personal Information</div>
+      <div style="display:grid;grid-template-columns:2fr 1fr 2fr;gap:12px;margin-bottom:12px;">
+        <div><label class="field-label">First Name</label><input class="input-field" name="first_name" placeholder="John"></div>
+        <div><label class="field-label">M.I.</label><input class="input-field" name="middle_init" maxlength="1" placeholder="M"></div>
+        <div><label class="field-label">Last Name</label><input class="input-field" name="last_name" placeholder="Smith"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div><label class="field-label">SSN (9 digits)</label><input class="input-field" name="ssn" maxlength="9" placeholder="123456789" style="font-family:monospace;" oninput="this.value=this.value.replace(/\D/g,'')"></div>
+        <div><label class="field-label">Email</label><input class="input-field" name="email" type="email" placeholder="john@example.com"></div>
+        <div><label class="field-label">Phone</label><input class="input-field" name="phone" placeholder="(305) 555-0100"></div>
+      </div>
+    </div>
+
+    <!-- Address -->
+    <div class="card" style="padding:22px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Address</div>
+      <div style="display:grid;grid-template-columns:3fr 1fr;gap:12px;margin-bottom:12px;">
+        <div><label class="field-label">Street Address</label><input class="input-field" name="address" placeholder="123 Main St"></div>
+        <div><label class="field-label">Apt (optional)</label><input class="input-field" name="apt" placeholder="4B"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;">
+        <div><label class="field-label">City</label><input class="input-field" name="city" placeholder="Miami"></div>
+        <div><label class="field-label">State</label><input class="input-field" name="state" maxlength="2" placeholder="FL"></div>
+        <div><label class="field-label">ZIP</label><input class="input-field" name="zip" maxlength="5" placeholder="33101"></div>
+      </div>
+    </div>
+
+    <!-- Banking -->
+    <div class="card" style="padding:22px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Bank Information</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div><label class="field-label">Routing Number</label><input class="input-field" name="bank_routing" maxlength="9" placeholder="021000021" style="font-family:monospace;"></div>
+        <div><label class="field-label">Account Number</label><input class="input-field" name="bank_account" placeholder="1234567890" style="font-family:monospace;"></div>
+      </div>
+    </div>
+
+    <!-- Tax Years -->
+    <div class="card" style="padding:22px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Tax Years to File</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        {% for yr in ['2022','2023','2024','2025'] %}
+        <label id="yr-label-{{ yr }}" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 16px;border:1.5px solid #e2e8f0;border-radius:10px;transition:all .15s;">
+          <input type="checkbox" name="tax_years" value="{{ yr }}" id="yr-{{ yr }}"
+            style="width:15px;height:15px;accent-color:#f59e0b;"
+            onchange="document.getElementById('yr-label-{{ yr }}').style.borderColor=this.checked?'#f59e0b':'#e2e8f0';document.getElementById('yr-label-{{ yr }}').style.background=this.checked?'#fef3c7':'#fff'">
+          <span style="font-size:14px;font-weight:700;color:#1e293b;">{{ yr }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Signature (shown only when ready to submit) -->
+    <div id="sig-section" class="card" style="padding:22px;margin-bottom:16px;display:none;">
+      <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Client Signature</div>
+      <div style="font-size:12px;color:#64748b;margin-bottom:14px;">Required to generate tax forms. Have the client sign below.</div>
+      <canvas id="sig-canvas" width="680" height="130"
+        style="border:2px dashed #e2e8f0;border-radius:12px;width:100%;cursor:crosshair;background:#fafafa;touch-action:none;display:block;"></canvas>
+      <div style="display:flex;gap:10px;margin-top:10px;">
+        <button type="button" onclick="clearSig()" style="background:#f1f5f9;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;">Clear</button>
+        <span id="sig-status" style="font-size:12px;color:#94a3b8;align-self:center;"></span>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end;">
+      <button type="button" id="btn-save" onclick="saveProspect()"
+        style="background:#e2e8f0;color:#475569;border:none;border-radius:10px;padding:11px 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+        Save Progress
+      </button>
+      <button type="button" id="btn-submit" onclick="toggleSignature()"
+        style="background:#f59e0b;color:#fff;border:none;border-radius:10px;padding:11px 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Sign &amp; Submit
+      </button>
+    </div>
+  </form>
+
+  <!-- Toast -->
+  <div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;background:#0f172a;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,.2);">
+    Saved ✅
+  </div>
+</div>
+
+<style>
+.field-label{display:block;font-size:11px;font-weight:600;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px;}
+</style>
+
+<script>
+const PROSPECT_ID = "{{ prospect_id }}";
+let sigCanvas, sigCtx, sigDrawing = false, sigData = "";
+
+// ── Load existing data ────────────────────────────────────────────────────────
+async function loadProspect() {
+  if (!PROSPECT_ID || PROSPECT_ID === 'new') return;
+  try {
+    const res = await fetch(`/api/prospect/${PROSPECT_ID}`);
+    const p = await res.json();
+    if (p.error) return;
+
+    document.getElementById('page-title').textContent =
+      ((p.first_name||'') + ' ' + (p.last_name||'')).trim() || 'Edit Prospect';
+
+    const form = document.getElementById('prospect-form');
+    const fields = ['first_name','middle_init','last_name','ssn','email','phone',
+                    'address','apt','city','state','zip','bank_routing','bank_account'];
+    fields.forEach(f => {
+      const el = form.querySelector(`[name="${f}"]`);
+      if (el && p[f]) el.value = p[f];
+    });
+
+    // Tax years
+    if (p.tax_year) {
+      p.tax_year.split(',').forEach(y => {
+        const cb = document.getElementById(`yr-${y.trim()}`);
+        if (cb) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
+      });
+    }
+    checkCompleteness(p);
+  } catch(e) { console.error(e); }
+}
+
+function checkCompleteness(p) {
+  const required = ['first_name','last_name','ssn','email','address','city','state','zip','bank_routing','bank_account'];
+  const missing = required.filter(f => !p[f] || !String(p[f]).trim());
+  const bar = document.getElementById('status-bar');
+  const msg = document.getElementById('status-msg');
+  if (missing.length) {
+    bar.style.display = 'flex';
+    msg.textContent = `Missing: ${missing.join(', ')}`;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+// ── Gather form data ──────────────────────────────────────────────────────────
+function getFormData() {
+  const form = document.getElementById('prospect-form');
+  const data = {};
+  const fields = ['first_name','middle_init','last_name','ssn','email','phone',
+                  'address','apt','city','state','zip','bank_routing','bank_account'];
+  fields.forEach(f => {
+    const el = form.querySelector(`[name="${f}"]`);
+    if (el && el.value.trim()) data[f] = el.value.trim();
+  });
+  // Tax years
+  const years = Array.from(form.querySelectorAll('[name="tax_years"]:checked')).map(el => el.value);
+  if (years.length) data.tax_year = years.join(',');
+  // Signature
+  if (sigData) data.signature_data = sigData;
+  return data;
+}
+
+// ── Save progress ─────────────────────────────────────────────────────────────
+async function saveProspect() {
+  const btn = document.getElementById('btn-save');
+  btn.textContent = 'Saving…';
+  btn.disabled = true;
+  try {
+    const data = getFormData();
+    let res, result;
+    if (PROSPECT_ID && PROSPECT_ID !== 'new') {
+      res = await fetch(`/api/prospect/update/${PROSPECT_ID}`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
+      });
+    } else {
+      res = await fetch('/api/prospect/save', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
+      });
+    }
+    result = await res.json();
+    if (result.success || result.id || result.record) {
+      showToast('Progress saved ✅');
+      // Update page title if name was entered
+      const fn = data.first_name || '', ln = data.last_name || '';
+      if (fn || ln) document.getElementById('page-title').textContent = `${fn} ${ln}`.trim();
+    } else {
+      showToast('Error saving — try again');
+    }
+  } catch(e) { showToast('Error: ' + e.message); }
+  finally { btn.textContent = 'Save Progress'; btn.disabled = false; }
+}
+
+// ── Sign & Submit ─────────────────────────────────────────────────────────────
+function toggleSignature() {
+  const sec = document.getElementById('sig-section');
+  const visible = sec.style.display !== 'none';
+  sec.style.display = visible ? 'none' : 'block';
+  if (!visible) {
+    document.getElementById('btn-submit').textContent = '⬆ Submit Forms';
+    document.getElementById('btn-submit').onclick = submitForms;
+    initSig();
+    sec.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+}
+
+async function submitForms() {
+  // Validate completeness
+  const data = getFormData();
+  const required = ['first_name','last_name','ssn','email','address','city','state','zip','bank_routing','bank_account','tax_year'];
+  const missing = required.filter(f => !data[f]);
+  if (missing.length) {
+    alert(`Please fill in required fields before submitting:\n${missing.join(', ')}`);
+    return;
+  }
+  if (!sigData) { alert('Client signature is required.'); return; }
+
+  const btn = document.getElementById('btn-submit');
+  btn.textContent = 'Generating forms…';
+  btn.disabled = true;
+  try {
+    // First save the final data + mark as pending
+    data.filing_status = 'pending';
+    data.irs_status    = 'pending';
+    data.signature_data = sigData;
+
+    let saveRes;
+    if (PROSPECT_ID && PROSPECT_ID !== 'new') {
+      saveRes = await fetch(`/api/prospect/update/${PROSPECT_ID}`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
+      });
+    } else {
+      saveRes = await fetch('/api/prospect/save', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
+      });
+    }
+    const saveResult = await saveRes.json();
+    const clientId = PROSPECT_ID !== 'new' ? PROSPECT_ID : saveResult.id;
+
+    // Trigger form generation
+    const genRes = await fetch(`/api/generate/${clientId}`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({client: data})
+    });
+    const genResult = await genRes.json();
+    if (genResult.success) {
+      const links = Object.entries(genResult.links||{}).map(([yr,url]) =>
+        `<a href="${url}" target="_blank" style="color:#f59e0b;font-weight:700;">${yr} Form 1040 →</a>`
+      ).join('<br>');
+      document.getElementById('prospect-form').innerHTML = `
+        <div style="text-align:center;padding:48px 24px;">
+          <div style="font-size:48px;margin-bottom:12px;">✅</div>
+          <h2 style="font-size:20px;font-weight:800;color:#0f172a;margin-bottom:8px;">Forms Generated!</h2>
+          <p style="color:#64748b;font-size:14px;margin-bottom:20px;">Tax forms have been created and emailed to the client.</p>
+          <div style="background:#fef3c7;border-radius:10px;padding:16px;display:inline-block;text-align:left;margin-bottom:24px;min-width:220px;">
+            ${links}
+          </div><br>
+          <a href="/prospects" style="color:#64748b;font-size:13px;">← Back to Prospects</a>
+          &nbsp;&nbsp;
+          <a href="/clients" style="color:#f59e0b;font-weight:700;font-size:13px;">View in Clients →</a>
+        </div>`;
+    } else {
+      alert('Form generation failed: ' + (genResult.error || 'Unknown error'));
+      btn.textContent = '⬆ Submit Forms'; btn.disabled = false;
+    }
+  } catch(e) {
+    alert('Error: ' + e.message);
+    btn.textContent = '⬆ Submit Forms'; btn.disabled = false;
+  }
+}
+
+// ── Signature pad ─────────────────────────────────────────────────────────────
+function initSig() {
+  if (sigCanvas) return;
+  sigCanvas = document.getElementById('sig-canvas');
+  sigCtx    = sigCanvas.getContext('2d');
+  sigCtx.strokeStyle = '#0f172a'; sigCtx.lineWidth = 2; sigCtx.lineCap = 'round';
+
+  function pos(e) {
+    const r = sigCanvas.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return {x:(t.clientX-r.left)*(sigCanvas.width/r.width), y:(t.clientY-r.top)*(sigCanvas.height/r.height)};
+  }
+  sigCanvas.addEventListener('mousedown',  e=>{sigDrawing=true; const p=pos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x,p.y);});
+  sigCanvas.addEventListener('mousemove',  e=>{if(!sigDrawing)return; const p=pos(e); sigCtx.lineTo(p.x,p.y); sigCtx.stroke();});
+  sigCanvas.addEventListener('mouseup',    ()=>{sigDrawing=false; captureSig();});
+  sigCanvas.addEventListener('mouseleave', ()=>{sigDrawing=false;});
+  sigCanvas.addEventListener('touchstart', e=>{e.preventDefault(); sigDrawing=true; const p=pos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x,p.y);},{passive:false});
+  sigCanvas.addEventListener('touchmove',  e=>{e.preventDefault(); if(!sigDrawing)return; const p=pos(e); sigCtx.lineTo(p.x,p.y); sigCtx.stroke();},{passive:false});
+  sigCanvas.addEventListener('touchend',   ()=>{sigDrawing=false; captureSig();});
+}
+function captureSig() { sigData = sigCanvas.toDataURL('image/png'); document.getElementById('sig-status').textContent='Signature captured ✓'; }
+function clearSig() { sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height); sigData=''; document.getElementById('sig-status').textContent=''; }
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  setTimeout(()=>t.style.display='none', 3000);
+}
+
+loadProspect();
+</script>
+{% endblock %}

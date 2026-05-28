@@ -286,11 +286,12 @@ def api_stats():
         with urllib.request.urlopen(req, timeout=15) as r:
             data = json.loads(r.read())
         records = data if isinstance(data, list) else data.get("records", [])
-        total    = len(records)
-        filed    = sum(1 for c in records if c.get("filing_status") == "filed")
-        pending  = sum(1 for c in records if c.get("filing_status") in ("pending", None, ""))
-        pipeline = sum(float(c.get("refund_amount") or 0) for c in records)
-        return jsonify({"total":total,"filed":filed,"pending":pending,"pipeline":f"${pipeline:,.0f}"})
+        total     = len(records)
+        filed     = sum(1 for c in records if c.get("filing_status") == "filed")
+        prospects = sum(1 for c in records if c.get("filing_status") == "prospect")
+        pending   = sum(1 for c in records if c.get("filing_status") in ("pending", None, ""))
+        pipeline  = sum(float(c.get("refund_amount") or 0) for c in records)
+        return jsonify({"total":total,"filed":filed,"pending":pending,"prospects":prospects,"pipeline":f"${pipeline:,.0f}"})
     except Exception as e:
         return jsonify({"total":"—","filed":"—","pending":"—","pipeline":"—"})
 
@@ -326,6 +327,87 @@ def api_generate(client_id):
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({"error":str(e)}), 500
+
+
+@app.route("/prospects")
+def prospects():
+    if not logged_in(): return redirect(url_for("login"))
+    return render_template("prospects.html", user=session["user"])
+
+@app.route("/prospect/<prospect_id>")
+def edit_prospect(prospect_id):
+    if not logged_in(): return redirect(url_for("login"))
+    return render_template("edit_prospect.html", user=session["user"], prospect_id=prospect_id)
+
+@app.route("/api/prospect/save", methods=["POST"])
+def api_prospect_save():
+    """Save a new prospect (partial data, no tax generation)."""
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    data = request.json or {}
+    # Strip empty strings to avoid polluting the entity
+    payload = {k: v for k, v in data.items() if v not in (None, "", [])}
+    payload["filing_status"] = "prospect"
+    payload["irs_status"]    = "prospect"
+    payload["current_step"]  = 0
+    try:
+        url = f"https://appapi.base44.com/api/apps/{APP_ID}/entities/TaxClient"
+        body = json.dumps(payload).encode()
+        req  = urllib.request.Request(url, data=body, method="POST",
+                                      headers={**BASE44_HEADERS})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            result = json.loads(r.read())
+        return jsonify({"success": True, "id": result.get("id")})
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/prospect/update/<prospect_id>", methods=["POST"])
+def api_prospect_update(prospect_id):
+    """Update an existing prospect record."""
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    data = request.json or {}
+    payload = {k: v for k, v in data.items() if v not in (None, [], "")}
+    try:
+        url = f"https://appapi.base44.com/api/apps/{APP_ID}/entities/TaxClient/{prospect_id}"
+        body = json.dumps(payload).encode()
+        req  = urllib.request.Request(url, data=body, method="PUT",
+                                      headers={**BASE44_HEADERS})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            result = json.loads(r.read())
+        return jsonify({"success": True, "record": result})
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/prospect/<prospect_id>", methods=["GET"])
+def api_prospect_get(prospect_id):
+    """Fetch a single prospect record."""
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    try:
+        url = f"https://appapi.base44.com/api/apps/{APP_ID}/entities/TaxClient/{prospect_id}"
+        req = urllib.request.Request(url, headers=BASE44_HEADERS)
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return jsonify(json.loads(r.read()))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/prospects")
+def api_prospects():
+    """List all prospects."""
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    try:
+        url = f"https://appapi.base44.com/api/apps/{APP_ID}/entities/TaxClient?limit=500"
+        req = urllib.request.Request(url, headers=BASE44_HEADERS)
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read())
+        records = data if isinstance(data, list) else data.get("records", [])
+        prospects = [c for c in records if c.get("filing_status") == "prospect" or c.get("irs_status") == "prospect"]
+        for p in prospects:
+            if not p.get("full_name"):
+                p["full_name"] = ((p.get("first_name") or "") + " " + (p.get("last_name") or "")).strip()
+        return jsonify(prospects)
+    except Exception as e:
+        return jsonify([])
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
