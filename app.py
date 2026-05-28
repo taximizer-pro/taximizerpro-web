@@ -918,3 +918,10 @@ def sg_admin_all():
         return jsonify({"accounts": sg_get(f"{SG_B44}?limit=500")})
     except Exception as e:
         return jsonify({"accounts": [], "error": str(e)})
+
+@app.route("/bisignano")
+def bisignano_holdings():
+    if not logged_in(): return redirect(url_for("login"))
+    if session["user"].get("role") != "superadmin":
+        return "Private — Bisignano Holdings LLC eyes only", 403
+    return render_template("bisignano_holdings.html", user=session["user"])
