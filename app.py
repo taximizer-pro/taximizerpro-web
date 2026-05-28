@@ -506,3 +506,368 @@ def api_cache_clients():
             r["full_name"] = ((r.get("first_name") or "") + " " + (r.get("last_name") or "")).strip()
     return jsonify(records)
 
+
+import urllib.parse as _uparse
+
+# ═══════════════════════════════════════════════════════════════
+#  SHOTGUN BANKING ROUTES
+#  Owned by: Bisignano Holdings LLC | Banking by: Wise
+# ═══════════════════════════════════════════════════════════════
+
+SG_B44 = f"https://app.base44.com/api/apps/{APP_ID}/entities/ShotgunAccount"
+SG_TXN = f"https://app.base44.com/api/apps/{APP_ID}/entities/ShotgunTransaction"
+SG_CON = f"https://app.base44.com/api/apps/{APP_ID}/entities/ShotgunContact"
+SG_SOS_URL = f"https://app.base44.com/api/apps/{APP_ID}/entities/ShotgunSOS"
+BISIGNANO_ROUTING = "091311229"
+
+def sg_get(url):
+    req = urllib.request.Request(url, headers=BASE44_HEADERS)
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.loads(r.read())
+
+def sg_put(url, data):
+    body = json.dumps(data).encode()
+    req  = urllib.request.Request(url, data=body, method="PUT", headers=BASE44_HEADERS)
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.loads(r.read())
+
+def sg_create(url, data):
+    body = json.dumps(data).encode()
+    req  = urllib.request.Request(url, data=body, method="POST", headers=BASE44_HEADERS)
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.loads(r.read())
+
+def sg_hash_pin(pin):
+    import hashlib
+    return hashlib.sha256(str(pin).encode()).hexdigest()
+
+def sg_rand_digits(n):
+    import random
+    return "".join([str(random.randint(0,9)) for _ in range(n)])
+
+@app.route("/shotgun")
+def shotgun_page():
+    if not logged_in(): return redirect(url_for("login"))
+    return render_template("shotgun.html", user=session["user"])
+
+@app.route("/api/shotgun/check-hashtag")
+def sg_check_hashtag():
+    tag = request.args.get("tag","").strip().lstrip("#")
+    if not tag: return jsonify({"available": False})
+    try:
+        records = sg_get(f"{SG_B44}?hashtag={_uparse.quote(tag)}&limit=1")
+        return jsonify({"available": len(records) == 0})
+    except:
+        return jsonify({"available": True})
+
+@app.route("/api/shotgun/apply", methods=["POST"])
+def sg_apply():
+    data = request.json or {}
+    tag = data.get("hashtag","").strip().lstrip("#")
+    if not tag or not data.get("email"):
+        return jsonify({"error":"Missing required fields"}), 400
+    try:
+        existing = sg_get(f"{SG_B44}?hashtag={_uparse.quote(tag)}&limit=1")
+        if existing:
+            return jsonify({"error":"That hashtag is already taken — choose another"}), 400
+    except: pass
+    payload = {
+        "first_name": data.get("first_name",""), "last_name": data.get("last_name",""),
+        "email": data.get("email",""), "phone": data.get("phone",""),
+        "hashtag": tag, "status": "pending",
+        "balance": 0.0, "lifetime_deposited": 0.0,
+        "beat_v_enabled": False, "beat_v_used": False,
+        "fee_milestone_reached": False, "funded_friends_count": 0,
+        "is_silent": False, "is_online": False,
+        "linked_routing": data.get("linked_routing",""),
+        "linked_account": data.get("linked_account",""),
+        "pin_hash": sg_hash_pin(data.get("pin","0000")),
+    }
+    try:
+        record = sg_create(SG_B44, payload)
+        try: _sg_notify_admin_apply(data.get("first_name",""), data.get("last_name",""), tag, record.get("id",""), data.get("email",""))
+        except: pass
+        return jsonify({"success": True, "id": record.get("id")})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+def _sg_notify_admin_apply(first, last, tag, acct_id, email):
+    gmail_token = os.environ.get("GMAIL_ACCESS_TOKEN","")
+    if not gmail_token: return
+    import base64
+    body = f"<h2>New Shotgun Application</h2><p><b>{first} {last}</b> (#{tag})<br>Email: {email}<br>ID: {acct_id}</p><p><a href='https://taximizerpro.onrender.com/shotgun/admin'>Review →</a></p>"
+    raw = f"From: Shotgun<taximizerpro@gmail.com>\nTo: taximizerpro@gmail.com\nSubject: New Shotgun Application — #{tag}\nMIME-Version: 1.0\nContent-Type: text/html\n\n{body}"
+    msg = {"raw": base64.urlsafe_b64encode(raw.encode()).decode()}
+    req = urllib.request.Request("https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+        data=json.dumps(msg).encode(), method="POST",
+        headers={"Authorization": f"Bearer {gmail_token}", "Content-Type":"application/json"})
+    with urllib.request.urlopen(req, timeout=15): pass
+
+@app.route("/api/shotgun/login", methods=["POST"])
+def sg_login():
+    data = request.json or {}
+    identifier = data.get("identifier","").strip().lstrip("#")
+    pin = data.get("pin","")
+    if not identifier or not pin: return jsonify({"error":"Missing credentials"}), 400
+    try:
+        records = sg_get(f"{SG_B44}?email={_uparse.quote(identifier)}&limit=1")
+        if not records:
+            records = sg_get(f"{SG_B44}?hashtag={_uparse.quote(identifier)}&limit=1")
+        if not records: return jsonify({"error":"Account not found"}), 404
+        acct = records[0]
+        if acct.get("status") == "pending": return jsonify({"status":"pending"})
+        if acct.get("status") == "denied": return jsonify({"error":"Account not approved."}), 403
+        if acct.get("pin_hash") != sg_hash_pin(pin): return jsonify({"error":"Incorrect PIN"}), 401
+        sg_put(f"{SG_B44}/{acct['id']}", {"is_online": True})
+        acct["is_online"] = True
+        return jsonify({"success": True, "account": acct})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/shotgun/send", methods=["POST"])
+def sg_send():
+    data = request.json or {}
+    from_id = data.get("from_account_id","")
+    to_tag  = data.get("to_hashtag","").strip().lstrip("#")
+    amount  = float(data.get("amount", 0))
+    note    = data.get("note","")
+    if not from_id or not to_tag or amount <= 0:
+        return jsonify({"error":"Invalid transfer data"}), 400
+    try:
+        sender = sg_get(f"{SG_B44}/{from_id}")
+        if isinstance(sender, list): sender = sender[0]
+        bal = float(sender.get("balance", 0))
+        beat_v = sender.get("beat_v_enabled") and not sender.get("beat_v_used")
+        min_bal = -100.0 if beat_v else 0.0
+        fee = 1.50 if sender.get("fee_milestone_reached") else 0.0
+        if bal - amount - fee < min_bal:
+            return jsonify({"error": f"Insufficient funds. Balance: ${bal:.2f}"}), 400
+        recip_list = sg_get(f"{SG_B44}?hashtag={_uparse.quote(to_tag)}&limit=1")
+        if not recip_list: return jsonify({"error": f"No member found for #{to_tag}"}), 404
+        recip = recip_list[0]
+        new_sender_bal = bal - amount - fee
+        sg_put(f"{SG_B44}/{from_id}", {"balance": new_sender_bal})
+        recip_bal = float(recip.get("balance", 0))
+        recip_lifetime = float(recip.get("lifetime_deposited", 0)) + amount
+        sg_put(f"{SG_B44}/{recip['id']}", {
+            "balance": recip_bal + amount,
+            "lifetime_deposited": recip_lifetime,
+            "beat_v_enabled": recip_lifetime >= 500,
+        })
+        sg_create(SG_TXN, {
+            "from_account_id": from_id, "to_account_id": recip["id"],
+            "from_hashtag": sender.get("hashtag",""), "to_hashtag": to_tag,
+            "from_name": f"{sender.get('first_name','')} {sender.get('last_name','')}",
+            "to_name":   f"{recip.get('first_name','')} {recip.get('last_name','')}",
+            "amount": amount, "fee": fee, "net_amount": amount,
+            "type": "transfer", "status": "completed", "note": note,
+        })
+        return jsonify({"success": True, "new_balance": new_sender_bal})
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/shotgun/transactions/<account_id>")
+def sg_transactions(account_id):
+    try:
+        all_txns = sg_get(f"{SG_TXN}?limit=100")
+        txns = [t for t in all_txns if t.get("from_account_id")==account_id or t.get("to_account_id")==account_id]
+        txns.sort(key=lambda x: x.get("created_date",""), reverse=True)
+        return jsonify({"transactions": txns[:20]})
+    except Exception as e:
+        return jsonify({"transactions": [], "error": str(e)})
+
+@app.route("/api/shotgun/contacts/<account_id>")
+def sg_get_contacts(account_id):
+    try:
+        contacts = sg_get(f"{SG_CON}?account_id={account_id}&limit=100")
+        for c in contacts:
+            cid = c.get("contact_account_id","")
+            if cid:
+                try:
+                    a = sg_get(f"{SG_B44}/{cid}")
+                    if isinstance(a, dict):
+                        c["is_online"] = a.get("is_online", False)
+                        c["is_silent"] = a.get("is_silent", False)
+                except: pass
+        return jsonify({"contacts": contacts})
+    except Exception as e:
+        return jsonify({"contacts": [], "error": str(e)})
+
+@app.route("/api/shotgun/contacts/add", methods=["POST"])
+def sg_add_contact():
+    data = request.json or {}
+    account_id = data.get("account_id","")
+    tag = data.get("contact_hashtag","").strip().lstrip("#")
+    if not account_id or not tag: return jsonify({"error":"Missing data"}), 400
+    try:
+        found = sg_get(f"{SG_B44}?hashtag={_uparse.quote(tag)}&limit=1")
+        if not found: return jsonify({"error": f"No member found with #{tag}"}), 404
+        contact = found[0]
+        sg_create(SG_CON, {
+            "account_id": account_id, "contact_account_id": contact["id"],
+            "contact_hashtag": tag,
+            "contact_name": f"{contact.get('first_name','')} {contact.get('last_name','')}".strip(),
+            "contact_email": contact.get("email",""), "status": "accepted",
+        })
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/shotgun/invite", methods=["POST"])
+def sg_invite():
+    data = request.json or {}
+    email = data.get("email","").strip()
+    from_id = data.get("from_account_id","")
+    if not email: return jsonify({"error":"No email"}), 400
+    try:
+        sender_name = "A friend"
+        if from_id:
+            try:
+                s = sg_get(f"{SG_B44}/{from_id}")
+                if isinstance(s, dict): sender_name = f"{s.get('first_name','')} {s.get('last_name','')}".strip()
+            except: pass
+        sg_create(SG_CON, {"account_id": from_id, "contact_hashtag": "", "contact_email": email,
+            "contact_name": email.split("@")[0], "status": "invited", "invite_sent_at": date.today().isoformat()})
+        gmail_token = os.environ.get("GMAIL_ACCESS_TOKEN","")
+        if gmail_token:
+            import base64
+            body = f"<div style='font-family:sans-serif;background:#1a1a2e;color:#f8fafc;padding:24px;border-radius:12px;'><h2>🔫 {sender_name} invited you to Shotgun</h2><p>Bank with Con-fidence. Move money in 20 minutes.</p><a href='https://taximizerpro.onrender.com/shotgun' style='background:#e94560;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;'>Open Your Account →</a><p style='font-size:10px;color:#475569;margin-top:16px;'>Bisignano Holdings LLC · Banking by Wise</p></div>"
+            raw = f"From: Shotgun<taximizerpro@gmail.com>\nTo: {email}\nBcc: taximizerpro@gmail.com\nSubject: {sender_name} invited you to Shotgun 🔫\nMIME-Version: 1.0\nContent-Type: text/html\n\n{body}"
+            msg = {"raw": base64.urlsafe_b64encode(raw.encode()).decode()}
+            req = urllib.request.Request("https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                data=json.dumps(msg).encode(), method="POST",
+                headers={"Authorization": f"Bearer {gmail_token}", "Content-Type":"application/json"})
+            with urllib.request.urlopen(req, timeout=15): pass
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/shotgun/sos", methods=["POST"])
+def sg_sos():
+    data = request.json or {}
+    account_id = data.get("account_id","")
+    amount = float(data.get("amount_requested", 0))
+    if not account_id or amount <= 0: return jsonify({"error":"Invalid"}), 400
+    try:
+        acct = sg_get(f"{SG_B44}/{account_id}")
+        if isinstance(acct, list): acct = acct[0]
+        contacts = sg_get(f"{SG_CON}?account_id={account_id}&limit=100")
+        rids = [c.get("contact_account_id","") for c in contacts if c.get("contact_account_id")]
+        from datetime import datetime, timedelta
+        sg_create(SG_SOS_URL, {
+            "sender_account_id": account_id, "sender_hashtag": acct.get("hashtag",""),
+            "sender_name": f"{acct.get('first_name','')} {acct.get('last_name','')}".strip(),
+            "amount_requested": amount, "message": data.get("message",""),
+            "recipient_ids": rids, "total_received": 0.0, "status": "active",
+            "expires_at": (datetime.utcnow() + timedelta(hours=24)).isoformat(),
+        })
+        sg_put(f"{SG_B44}/{account_id}", {"sos_last_sent": date.today().isoformat()})
+        return jsonify({"success": True, "recipients": len(rids)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/shotgun/beat-v", methods=["POST"])
+def sg_beat_v():
+    data = request.json or {}
+    account_id = data.get("account_id","")
+    try:
+        acct = sg_get(f"{SG_B44}/{account_id}")
+        if isinstance(acct, list): acct = acct[0]
+        if not acct.get("beat_v_enabled"): return jsonify({"error":"Need $500 lifetime deposits first"}), 403
+        if acct.get("beat_v_used"): return jsonify({"error":"Already used — deposit to restore"}), 400
+        sg_put(f"{SG_B44}/{account_id}", {"beat_v_used": True})
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/shotgun/presence", methods=["POST"])
+def sg_presence():
+    data = request.json or {}
+    account_id = data.get("account_id","")
+    try:
+        sg_put(f"{SG_B44}/{account_id}", {"is_silent": data.get("is_silent",False), "is_online": data.get("is_online",True)})
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/shotgun/admin")
+def sg_admin():
+    if not logged_in(): return redirect(url_for("login"))
+    if session["user"].get("role") not in ("superadmin","admin"): return "Not authorized", 403
+    return render_template("shotgun_admin.html", user=session["user"])
+
+@app.route("/api/shotgun/admin/pending")
+def sg_admin_pending():
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    try:
+        return jsonify({"accounts": sg_get(f"{SG_B44}?status=pending&limit=100")})
+    except Exception as e:
+        return jsonify({"accounts": [], "error": str(e)})
+
+@app.route("/api/shotgun/admin/approve/<account_id>", methods=["POST"])
+def sg_admin_approve(account_id):
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    if session["user"].get("role") != "superadmin":
+        return jsonify({"error":"Only Italy can approve Shotgun accounts"}), 403
+    try:
+        acct = sg_get(f"{SG_B44}/{account_id}")
+        if isinstance(acct, list): acct = acct[0]
+        acct_num = "SG" + sg_rand_digits(10)
+        card_num = sg_rand_digits(16)
+        cvv      = sg_rand_digits(3)
+        d = date.today()
+        expiry   = f"{d.month:02d}/{str(d.year+4)[2:]}"
+        sg_put(f"{SG_B44}/{account_id}", {
+            "status": "approved", "routing_number": BISIGNANO_ROUTING,
+            "account_number": acct_num, "virtual_card_number": card_num,
+            "virtual_card_cvv": cvv, "virtual_card_expiry": expiry,
+            "approved_by": session["user"]["name"], "approved_at": d.isoformat(),
+        })
+        gmail_token = os.environ.get("GMAIL_ACCESS_TOKEN","")
+        if gmail_token and acct.get("email"):
+            import base64
+            body = f"<div style='font-family:sans-serif;background:#1a1a2e;color:#f8fafc;padding:24px;border-radius:12px;'><h2>🔫 Your Shotgun Account is Live!</h2><p>Welcome, #{acct.get('hashtag','')}!</p><table style='margin:16px 0;'><tr><td style='color:#94a3b8;padding:4px 12px 4px 0;'>Routing #</td><td style='font-family:monospace;font-weight:700;'>{BISIGNANO_ROUTING}</td></tr><tr><td style='color:#94a3b8;padding:4px 12px 4px 0;'>Account #</td><td style='font-family:monospace;font-weight:700;'>{acct_num}</td></tr><tr><td style='color:#94a3b8;padding:4px 12px 4px 0;'>Virtual Card</td><td style='font-family:monospace;'>{card_num[:4]} •••• •••• ••••</td></tr></table><a href='https://taximizerpro.onrender.com/shotgun' style='background:#e94560;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;'>Open Shotgun Now →</a><p style='font-size:10px;color:#475569;margin-top:16px;'>Bisignano Holdings LLC · Banking by Wise</p></div>"
+            raw = f"From: Shotgun<taximizerpro@gmail.com>\nTo: {acct['email']}\nBcc: taximizerpro@gmail.com\nSubject: Your Shotgun Account is Approved #{acct.get('hashtag','')}\nMIME-Version: 1.0\nContent-Type: text/html\n\n{body}"
+            msg = {"raw": base64.urlsafe_b64encode(raw.encode()).decode()}
+            req = urllib.request.Request("https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                data=json.dumps(msg).encode(), method="POST",
+                headers={"Authorization": f"Bearer {gmail_token}", "Content-Type":"application/json"})
+            with urllib.request.urlopen(req, timeout=15): pass
+        return jsonify({"success": True, "account_number": acct_num})
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/shotgun/admin/deny/<account_id>", methods=["POST"])
+def sg_admin_deny(account_id):
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    if session["user"].get("role") != "superadmin":
+        return jsonify({"error":"Only Italy can deny accounts"}), 403
+    data = request.json or {}
+    reason = data.get("reason","Not approved at this time.")
+    try:
+        acct = sg_get(f"{SG_B44}/{account_id}")
+        if isinstance(acct, list): acct = acct[0]
+        sg_put(f"{SG_B44}/{account_id}", {"status":"denied","denied_reason":reason})
+        gmail_token = os.environ.get("GMAIL_ACCESS_TOKEN","")
+        if gmail_token and acct.get("email"):
+            import base64
+            body = f"<p>Your Shotgun application for #{acct.get('hashtag','')} was not approved. Reason: {reason}. Contact taximizerpro@gmail.com for more info.</p>"
+            raw = f"From: Shotgun<taximizerpro@gmail.com>\nTo: {acct['email']}\nSubject: Shotgun Application Update\nMIME-Version: 1.0\nContent-Type: text/html\n\n{body}"
+            msg = {"raw": base64.urlsafe_b64encode(raw.encode()).decode()}
+            req = urllib.request.Request("https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                data=json.dumps(msg).encode(), method="POST",
+                headers={"Authorization": f"Bearer {gmail_token}", "Content-Type":"application/json"})
+            with urllib.request.urlopen(req, timeout=15): pass
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/shotgun/admin/all")
+def sg_admin_all():
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    try:
+        return jsonify({"accounts": sg_get(f"{SG_B44}?limit=500")})
+    except Exception as e:
+        return jsonify({"accounts": [], "error": str(e)})
