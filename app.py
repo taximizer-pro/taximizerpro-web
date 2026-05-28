@@ -257,14 +257,19 @@ def staff():
     return render_template("staff.html", user=session["user"])
 
 # ── API ───────────────────────────────────────────────────────────────────────
-BASE44_HEADERS = {"app-id": APP_ID, "Content-Type": "application/json"}
+BASE44_HEADERS = {
+    "app-id": APP_ID,
+    "Content-Type": "application/json",
+    "x-api-key": os.environ.get("BASE44_API_KEY", ""),
+}
+B44_BASE = f"https://api.base44.com/api/apps/{APP_ID}/entities/TaxClient"
 
 @app.route("/api/clients")
 def api_clients():
     if not logged_in(): return jsonify({"error":"unauthorized"}), 401
     try:
         limit = request.args.get("limit", 500)
-        url = f"https://appapi.base44.com/api/apps/{APP_ID}/entities/TaxClient?limit={limit}"
+        url = f"{B44_BASE}?limit={limit}"
         req = urllib.request.Request(url, headers=BASE44_HEADERS)
         with urllib.request.urlopen(req, timeout=15) as r:
             data = json.loads(r.read())
@@ -281,7 +286,7 @@ def api_clients():
 def api_stats():
     if not logged_in(): return jsonify({"error":"unauthorized"}), 401
     try:
-        url = f"https://appapi.base44.com/api/apps/{APP_ID}/entities/TaxClient?limit=500"
+        url = f"{B44_BASE}?limit=500"
         req = urllib.request.Request(url, headers=BASE44_HEADERS)
         with urllib.request.urlopen(req, timeout=15) as r:
             data = json.loads(r.read())
@@ -350,7 +355,7 @@ def api_prospect_save():
     payload["irs_status"]    = "prospect"
     payload["current_step"]  = 0
     try:
-        url = f"https://appapi.base44.com/api/apps/{APP_ID}/entities/TaxClient"
+        url = B44_BASE
         body = json.dumps(payload).encode()
         req  = urllib.request.Request(url, data=body, method="POST",
                                       headers={**BASE44_HEADERS})
@@ -368,7 +373,7 @@ def api_prospect_update(prospect_id):
     data = request.json or {}
     payload = {k: v for k, v in data.items() if v not in (None, [], "")}
     try:
-        url = f"https://appapi.base44.com/api/apps/{APP_ID}/entities/TaxClient/{prospect_id}"
+        url = f"{B44_BASE}/{prospect_id}"
         body = json.dumps(payload).encode()
         req  = urllib.request.Request(url, data=body, method="PUT",
                                       headers={**BASE44_HEADERS})
@@ -384,7 +389,7 @@ def api_prospect_get(prospect_id):
     """Fetch a single prospect record."""
     if not logged_in(): return jsonify({"error":"unauthorized"}), 401
     try:
-        url = f"https://appapi.base44.com/api/apps/{APP_ID}/entities/TaxClient/{prospect_id}"
+        url = f"{B44_BASE}/{prospect_id}"
         req = urllib.request.Request(url, headers=BASE44_HEADERS)
         with urllib.request.urlopen(req, timeout=15) as r:
             return jsonify(json.loads(r.read()))
@@ -396,7 +401,7 @@ def api_prospects():
     """List all prospects."""
     if not logged_in(): return jsonify({"error":"unauthorized"}), 401
     try:
-        url = f"https://appapi.base44.com/api/apps/{APP_ID}/entities/TaxClient?limit=500"
+        url = f"{B44_BASE}?limit=500"
         req = urllib.request.Request(url, headers=BASE44_HEADERS)
         with urllib.request.urlopen(req, timeout=15) as r:
             data = json.loads(r.read())
@@ -454,3 +459,4 @@ def api_cache_clients():
         if not r.get("full_name"):
             r["full_name"] = ((r.get("first_name") or "") + " " + (r.get("last_name") or "")).strip()
     return jsonify(records)
+
