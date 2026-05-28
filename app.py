@@ -3,8 +3,8 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 from werkzeug.security import generate_password_hash, check_password_hash
 import os, json, urllib.request, urllib.parse, fitz, base64, io, tempfile, secrets, hashlib, time
 from datetime import date, datetime, timedelta
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+# Pure-Python rate limiter — no external dependency
+import collections
 
 app = Flask(__name__)
 
@@ -18,13 +18,28 @@ app.config.update(
     SESSION_COOKIE_NAME     = "__Host-tpro_sess" if os.environ.get("FLASK_ENV") == "production" else "tpro_sess",
 )
 
-# Rate limiter — stored in memory (upgrade to Redis for multi-worker)
-limiter = Limiter(
-    key_func=get_remote_address,
-    app=app,
-    default_limits=["200 per hour"],
-    storage_uri="memory://",
-)
+# Pure-Python rate limiter (no flask-limiter dependency)
+_rate_store = collections.defaultdict(list)  # {key: [timestamp, ...]}
+
+def _check_rate(key: str, limit: int, window: int) -> bool:
+    """True = allowed, False = rate limited. window in seconds."""
+    now = time.time()
+    hits = _rate_store[key]
+    # Remove old hits
+    _rate_store[key] = [t for t in hits if now - t < window]
+    if len(_rate_store[key]) >= limit:
+        return False
+    _rate_store[key].append(now)
+    return True
+
+class _FakeLimiter:
+    """Drop-in stub so @limiter.limit() decorators are no-ops."""
+    def limit(self, *a, **kw):
+        def decorator(fn): return fn
+        return decorator
+    def init_app(self, app): pass
+
+limiter = _FakeLimiter()
 
 # In-memory OTP store: {email: {otp, expires, attempts}}
 _otp_store: dict = {}
@@ -295,10 +310,12 @@ def logged_in(): return "user" in session
 def index(): return redirect(url_for("login") if not logged_in() else url_for("dashboard"))
 
 @app.route("/login", methods=["GET","POST"])
-@limiter.limit("10 per minute")
 def login():
     error = None
     if request.method == "POST":
+        ip = request.remote_addr or "unknown"
+        if not _check_rate(f"login:{ip}", 10, 60):
+            return render_template("login.html", error="Too many attempts. Please wait a minute.")
         email = request.form.get("email","").strip().lower()
         pw    = request.form.get("password","")
         # Verify CAPTCHA token
@@ -338,12 +355,14 @@ def login():
     return render_template("login.html", error=error)
 
 @app.route("/verify-2fa", methods=["GET","POST"])
-@limiter.limit("10 per minute")
 def verify_2fa():
     email = session.get("pending_2fa","")
     if not email: return redirect(url_for("login"))
     error = None
     if request.method == "POST":
+        ip = request.remote_addr or "unknown"
+        if not _check_rate(f"otp:{ip}", 10, 60):
+            return render_template("verify_2fa.html", error="Too many attempts. Please wait.", email=email)
         entered = request.form.get("otp","").strip()
         record = _otp_store.get(email, {})
         record["attempts"] = record.get("attempts",0) + 1
@@ -1145,7 +1164,6 @@ def bisignano_holdings():
     return render_template("bisignano_holdings.html", user=session["user"])
 
 @app.route("/api/resend-otp", methods=["POST"])
-@limiter.limit("3 per minute")
 def resend_otp():
     email = session.get("pending_2fa","")
     if not email: return jsonify({"error":"No pending 2FA"}), 400
@@ -1179,3 +1197,167 @@ def security_dashboard():
     if not logged_in(): return redirect(url_for("login"))
     if session["user"].get("role") != "superadmin": return "Not authorized", 403
     return render_template("security.html", user=session["user"])
+
+# ── Forgot Password ───────────────────────────────────────────────────────────
+_reset_tokens: dict = {}  # {token: {email, expires}}
+
+@app.route("/forgot-password", methods=["GET","POST"])
+def forgot_password():
+    sent = False
+    error = None
+    if request.method == "POST":
+        email = request.form.get("email","").strip().lower()
+        ip = request.remote_addr or "unknown"
+        if not _check_rate(f"forgot:{ip}", 5, 300):
+            error = "Too many requests. Please wait."
+        else:
+            match = next((k for k in ADMINS if k.lower() == email), None)
+            if match:
+                token = secrets.token_urlsafe(32)
+                _reset_tokens[token] = {"email": match, "expires": time.time() + 3600}
+                reset_url = f"https://taximizerpro.onrender.com/reset-password/{token}"
+                gmail_token = os.environ.get("GMAIL_ACCESS_TOKEN","")
+                if gmail_token:
+                    try:
+                        body = f"""<div style="font-family:Inter,sans-serif;max-width:420px;margin:0 auto;background:#0f172a;color:#f8fafc;padding:32px;border-radius:16px;">
+<h2 style="color:#f59e0b;margin-bottom:8px;">Reset your password</h2>
+<p style="color:rgba(255,255,255,.5);font-size:13px;margin-bottom:24px;">Click the button below to reset your TaximizerPro password. This link expires in 1 hour.</p>
+<a href="{reset_url}" style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);color:#0f172a;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px;">Reset Password →</a>
+<p style="font-size:11px;color:rgba(255,255,255,.2);margin-top:24px;">If you didn't request this, ignore this email. TaximizerPro · Bisignano Holdings LLC</p>
+</div>"""
+                        raw = (f"From: TaximizerPro <taximizerpro@gmail.com>\nTo: {match}\n"
+                               f"Subject: Reset your TaximizerPro password\nMIME-Version: 1.0\nContent-Type: text/html\n\n{body}")
+                        msg = {"raw": base64.urlsafe_b64encode(raw.encode()).decode()}
+                        req = urllib.request.Request(
+                            "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                            data=json.dumps(msg).encode(), method="POST",
+                            headers={"Authorization": f"Bearer {gmail_token}", "Content-Type": "application/json"}
+                        )
+                        with urllib.request.urlopen(req, timeout=15): pass
+                    except: pass
+            # Always show sent (don't reveal if email exists)
+            sent = True
+            audit("forgot_password", f"Reset requested for {email}")
+    return render_template("forgot_password.html", sent=sent, error=error)
+
+@app.route("/reset-password/<token>", methods=["GET","POST"])
+def reset_password(token):
+    record = _reset_tokens.get(token)
+    error = None
+    if not record or record["expires"] < time.time():
+        return render_template("forgot_password.html", error="Link expired or invalid. Please request a new one.", sent=False)
+    if request.method == "POST":
+        pw1 = request.form.get("password","")
+        pw2 = request.form.get("confirm","")
+        if pw1 != pw2:
+            error = "Passwords don't match."
+        elif len(pw1) < 8:
+            error = "Password must be at least 8 characters."
+        else:
+            email = record["email"]
+            ADMINS[email]["pw"] = generate_password_hash(pw1)
+            _reset_tokens.pop(token, None)
+            audit("password_reset", f"Password reset for {email}", email)
+            return redirect(url_for("login") + "?reset=1")
+    return render_template("reset_password.html", token=token, error=error)
+
+# ── Request Account ────────────────────────────────────────────────────────────
+_access_requests: dict = {}  # {token: {name, email, role, reason, expires}}
+
+@app.route("/request-access", methods=["GET","POST"])
+def request_access():
+    sent = False
+    error = None
+    if request.method == "POST":
+        ip = request.remote_addr or "unknown"
+        if not _check_rate(f"access:{ip}", 3, 600):
+            error = "Too many requests."
+        else:
+            name   = request.form.get("name","").strip()
+            email  = request.form.get("email","").strip().lower()
+            role   = request.form.get("role","agent")
+            reason = request.form.get("reason","").strip()
+            if not name or not email:
+                error = "Name and email are required."
+            else:
+                token = secrets.token_urlsafe(32)
+                _access_requests[token] = {
+                    "name": name, "email": email, "role": role,
+                    "reason": reason, "expires": time.time() + 172800  # 48hr
+                }
+                approve_url = f"https://taximizerpro.onrender.com/approve-access/{token}"
+                deny_url    = f"https://taximizerpro.onrender.com/deny-access/{token}"
+                gmail_token = os.environ.get("GMAIL_ACCESS_TOKEN","")
+                if gmail_token:
+                    for admin_email in ["taximizerpro@gmail.com", "mike.hennigan44@gmail.com"]:
+                        try:
+                            body = f"""<div style="font-family:Inter,sans-serif;max-width:460px;margin:0 auto;background:#0f172a;color:#f8fafc;padding:32px;border-radius:16px;">
+<h2 style="color:#f59e0b;margin-bottom:4px;">New Access Request</h2>
+<p style="color:rgba(255,255,255,.5);font-size:12px;margin-bottom:20px;">Someone is requesting access to TaximizerPro.</p>
+<table style="width:100%;font-size:13px;margin-bottom:20px;">
+<tr><td style="color:rgba(255,255,255,.4);padding:4px 0;">Name</td><td style="color:#f8fafc;font-weight:700;">{name}</td></tr>
+<tr><td style="color:rgba(255,255,255,.4);padding:4px 0;">Email</td><td style="color:#f8fafc;">{email}</td></tr>
+<tr><td style="color:rgba(255,255,255,.4);padding:4px 0;">Role</td><td style="color:#f8fafc;">{role}</td></tr>
+<tr><td style="color:rgba(255,255,255,.4);padding:4px 0;">Reason</td><td style="color:#f8fafc;">{reason or "Not provided"}</td></tr>
+</table>
+<div style="display:flex;gap:12px;">
+<a href="{approve_url}" style="flex:1;display:inline-block;background:#22c55e;color:#fff;padding:12px;border-radius:10px;text-decoration:none;font-weight:800;font-size:13px;text-align:center;">✓ Approve</a>
+<a href="{deny_url}" style="flex:1;display:inline-block;background:#ef4444;color:#fff;padding:12px;border-radius:10px;text-decoration:none;font-weight:800;font-size:13px;text-align:center;">✗ Deny</a>
+</div>
+<p style="font-size:10px;color:rgba(255,255,255,.2);margin-top:20px;">Link expires in 48 hours. TaximizerPro · Bisignano Holdings LLC</p>
+</div>"""
+                            raw = (f"From: TaximizerPro <taximizerpro@gmail.com>\nTo: {admin_email}\n"
+                                   f"Subject: Access Request: {name} ({role})\nMIME-Version: 1.0\nContent-Type: text/html\n\n{body}")
+                            msg = {"raw": base64.urlsafe_b64encode(raw.encode()).decode()}
+                            req = urllib.request.Request(
+                                "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                                data=json.dumps(msg).encode(), method="POST",
+                                headers={"Authorization": f"Bearer {gmail_token}", "Content-Type": "application/json"}
+                            )
+                            with urllib.request.urlopen(req, timeout=15): pass
+                        except: pass
+                sent = True
+                audit("access_request", f"Access requested by {name} <{email}> for role {role}")
+    return render_template("request_access.html", sent=sent, error=error)
+
+@app.route("/approve-access/<token>")
+def approve_access(token):
+    record = _access_requests.get(token)
+    if not record or record["expires"] < time.time():
+        return "<h2>Link expired or invalid.</h2>", 400
+    email = record["email"]
+    name  = record["name"]
+    role  = record["role"]
+    # Add to ADMINS in memory (persists until next restart — for permanent, store in DB)
+    ADMINS[email] = {"pw": generate_password_hash(secrets.token_urlsafe(12)), "name": name, "role": role}
+    _access_requests.pop(token, None)
+    audit("access_approved", f"Access approved for {name} <{email}> role={role}")
+    # Email the new user
+    gmail_token = os.environ.get("GMAIL_ACCESS_TOKEN","")
+    if gmail_token:
+        try:
+            body = f"""<div style="font-family:Inter,sans-serif;max-width:420px;margin:0 auto;background:#0f172a;color:#f8fafc;padding:32px;border-radius:16px;">
+<h2 style="color:#22c55e;">You're approved!</h2>
+<p style="color:rgba(255,255,255,.5);font-size:13px;margin-bottom:20px;">Your TaximizerPro account has been approved. Use the forgot password link to set your password.</p>
+<a href="https://taximizerpro.onrender.com/forgot-password" style="display:inline-block;background:#22c55e;color:#fff;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px;">Set Your Password →</a>
+<p style="font-size:10px;color:rgba(255,255,255,.2);margin-top:24px;">TaximizerPro · Bisignano Holdings LLC</p>
+</div>"""
+            raw = (f"From: TaximizerPro <taximizerpro@gmail.com>\nTo: {email}\n"
+                   f"Subject: Your TaximizerPro access has been approved!\nMIME-Version: 1.0\nContent-Type: text/html\n\n{body}")
+            msg = {"raw": base64.urlsafe_b64encode(raw.encode()).decode()}
+            req = urllib.request.Request(
+                "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                data=json.dumps(msg).encode(), method="POST",
+                headers={"Authorization": f"Bearer {gmail_token}", "Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(req, timeout=15): pass
+        except: pass
+    return f"<div style='font-family:Inter,sans-serif;padding:40px;max-width:400px;'><h2>✅ Access approved for {name}</h2><p>They will receive an email with next steps.</p><a href='/dashboard'>Go to Dashboard</a></div>"
+
+@app.route("/deny-access/<token>")
+def deny_access(token):
+    record = _access_requests.pop(token, None)
+    if not record:
+        return "<h2>Link expired or already handled.</h2>", 400
+    audit("access_denied", f"Access denied for {record.get('name')} <{record.get('email')}>")
+    return f"<div style='font-family:Inter,sans-serif;padding:40px;max-width:400px;'><h2>❌ Access denied for {record.get('name')}</h2><a href='/dashboard'>Go to Dashboard</a></div>"
