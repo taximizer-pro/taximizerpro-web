@@ -2,10 +2,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1';
 
 /**
- * Taximizer Pro — IRS 1040 Form Generator (v18 — Self-Contained, Cross-App)
- * NO Render. NO token passing from frontend.
- * Fetches client from Taximizer app (6a13ae4b43ea85cec629af77) via REST API.
- * Gets its own Drive + Gmail OAuth tokens server-side.
+ * Taximizer Pro — IRS 1040 Form Generator (v19 — clears watermark fields before drawing)
+ * NO Render. Fetches own OAuth tokens. Clears placeholder text before overlay.
  */
 
 const TAXIMIZER_APP_ID = '6a13ae4b43ea85cec629af77';
@@ -64,22 +62,64 @@ const FIELDS: Record<string, Record<string, FieldDef>> = {
   },
 };
 
-// ── Base44 REST API helpers ───────────────────────────────────────────────────
+// Fields to clear per year — these contain placeholder watermark text in the master template
+// We blank them so our overlay text doesn't double-write
+const FIELDS_TO_CLEAR: Record<string, string[]> = {
+  '2023': [
+    'topmostSubform[0].Page1[0].f1_04[0]',   // FIRST NAME, MIDDLE
+    'topmostSubform[0].Page1[0].f1_05[0]',   // LAST
+    'topmostSubform[0].Page1[0].f1_06[0]',   // SS#
+    'topmostSubform[0].Page1[0].Address_ReadOrder[0].f1_10[0]', // STREET ADDRESS
+    'topmostSubform[0].Page1[0].Address_ReadOrder[0].f1_11[0]', // APT
+    'topmostSubform[0].Page1[0].Address_ReadOrder[0].f1_12[0]', // CITY
+    'topmostSubform[0].Page1[0].Address_ReadOrder[0].f1_13[0]', // STATE
+    'topmostSubform[0].Page1[0].Address_ReadOrder[0].f1_14[0]', // ZIP
+    'topmostSubform[0].Page2[0].RoutingNo[0].f2_25[0]',         // ACCOUNT # (swapped label)
+    'topmostSubform[0].Page2[0].AccountNo[0].f2_26[0]',         // ROUTING # (swapped label)
+    'topmostSubform[0].Page2[0].f2_33[0]',                      // HELPER
+  ],
+  '2024': [
+    'topmostSubform[0].Page1[0].f1_04[0]',
+    'topmostSubform[0].Page1[0].f1_05[0]',
+    'topmostSubform[0].Page1[0].f1_06[0]',
+    'topmostSubform[0].Page1[0].Address_ReadOrder[0].f1_10[0]',
+    'topmostSubform[0].Page1[0].Address_ReadOrder[0].f1_11[0]',
+    'topmostSubform[0].Page1[0].Address_ReadOrder[0].f1_12[0]',
+    'topmostSubform[0].Page1[0].Address_ReadOrder[0].f1_13[0]',
+    'topmostSubform[0].Page1[0].Address_ReadOrder[0].f1_14[0]',
+    'topmostSubform[0].Page2[0].RoutingNo[0].f2_25[0]',
+    'topmostSubform[0].Page2[0].AccountNo[0].f2_26[0]',
+    'topmostSubform[0].Page2[0].f2_33[0]',
+  ],
+  '2025': [
+    'topmostSubform[0].Page1[0].f1_14[0]',   // FIRST+MI
+    'topmostSubform[0].Page1[0].f1_15[0]',   // LAST
+    'topmostSubform[0].Page1[0].f1_16[0]',   // SSN
+    'topmostSubform[0].Page1[0].Address_ReadOrder[0].f1_20[0]', // STREET
+    'topmostSubform[0].Page1[0].Address_ReadOrder[0].f1_21[0]', // APT
+    'topmostSubform[0].Page1[0].Address_ReadOrder[0].f1_22[0]', // CITY
+    'topmostSubform[0].Page1[0].Address_ReadOrder[0].f1_23[0]', // STATE
+    'topmostSubform[0].Page1[0].Address_ReadOrder[0].f1_24[0]', // ZIP
+    'topmostSubform[0].Page2[0].RoutingNo[0].f2_32[0]',
+    'topmostSubform[0].Page2[0].AccountNo[0].f2_33[0]',
+    'topmostSubform[0].Page2[0].f2_40[0]',
+  ],
+};
 
-async function getClientFromTaximizer(clientId: string, serviceToken: string): Promise<Record<string, string>> {
-  const url = `${BASE44_API}/${TAXIMIZER_APP_ID}/entities/TaxClient/${clientId}`;
-  const r = await fetch(url, {
-    headers: { 'Authorization': `Bearer ${serviceToken}`, 'Content-Type': 'application/json' }
+// ── Base44 REST helpers ───────────────────────────────────────────────────────
+
+async function getClientFromTaximizer(clientId: string, token: string): Promise<Record<string, string>> {
+  const r = await fetch(`${BASE44_API}/${TAXIMIZER_APP_ID}/entities/TaxClient/${clientId}`, {
+    headers: { Authorization: `Bearer ${token}` }
   });
   if (!r.ok) throw new Error(`Client fetch failed: ${r.status} ${await r.text()}`);
   return await r.json();
 }
 
-async function updateClientInTaximizer(clientId: string, data: Record<string, unknown>, serviceToken: string): Promise<void> {
-  const url = `${BASE44_API}/${TAXIMIZER_APP_ID}/entities/TaxClient/${clientId}`;
-  await fetch(url, {
+async function updateClientInTaximizer(clientId: string, data: Record<string, unknown>, token: string) {
+  await fetch(`${BASE44_API}/${TAXIMIZER_APP_ID}/entities/TaxClient/${clientId}`, {
     method: 'PUT',
-    headers: { 'Authorization': `Bearer ${serviceToken}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
 }
@@ -143,15 +183,34 @@ async function fillForm(templateBytes: Uint8Array, year: string, client: Record<
   const pages  = pdfDoc.getPages();
   const fields = FIELDS[year];
 
+  // ── Step 1: Clear placeholder watermark text in form fields ──────────────
+  const form = pdfDoc.getForm();
+  const toClear = FIELDS_TO_CLEAR[year] ?? [];
+  for (const fieldName of toClear) {
+    try {
+      const field = form.getTextField(fieldName);
+      field.setText('');
+    } catch {
+      // field may not exist in this template variant — skip silently
+    }
+  }
+
+  // ── Step 2: Draw our values as text overlays ──────────────────────────────
   function draw(key: string, text: string) {
     if (!text || !fields[key]) return;
     const f = fields[key];
-    pages[f.page].drawText(text, { x: f.x, y: PH - f.y + 1, size: f.size, font, color: rgb(0,0,0) });
+    pages[f.page].drawText(text, {
+      x: f.x,
+      y: PH - f.y + 1,
+      size: f.size,
+      font,
+      color: rgb(0, 0, 0),
+    });
   }
 
   const apt = (client.apt || '').trim();
   const aptClean = BAD_APT.has(apt.toLowerCase()) ? '' : apt;
-  const street = aptClean ? `${client.address} Apt ${aptClean}` : (client.address || '');
+  const street = aptClean ? `${(client.address || '').trim()} Apt ${aptClean}` : (client.address || '').trim();
 
   draw('FIRST_MID', [client.first_name, client.middle_init].filter(Boolean).join(' '));
   draw('LAST',      client.last_name || '');
@@ -164,6 +223,9 @@ async function fillForm(templateBytes: Uint8Array, year: string, client: Record<
   if (client.bank_account) draw('ACCOUNT', client.bank_account);
   draw('HELPER', 'HELPER');
   draw('DATE',   today);
+
+  // ── Step 3: Flatten form so widgets don't render on top of our text ───────
+  form.flatten();
 
   return pdfDoc.save();
 }
@@ -183,7 +245,8 @@ async function sendEmail(to: string, bcc: string, clientName: string, links: Rec
     <ul style="list-style:none;padding:0;margin:0">${rows}</ul>
     <p style="color:#475569;font-size:12px;margin-top:20px">Generated by TaximizerPro · ${new Date().toLocaleDateString()}</p>
   </div>`;
-  const msg = [`To: ${to}`, `Bcc: ${bcc}`, `Subject: ✅ Your Tax Forms Are Ready — ${clientName}`,
+  const msg = [`To: ${to}`, `Bcc: ${bcc}`,
+    `Subject: ✅ Your Tax Forms Are Ready — ${clientName}`,
     'MIME-Version: 1.0', 'Content-Type: text/html; charset=UTF-8', '', html].join('\r\n');
   const raw = btoa(unescape(encodeURIComponent(msg))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
   await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
@@ -199,38 +262,31 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const svc = base44.asServiceRole ?? base44;
+    const serviceToken: string = (svc as any)._token ?? (base44 as any)._serviceToken ?? '';
 
     const body = await req.json().catch(() => ({}));
     const { clientId, years } = body as { clientId?: string; years?: string[] };
     if (!clientId) return Response.json({ error: 'clientId required' }, { status: 400 });
 
-    // Get service token for cross-app API calls
-    const serviceToken: string = (svc as any)._token ?? (base44 as any)._serviceToken ?? '';
-
-    // ── Fetch client via REST API (cross-app) ─────────────────────────────────
     const clientData = await getClientFromTaximizer(clientId, serviceToken);
 
-    // ── Get OAuth tokens server-side ──────────────────────────────────────────
     const { accessToken: driveToken } = await svc.connectors.getConnection('googledrive');
     const { accessToken: gmailToken }  = await svc.connectors.getConnection('gmail');
 
-    // ── Determine years ───────────────────────────────────────────────────────
-    const taxYearStr = (clientData.tax_year || '');
+    const taxYearStr = clientData.tax_year || '';
     const clientYears = taxYearStr.split(',').map((y: string) => y.trim()).filter(Boolean);
     const yearsToGen: string[] = years ?? (clientYears.length ? clientYears : ['2023','2024','2025']);
 
     const today = new Date().toLocaleDateString('en-US', { month:'2-digit', day:'2-digit', year:'numeric' });
-    const lastName  = (clientData.last_name  || '').replace(/\s+/g,'_');
-    const firstName = (clientData.first_name || '').replace(/\s+/g,'_');
+    const lastName  = (clientData.last_name  || '').replace(/\s+/g, '_');
+    const firstName = (clientData.first_name || '').replace(/\s+/g, '_');
     const clientName = `${clientData.first_name} ${clientData.last_name}`.trim();
     const folderName = `${lastName}_${firstName}_${today.replace(/\//g,'-')}_${yearsToGen.join('-')}`;
 
-    // ── Drive folders ─────────────────────────────────────────────────────────
     const rootId   = await findOrCreateFolder('TaximizerPro V 2.0 Clients', null, driveToken);
     const folderId = await findOrCreateFolder(folderName, rootId, driveToken);
     const folderUrl = `https://drive.google.com/drive/folders/${folderId}`;
 
-    // ── Fill + upload each year ───────────────────────────────────────────────
     const links: Record<string, string> = {};
     for (const year of yearsToGen) {
       const tplId = MASTER_IDS[year];
@@ -240,16 +296,14 @@ Deno.serve(async (req) => {
       links[year]    = await uploadPdf(filled, `${lastName}_${firstName}_${year}_1040.pdf`, folderId, driveToken);
     }
 
-    // ── Email ─────────────────────────────────────────────────────────────────
     if (clientData.email && Object.keys(links).length > 0) {
       await sendEmail(clientData.email, 'taximizerpro@gmail.com', clientName, links, gmailToken);
     }
 
-    // ── Update TaxClient in Taximizer app ─────────────────────────────────────
     await updateClientInTaximizer(clientId, {
       irs_status: 'filed',
       drive_folder_url: folderUrl,
-      form_links: Object.entries(links).map(([yr,url]) => `${yr}: ${url}`).join('\n'),
+      form_links: Object.entries(links).map(([yr, url]) => `${yr}: ${url}`).join('\n'),
       current_step: 'complete',
     }, serviceToken);
 
