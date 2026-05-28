@@ -394,12 +394,12 @@ def reset_password(token):
 def logout(): session.clear(); return redirect(url_for("login"))
 
 # ── Pages ─────────────────────────────────────────────────────────────────────
-@app.route("/dashboard")
+@app.route("/dashboard", methods=["GET","POST"])
 def dashboard():
     if not logged_in(): return redirect(url_for("login"))
     return render_template("dashboard.html", user=session["user"])
 
-@app.route("/clients")
+@app.route("/clients", methods=["GET","POST"])
 def clients():
     if not logged_in(): return redirect(url_for("login"))
     return render_template("clients.html", user=session["user"])
@@ -409,17 +409,17 @@ def new_client():
     if not logged_in(): return redirect(url_for("login"))
     return render_template("new_client.html", user=session["user"])
 
-@app.route("/tracker")
+@app.route("/tracker", methods=["GET","POST"])
 def tracker():
     if not logged_in(): return redirect(url_for("login"))
     return render_template("tracker.html", user=session["user"])
 
-@app.route("/messages")
+@app.route("/messages", methods=["GET","POST"])
 def messages():
     if not logged_in(): return redirect(url_for("login"))
     return render_template("messages.html", user=session["user"])
 
-@app.route("/staff")
+@app.route("/staff", methods=["GET","POST"])
 def staff():
     if not logged_in(): return redirect(url_for("login"))
     return render_template("staff.html", user=session["user"])
@@ -515,7 +515,7 @@ def api_generate(client_id):
         return jsonify({"error":str(e)}), 500
 
 
-@app.route("/prospects")
+@app.route("/prospects", methods=["GET","POST"])
 def prospects():
     if not logged_in(): return redirect(url_for("login"))
     return render_template("prospects.html", user=session["user"])
