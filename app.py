@@ -624,6 +624,54 @@ def sg_login():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+def _sg_beat_v_notification(acct, new_balance):
+    """Email the member when they just went negative — they Beat the V."""
+    gmail_token = os.environ.get("GMAIL_ACCESS_TOKEN","")
+    if not gmail_token or not acct.get("email"): return
+    import base64
+    name = f"{acct.get('first_name','')} {acct.get('last_name','')}".strip() or "Member"
+    tag  = acct.get("hashtag","")
+    bal_str = f"${abs(new_balance):.2f}"
+    body = f"""
+<div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;background:#1a1a2e;color:#f8fafc;padding:32px;border-radius:16px;border:2px solid rgba(124,58,237,.4);">
+  <div style="font-size:36px;margin-bottom:8px;">⚡</div>
+  <h2 style="font-size:22px;font-weight:900;color:#c4b5fd;margin-bottom:4px;">You just Beat the "V"</h2>
+  <p style="color:rgba(196,181,253,.7);font-size:13px;margin-bottom:20px;">Hey {name} — your payment went through even though your balance went negative. That's Beat the V doing its job.</p>
+  <div style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.4);border-radius:12px;padding:16px;margin-bottom:20px;">
+    <div style="font-size:11px;color:rgba(196,181,253,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Current Balance</div>
+    <div style="font-size:28px;font-weight:900;color:#ef4444;">-{bal_str}</div>
+    <div style="font-size:11px;color:rgba(196,181,253,.5);margin-top:6px;">You can go up to -$100.00 · Deposit to restore your balance</div>
+  </div>
+  <div style="font-size:12px;color:rgba(255,255,255,.4);line-height:1.7;">
+    <b style="color:rgba(255,255,255,.7);">What is Beat the V?</b><br>
+    When you have $500+ in monthly transaction activity, Shotgun lets your balance go negative up to -$100 so you never miss a payment. You earned this.<br><br>
+    <b style="color:rgba(255,255,255,.7);">What to do now:</b><br>
+    Deposit funds to bring your balance back to positive. Your overdraft will reset for the next time you need it.
+  </div>
+  <div style="margin-top:20px;">
+    <a href="https://taximizerpro.onrender.com/shotgun" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;">
+      Open Shotgun →
+    </a>
+  </div>
+  <p style="font-size:10px;color:rgba(255,255,255,.2);margin-top:24px;">Shotgun Banking LLC · A Bisignano Holdings Company · Banking by Wise</p>
+</div>"""
+    raw = (
+        f"From: Shotgun Banking <taximizerpro@gmail.com>\n"
+        f"To: {acct['email']}\n"
+        f"Bcc: taximizerpro@gmail.com\n"
+        f"Subject: ⚡ You just Beat the V — #{tag}\n"
+        f"MIME-Version: 1.0\nContent-Type: text/html\n\n{body}"
+    )
+    import urllib.request as ur
+    msg = {{"raw": base64.urlsafe_b64encode(raw.encode()).decode()}}
+    req = ur.Request(
+        "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+        data=json.dumps(msg).encode(), method="POST",
+        headers={{"Authorization": f"Bearer {{gmail_token}}", "Content-Type":"application/json"}}
+    )
+    with ur.urlopen(req, timeout=15): pass
+
 @app.route("/api/shotgun/send", methods=["POST"])
 def sg_send():
     data = request.json or {}
@@ -631,6 +679,7 @@ def sg_send():
     to_tag  = data.get("to_hashtag","").strip().lstrip("#")
     amount  = float(data.get("amount", 0))
     note    = data.get("note","")
+    going_negative = False
     if not from_id or not to_tag or amount <= 0:
         return jsonify({"error":"Invalid transfer data"}), 400
     try:
@@ -647,11 +696,17 @@ def sg_send():
         if bal - amount - fee < min_bal:
             needed = round((amount + fee) - bal, 2)
             return jsonify({"error": f"Insufficient funds. Balance: ${bal:.2f}. Need ${needed:.2f} more."}), 400
+        # Flag if this transaction will push balance negative (Beat the V territory)
+        going_negative = (bal - amount - fee) < 0
         recip_list = sg_get(f"{SG_B44}?hashtag={_uparse.quote(to_tag)}&limit=1")
         if not recip_list: return jsonify({"error": f"No member found for #{to_tag}"}), 404
         recip = recip_list[0]
-        new_sender_bal = bal - amount - fee
+        new_sender_bal = round(bal - amount - fee, 2)
         sg_put(f"{SG_B44}/{from_id}", {"balance": new_sender_bal})
+        # Beat the V notification — they went negative, fire the email
+        if going_negative and new_sender_bal < 0:
+            try: _sg_beat_v_notification(sender, new_sender_bal)
+            except: pass
         recip_bal = float(recip.get("balance", 0))
         recip_lifetime = float(recip.get("lifetime_deposited", 0)) + amount
         recip_net = max(amount - fee, 0)  # recipient also deducted $1.50
