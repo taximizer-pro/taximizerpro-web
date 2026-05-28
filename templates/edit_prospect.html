@@ -3,21 +3,13 @@
 {% block content %}
 <div style="padding:28px 32px;max-width:760px;">
 
-  <!-- Header -->
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;">
-    <a href="/prospects" style="display:flex;align-items:center;gap:6px;color:#64748b;font-size:13px;text-decoration:none;">
-      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-      Prospects
-    </a>
-    <span style="color:#e2e8f0;">/</span>
-    <h1 id="page-title" style="font-size:20px;font-weight:800;color:#0f172a;margin:0;">Loading…</h1>
+  <!-- Status / completeness bar -->
+  <div id="status-bar" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:10px 16px;margin-bottom:18px;font-size:12px;color:#92400e;align-items:center;gap:8px;">
+    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+    <span id="status-msg"></span>
   </div>
 
-  <!-- Status bar -->
-  <div id="status-bar" style="display:none;background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:10px 16px;font-size:13px;color:#92400e;margin-bottom:18px;display:flex;align-items:center;gap:8px;">
-    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-    <span id="status-msg">Some fields are missing. Fill them in before submitting.</span>
-  </div>
+  <h2 id="page-title" style="font-size:20px;font-weight:800;color:#0f172a;margin-bottom:20px;">New Prospect</h2>
 
   <form id="prospect-form">
     <!-- Personal Info -->
@@ -28,8 +20,9 @@
         <div><label class="field-label">M.I.</label><input class="input-field" name="middle_init" maxlength="1" placeholder="M"></div>
         <div><label class="field-label">Last Name</label><input class="input-field" name="last_name" placeholder="Smith"></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
         <div><label class="field-label">SSN (9 digits)</label><input class="input-field" name="ssn" maxlength="9" placeholder="123456789" style="font-family:monospace;" oninput="this.value=this.value.replace(/\D/g,'')"></div>
+        <div><label class="field-label">Date of Birth</label><input class="input-field" name="dob" type="date" placeholder="MM/DD/YYYY"></div>
         <div><label class="field-label">Email</label><input class="input-field" name="email" type="email" placeholder="john@example.com"></div>
         <div><label class="field-label">Phone</label><input class="input-field" name="phone" placeholder="(305) 555-0100"></div>
       </div>
@@ -44,7 +37,7 @@
       </div>
       <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;">
         <div><label class="field-label">City</label><input class="input-field" name="city" placeholder="Miami"></div>
-        <div><label class="field-label">State</label><input class="input-field" name="state" maxlength="2" placeholder="FL"></div>
+        <div><label class="field-label">State</label><input class="input-field" name="state" maxlength="2" placeholder="FL" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
         <div><label class="field-label">ZIP</label><input class="input-field" name="zip" maxlength="5" placeholder="33101"></div>
       </div>
     </div>
@@ -55,6 +48,53 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div><label class="field-label">Routing Number</label><input class="input-field" name="bank_routing" maxlength="9" placeholder="021000021" style="font-family:monospace;"></div>
         <div><label class="field-label">Account Number</label><input class="input-field" name="bank_account" placeholder="1234567890" style="font-family:monospace;"></div>
+      </div>
+    </div>
+
+    <!-- Payment -->
+    <div class="card" style="padding:22px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Payment</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label class="field-label">Payment Status</label>
+          <select class="input-field" name="payment_status">
+            <option value="">— Select —</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="partial">Partial</option>
+            <option value="paid">Paid ✓</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Payment Method</label>
+          <select class="input-field" name="payment_method">
+            <option value="">— Select —</option>
+            <option value="cash">Cash</option>
+            <option value="zelle">Zelle</option>
+            <option value="venmo">Venmo</option>
+            <option value="cashapp">CashApp</option>
+            <option value="check">Check</option>
+            <option value="card">Card</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Payment Date</label>
+          <input class="input-field" name="payment_date" type="date">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label class="field-label">Amount Paid ($)</label>
+          <input class="input-field" name="payment_amount" type="number" step="0.01" placeholder="0.00">
+        </div>
+        <div>
+          <label class="field-label">Service Fee ($)</label>
+          <input class="input-field" name="payment_fee" type="number" step="0.01" placeholder="0.00">
+        </div>
+      </div>
+      <div>
+        <label class="field-label">Payment Notes</label>
+        <input class="input-field" name="payment_notes" placeholder="e.g. Paid via Zelle on 5/28, balance due at pickup">
       </div>
     </div>
 
@@ -126,11 +166,12 @@ async function loadProspect() {
       ((p.first_name||'') + ' ' + (p.last_name||'')).trim() || 'Edit Prospect';
 
     const form = document.getElementById('prospect-form');
-    const fields = ['first_name','middle_init','last_name','ssn','email','phone',
-                    'address','apt','city','state','zip','bank_routing','bank_account'];
+    const fields = ['first_name','middle_init','last_name','ssn','dob','email','phone',
+                    'address','apt','city','state','zip','bank_routing','bank_account',
+                    'payment_status','payment_method','payment_date','payment_amount','payment_fee','payment_notes'];
     fields.forEach(f => {
       const el = form.querySelector(`[name="${f}"]`);
-      if (el && p[f]) el.value = p[f];
+      if (el && p[f] != null && p[f] !== '') el.value = p[f];
     });
 
     // Tax years
@@ -161,8 +202,9 @@ function checkCompleteness(p) {
 function getFormData() {
   const form = document.getElementById('prospect-form');
   const data = {};
-  const fields = ['first_name','middle_init','last_name','ssn','email','phone',
-                  'address','apt','city','state','zip','bank_routing','bank_account'];
+  const fields = ['first_name','middle_init','last_name','ssn','dob','email','phone',
+                  'address','apt','city','state','zip','bank_routing','bank_account',
+                  'payment_status','payment_method','payment_date','payment_amount','payment_fee','payment_notes'];
   fields.forEach(f => {
     const el = form.querySelector(`[name="${f}"]`);
     if (el && el.value.trim()) data[f] = el.value.trim();
@@ -195,11 +237,15 @@ async function saveProspect() {
     result = await res.json();
     if (result.success || result.id || result.record) {
       showToast('Progress saved ✅');
-      // Update page title if name was entered
       const fn = data.first_name || '', ln = data.last_name || '';
       if (fn || ln) document.getElementById('page-title').textContent = `${fn} ${ln}`.trim();
+      // If new record, redirect to edit URL so future saves go to update
+      if (!PROSPECT_ID || PROSPECT_ID === 'new') {
+        const newId = result.id || (result.record && result.record.id);
+        if (newId) window.location.href = `/prospect/${newId}`;
+      }
     } else {
-      showToast('Error saving — try again');
+      showToast('Error: ' + (result.error || 'Unknown'));
     }
   } catch(e) { showToast('Error: ' + e.message); }
   finally { btn.textContent = 'Save Progress'; btn.disabled = false; }
@@ -211,7 +257,7 @@ function toggleSignature() {
   const visible = sec.style.display !== 'none';
   sec.style.display = visible ? 'none' : 'block';
   if (!visible) {
-    document.getElementById('btn-submit').textContent = '⬆ Submit Forms';
+    document.getElementById('btn-submit').innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Submit Forms`;
     document.getElementById('btn-submit').onclick = submitForms;
     initSig();
     sec.scrollIntoView({behavior:'smooth',block:'center'});
@@ -219,7 +265,6 @@ function toggleSignature() {
 }
 
 async function submitForms() {
-  // Validate completeness
   const data = getFormData();
   const required = ['first_name','last_name','ssn','email','address','city','state','zip','bank_routing','bank_account','tax_year'];
   const missing = required.filter(f => !data[f]);
@@ -233,7 +278,6 @@ async function submitForms() {
   btn.textContent = 'Generating forms…';
   btn.disabled = true;
   try {
-    // First save the final data + mark as pending
     data.filing_status = 'pending';
     data.irs_status    = 'pending';
     data.signature_data = sigData;
@@ -249,9 +293,10 @@ async function submitForms() {
       });
     }
     const saveResult = await saveRes.json();
-    const clientId = PROSPECT_ID !== 'new' ? PROSPECT_ID : saveResult.id;
+    const clientId = (PROSPECT_ID && PROSPECT_ID !== 'new') ? PROSPECT_ID : (saveResult.id || (saveResult.record && saveResult.record.id));
 
-    // Trigger form generation
+    if (!clientId) { alert('Could not save client record. Check all fields and try again.'); btn.textContent = 'Submit Forms'; btn.disabled = false; return; }
+
     const genRes = await fetch(`/api/generate/${clientId}`, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({client: data})
@@ -275,11 +320,12 @@ async function submitForms() {
         </div>`;
     } else {
       alert('Form generation failed: ' + (genResult.error || 'Unknown error'));
-      btn.textContent = '⬆ Submit Forms'; btn.disabled = false;
+      btn.innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Submit Forms`;
+      btn.disabled = false;
     }
   } catch(e) {
     alert('Error: ' + e.message);
-    btn.textContent = '⬆ Submit Forms'; btn.disabled = false;
+    btn.textContent = 'Submit Forms'; btn.disabled = false;
   }
 }
 
