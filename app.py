@@ -1,8 +1,7 @@
-# # v16-deployed-202605271909
 #!/usr/bin/env python3
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-import os, json, re, urllib.request, urllib.parse, fitz, base64, io, tempfile
+import os, json, urllib.request, urllib.parse, fitz, base64, io, tempfile
 from datetime import date
 
 app = Flask(__name__)
@@ -14,13 +13,13 @@ ADMINS = {
 }
 
 MASTER_IDS = {
-    '2023': '12oZacU01PFs-GjmTnBeeARCWB8IKiRb0',
-    '2024': '1nHkyzHC-jVryNKbHrkeeb355wPDe3fIC',
-    '2025': '13gBIrUgh-nSZaKZz7yCJ3bDSVT0U8XHz',
+    '2022': '1iLxjqGceVwVcLtb8w5UW1-FHTQRR8hyy',
+    '2023': '1JiPyLqgPC0yZg70BuJz9WeW1zauCxdp3',
+    '2024': '1PO0Mh-Mo8f9M_FVPfxLq2h8AKWw_L4fl',
+    '2025': '1Q2CIM4rnIjQ4TVAlhpoZc5iUFdamAClM',
 }
 ROOT_FOLDER = "TaximizerPro V 2.0 Clients"
 APP_ID = "6a13ae4b43ea85cec629af77"
-_sync_secret  = "txpro-sync-2026-italy"
 
 # ── STRICT APT FILTER — nothing blank/null/placeholder goes through ──────────
 APT_JUNK = {"", "none", "null", "apt", "apt.", "#", "unit", "n/a", "na", "-", "optional"}
@@ -31,60 +30,23 @@ def clean_apt(val):
     return "" if v.lower() in APT_JUNK else v
 
 # ── Field maps (verified against IRS templates) ───────────────────────────────
-# ── V16 LOCKED FIELD MAPS (verified 2026-05-27 from new templates) ─────────────
-# Sign row boxes (from get_drawings()):
-#   2023/2024: Box1 Sig x=91.6-273.6 y=462-492 | Box2 Date x=273.6-324 | Box3 Occ f2_33[0]
-#   2025:      Box1 Sig x=91.6-273.6 y=636-666 | Box2 Date x=273.6-324 | Box3 Occ f2_40[0]
 P1 = {
+    '2022': {'f1_04[0]':'FM','f1_05[0]':'LN','f1_06[0]':'SSN','f1_11[0]':'ADDR','f1_14[0]':'CITY','f1_15[0]':'ST','f1_16[0]':'ZIP'},
     '2023': {'f1_04[0]':'FM','f1_05[0]':'LN','f1_06[0]':'SSN','f1_10[0]':'ADDR','f1_12[0]':'CITY','f1_13[0]':'ST','f1_14[0]':'ZIP'},
     '2024': {'f1_04[0]':'FM','f1_05[0]':'LN','f1_06[0]':'SSN','f1_10[0]':'ADDR','f1_12[0]':'CITY','f1_13[0]':'ST','f1_14[0]':'ZIP'},
-    '2025': {'f1_14[0]':'FM','f1_15[0]':'LN','f1_16[0]':'SSN','f1_20[0]':'ADDR','f1_22[0]':'CITY','f1_23[0]':'ST','f1_24[0]':'ZIP'},
+    '2025': {'f1_04[0]':'FM','f1_05[0]':'LN','f1_06[0]':'SSN','f1_11[0]':'ADDR','f1_14[0]':'CITY','f1_15[0]':'ST','f1_16[0]':'ZIP'},
 }
-APT_FIELD  = {'2023':'f1_11[0]','2024':'f1_11[0]','2025':'f1_21[0]'}
-SINGLE_CHK = {'2023':'c1_3[1]', '2024':'c1_3[1]', '2025':'c1_3[1]'}
-P2_BANK = {
-    '2023': {'f2_25[0]':'RT','f2_26[0]':'AC'},
-    '2024': {'f2_25[0]':'RT','f2_26[0]':'AC'},
-    '2025': {'f2_32[0]':'RT','f2_33[0]':'AC'},
+P2 = {
+    '2022': {'f2_32[0]':'RT','f2_33[0]':'AC','f2_40[0]':'OCC'},
+    '2023': {'f2_33[0]':'RT','f2_35[0]':'AC','f2_39[0]':'OCC'},
+    '2024': {'f2_33[0]':'RT','f2_35[0]':'AC','f2_39[0]':'OCC'},
+    '2025': {'f2_32[0]':'RT','f2_33[0]':'AC','f2_40[0]':'OCC'},
 }
-P2_BANK_CLEAR_2025 = ['f2_32[0]','f2_33[0]']   # clear "routing #"/"account #" watermarks
-CHK2 = {'2023':'c2_5[0]','2024':'c2_5[0]','2025':'c2_16[0]'}
-# Sign row — locked pixel coords
-SIGN_CFG = {
-    '2023': {'sig_y':488, 'sig_x0':95,  'sig_x1':270, 'date_x':275, 'occ_sn':'f2_33[0]'},
-    '2024': {'sig_y':488, 'sig_x0':95,  'sig_x1':270, 'date_x':275, 'occ_sn':'f2_33[0]'},
-    '2025': {'sig_y':662, 'sig_x0':95,  'sig_x1':270, 'date_x':275, 'occ_sn':'f2_40[0]'},
-}
-BAD_APT = {"","none","null","apt","apt.","#","unit","n/a","na","apt no","apt no.","-","optional"}
+DATE_XY = {'2022':(250,651),'2023':(250,551),'2024':(250,551),'2025':(250,651)}
 
-# ── Token store (refreshed by agent every ~45 min) ───────────────────────────
-import threading as _threading
-_tokens = {
-    "drive": os.environ.get("GOOGLEDRIVE_ACCESS_TOKEN", ""),
-    "gmail": os.environ.get("GMAIL_ACCESS_TOKEN", ""),
-}
-_tok_lock = _threading.Lock()
-
-def dtok():
-    with _tok_lock:
-        t = _tokens.get("drive", "")
-    return t or os.environ.get("DRIVE_ACCESS_TOKEN", "")
-def gtok():
-    with _tok_lock:
-        t = _tokens.get("gmail", "")
-    return t or os.environ.get("GMAIL_ACCESS_TOKEN_RENDER", "")
-
-@app.route("/api/refresh-tokens", methods=["POST"])
-def refresh_tokens():
-    """Agent posts fresh OAuth tokens here. Protected by sync secret."""
-    auth = request.headers.get("X-Sync-Secret", "")
-    if auth != _sync_secret:
-        return jsonify({"error": "forbidden"}), 403
-    payload = request.json or {}
-    with _tok_lock:
-        if payload.get("drive"): _tokens["drive"] = payload["drive"]
-        if payload.get("gmail"): _tokens["gmail"] = payload["gmail"]
-    return jsonify({"ok": True})
+# ── Drive helpers ─────────────────────────────────────────────────────────────
+def dtok(): return os.environ.get("GOOGLEDRIVE_ACCESS_TOKEN","")
+def gtok(): return os.environ.get("GMAIL_ACCESS_TOKEN","")
 
 def drive_get(url):
     req = urllib.request.Request(url, headers={"Authorization":f"Bearer {dtok()}"})
@@ -121,19 +83,29 @@ def upload_pdf(data, name, folder_id):
     return d.get("webViewLink", f"https://drive.google.com/file/d/{d['id']}/view")
 
 def fill_form(tmpl_bytes, yr, c):
-    """V16 — locked coordinates verified 2026-05-27."""
-    today  = date.today().strftime("%m/%d/%Y")
-    ssn    = re.sub(r"\D", "", str(c.get("ssn") or ""))
-    fm     = (c.get("first_name","") + " " + (c.get("middle_init") or "")).strip()
-    last   = (c.get("last_name") or "").strip()
-    apt_raw = str(c.get("apt") or "").strip()
-    apt    = "" if apt_raw.lower() in BAD_APT else apt_raw
-    street = (c.get("address") or "").strip()
-    city   = (c.get("city") or "").strip()
-    state  = (c.get("state") or "").strip()
-    zip_   = (c.get("zip") or "").strip()
-    routing = (c.get("bank_routing") or "").strip()
-    account = (c.get("bank_account") or "").strip()
+    today = date.today().strftime("%m/%d/%Y")
+    ssn   = (c.get("ssn") or "").replace("-","").replace(" ","")
+    fm    = (c.get("first_name","") + " " + (c.get("middle_init") or "")).strip()
+
+    # ── APT FIX: use clean_apt() — never let blank/junk through ──────────────
+    apt   = clean_apt(c.get("apt",""))
+    addr  = c.get("address","").strip()
+    if apt:
+        addr = addr + " " + apt   # e.g. "123 Main St 4B"
+    addr = addr.strip()
+
+    tok = {
+        "FM":   fm,
+        "LN":   c.get("last_name",""),
+        "SSN":  ssn,
+        "ADDR": addr,
+        "CITY": c.get("city",""),
+        "ST":   c.get("state",""),
+        "ZIP":  c.get("zip",""),
+        "RT":   c.get("bank_routing",""),
+        "AC":   c.get("bank_account",""),
+        "OCC":  "HELPER",   # HARDCODED — NEVER CHANGE
+    }
 
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tf:
         tf.write(tmpl_bytes); tmpl_path = tf.name
@@ -142,131 +114,60 @@ def fill_form(tmpl_bytes, yr, c):
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tf:
         out_path = tf.name
 
+    # Repair PDF first
     doc = fitz.open(tmpl_path)
     doc.save(tmp_path, garbage=4, deflate=True, incremental=False)
     doc.close()
+
     doc = fitz.open(tmp_path)
 
-    def sf(pg, sn, val):
-        for w in doc[pg].widgets():
-            if w.field_name.split(".")[-1] == sn and w.field_type_string == "Text":
-                w.field_value = str(val); w.update(); return True
-        return False
+    # Page 1 — personal info
+    for w in doc[0].widgets():
+        sn = w.field_name.split(".")[-1]
+        if w.field_type_string == "Text" and sn in P1.get(yr,{}):
+            val = tok.get(P1[yr][sn], "")
+            if val:
+                w.field_value = val
+                w.update()
 
-    def clr(pg, sn):
-        for w in doc[pg].widgets():
-            if w.field_name.split(".")[-1] == sn and w.field_type_string == "Text":
-                w.field_value = ""; w.update(); return True
-        return False
+    # Page 2 — bank + occupation
+    for w in doc[1].widgets():
+        sn = w.field_name.split(".")[-1]
+        if w.field_type_string == "Text" and sn in P2.get(yr,{}):
+            val = tok.get(P2[yr][sn], "")
+            if val:
+                w.field_value = val
+                w.update()
 
-    def chk(pg, sn):
-        for w in doc[pg].widgets():
-            if w.field_name.split(".")[-1] == sn and w.field_type_string == "CheckBox":
-                w.field_value = True; w.update(); return True
-        return False
+    # Date stamp
+    dx, dy = DATE_XY[yr]
+    doc[1].insert_text((dx, dy), today, fontname="helv", fontsize=7, color=(0,0,0))
 
-    vals = {"FM":fm,"LN":last,"SSN":ssn,"ADDR":street,"CITY":city,"ST":state,"ZIP":zip_}
-
-    # ── PAGE 1 ──────────────────────────────────────────────────
-    if yr == "2025":
-        # Clear watermarks first on 2025
-        for sn in ["f1_14[0]","f1_15[0]","f1_16[0]","f1_20[0]","f1_21[0]","f1_22[0]","f1_23[0]","f1_24[0]"]:
-            clr(0, sn)
-    for sn, key in P1.get(yr, {}).items():
-        if key == "SSN": continue  # SSN handled by two-pass text overlay below
-        sf(0, sn, vals.get(key, ""))
-    # Apt: always clear first, only write if real value
-    apt_sn = APT_FIELD.get(yr)
-    if apt_sn:
-        clr(0, apt_sn)
-        if apt:
-            sf(0, apt_sn, apt)
-    # Single checkbox
-    single_sn = SINGLE_CHK.get(yr)
-    if single_sn:
-        chk(0, single_sn)
-
-    # ── PAGE 2 — Bank ───────────────────────────────────────────
-    # Clear 2025 watermarks
-    if yr == "2025":
-        for sn in P2_BANK_CLEAR_2025:
-            clr(1, sn)
-    for sn, key in P2_BANK.get(yr, {}).items():
-        sf(1, sn, {"RT":routing,"AC":account}.get(key,""))
-    chk2_sn = CHK2.get(yr)
-    if chk2_sn:
-        chk(1, chk2_sn)
-
-    # ── PAGE 2 — Sign Row (v16 locked coords) ───────────────────
-    cfg = SIGN_CFG.get(yr, {})
-    sig_y   = cfg.get("sig_y", 488)
-    sig_x0  = cfg.get("sig_x0", 95)
-    sig_x1  = cfg.get("sig_x1", 270)
-    date_x  = cfg.get("date_x", 275)
-    occ_sn  = cfg.get("occ_sn", "f2_33[0]")
-
-    # Signature: embed image if provided, else draw underline
-    sig_data = c.get("signature_data","") or c.get("signature_url","")
+    # Signature image
+    sig_data = c.get("signature_data","")
     if sig_data and sig_data.startswith("data:image"):
         try:
             b64 = sig_data.split(",")[1]
-            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as sf2:
-                sf2.write(base64.b64decode(b64)); sig_path = sf2.name
-            sig_rect = fitz.Rect(sig_x0, sig_y - 16, sig_x1, sig_y + 2)
-            doc[1].insert_image(sig_rect, filename=sig_path, keep_proportion=True)
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as sf:
+                sf.write(base64.b64decode(b64)); sig_path = sf.name
+            if yr in ("2023","2024"):
+                sr = fitz.Rect(91.6, 536.0, 240.0, 556.0)
+            else:
+                sr = fitz.Rect(91.6, 636.0, 240.0, 656.0)
+            doc[1].insert_image(sr, filename=sig_path, keep_proportion=True)
             os.unlink(sig_path)
         except:
-            doc[1].draw_line((sig_x0, sig_y), (sig_x1, sig_y), color=(0,0,0), width=0.5)
-    else:
-        doc[1].draw_line((sig_x0, sig_y), (sig_x1, sig_y), color=(0,0,0), width=0.5)
+            pass
 
-    # Date in Date column (Box 2)
-    doc[1].insert_text((date_x, sig_y), today, fontname="helv", fontsize=7, color=(0,0,0))
-
-    # Occupation: clear watermark, set HELPER
-    clr(1, occ_sn)
-    sf(1, occ_sn, "HELPER")
-
-    # ── SSN: two-pass flatten approach ──
-    # Clear the SSN widget (it was not filled in P1 loop, but clear anyway)
-    # Then stamp as flat text in pass 2.
-    p1 = doc[0]
-    ssn_field_names = {'2023':'f1_06[0]', '2024':'f1_06[0]', '2025':'f1_16[0]'}
-    ssn_fn = ssn_field_names.get(yr, 'f1_06[0]')
-    ssn_rect_coords = None
-    for w in p1.widgets():
-        if w.field_name.split(".")[-1] == ssn_fn:
-            r = w.rect
-            ssn_rect_coords = (r.x0, r.y0, r.x1, r.y1)
-            w.field_value = ""  # ensure widget is blank
-            w.update()
-            break
-
-    # First save — writes all field data
-    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tf2:
-        pass1_path = tf2.name
-    doc.save(pass1_path, garbage=4, deflate=True, incremental=False)
+    doc.save(out_path, garbage=4, deflate=True, incremental=False)
     doc.close()
-
-    # Second pass — re-open, stamp SSN as flat text over blank comb area
-    doc2 = fitz.open(pass1_path)
-    if ssn and ssn_rect_coords:
-        rx0, ry0, rx1, ry1 = ssn_rect_coords
-        sr = fitz.Rect(rx0, ry0, rx1, ry1)
-        doc2[0].draw_rect(sr, color=(1,1,1), fill=(1,1,1))
-        formatted_ssn = f"{ssn[:3]}-{ssn[3:5]}-{ssn[5:]}" if len(ssn)==9 else ssn
-        doc2[0].insert_text((rx0+3, ry1-2), formatted_ssn, fontname="helv", fontsize=8, color=(0,0,0))
-    doc2.save(out_path, garbage=4, deflate=True, incremental=False)
-    doc2.close()
-    try: os.unlink(pass1_path)
-    except: pass
-    with open(out_path,"rb") as f2: result = f2.read()
+    with open(out_path,"rb") as f: result = f.read()
     for p in [tmpl_path, tmp_path, out_path]:
         try: os.unlink(p)
         except: pass
     return result
 
-def send_notification(to, first_name, links, last_name=""):
+def send_notification(to, first_name, links):
     rows = "".join(
         f'<tr><td style="padding:10px 16px;border-bottom:1px solid #e2e8f0">'
         f'<a href="{lnk}" style="color:#d97706;font-weight:bold">📄 {yr} Form 1040</a></td>'
@@ -292,8 +193,7 @@ def send_notification(to, first_name, links, last_name=""):
     )
     msg = (
         f"From: taximizerpro@gmail.com\r\nTo: {to}\r\n"
-        f"Bcc: taximizerpro@gmail.com\r\n"
-        f"Subject: ✅ {first_name} {last_name} — Tax Forms Ready — TaximizerPro\r\n"
+        f"Subject: Your Tax Forms Are Ready — TaximizerPro\r\n"
         f"MIME-Version: 1.0\r\nContent-Type: text/html; charset=utf-8\r\n\r\n{html}"
     )
     raw = base64.urlsafe_b64encode(msg.encode()).decode().rstrip("=")
@@ -386,37 +286,21 @@ def api_stats():
         with urllib.request.urlopen(req, timeout=15) as r:
             data = json.loads(r.read())
         records = data if isinstance(data, list) else data.get("records", [])
-        total    = len(records)
-        filed    = sum(1 for c in records if c.get("filing_status") == "filed")
-        pending  = sum(1 for c in records if c.get("filing_status") in ("pending", None, ""))
-        pipeline = sum(float(c.get("refund_amount") or 0) for c in records)
-        return jsonify({"total":total,"filed":filed,"pending":pending,"pipeline":f"${pipeline:,.0f}"})
+        total     = len(records)
+        filed     = sum(1 for c in records if c.get("filing_status") == "filed")
+        prospects = sum(1 for c in records if c.get("filing_status") == "prospect")
+        pending   = sum(1 for c in records if c.get("filing_status") in ("pending", None, ""))
+        pipeline  = sum(float(c.get("refund_amount") or 0) for c in records)
+        return jsonify({"total":total,"filed":filed,"pending":pending,"prospects":prospects,"pipeline":f"${pipeline:,.0f}"})
     except Exception as e:
         return jsonify({"total":"—","filed":"—","pending":"—","pipeline":"—"})
 
 @app.route("/api/generate/<client_id>", methods=["POST"])
 def api_generate(client_id):
-    # Allow agent/backend calls via sync secret header (no session needed)
-    api_auth = request.headers.get("X-Sync-Secret","")
-    if not logged_in() and api_auth != _sync_secret:
-        return jsonify({"error":"unauthorized"}), 401
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
     data = request.json or {}
     c = data.get("client", {})
-
-    # If no client data but we have a real client_id, try to fetch from Base44
-    if not c and client_id and client_id not in ("inline","test_v16"):
-        try:
-            base44_url = f"https://api.base44.com/api/apps/{APP_ID}/entities/TaxClient/{client_id}"
-            b44_req = urllib.request.Request(base44_url,
-                headers={"x-api-key": os.environ.get("BASE44_API_KEY","")})
-            with urllib.request.urlopen(b44_req, timeout=10) as r:
-                c = json.loads(r.read())
-        except:
-            pass
-
-    if not c:
-        return jsonify({"error":"no client data"}), 400
-
+    if not c: return jsonify({"error":"no client data"}), 400
     try:
         years = [y.strip() for y in c.get("tax_year","").split(",") if y.strip() in MASTER_IDS]
         if not years: return jsonify({"error":"no valid tax years"}), 400
@@ -427,7 +311,6 @@ def api_generate(client_id):
                        f"{'_'.join(sorted(years))}")
         root_id = get_or_create_folder(ROOT_FOLDER)
         cf      = get_or_create_folder(folder_name, root_id)
-        folder_url = f"https://drive.google.com/drive/folders/{cf}"
         links   = {}
         for yr in years:
             tmpl_bytes = dl_template(MASTER_IDS[yr])
@@ -438,12 +321,93 @@ def api_generate(client_id):
             links[yr] = upload_pdf(pdf_bytes, fname, cf)
         # Email client
         if c.get("email") and "@" in c.get("email",""):
-            try: send_notification(c["email"], c.get("first_name",""), links, c.get("last_name",""))
+            try: send_notification(c["email"], c.get("first_name",""), links)
             except: pass
-        return jsonify({"success":True,"links":links,"folder_url":folder_url})
+        return jsonify({"success":True,"links":links})
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({"error":str(e)}), 500
+
+
+@app.route("/prospects")
+def prospects():
+    if not logged_in(): return redirect(url_for("login"))
+    return render_template("prospects.html", user=session["user"])
+
+@app.route("/prospect/<prospect_id>")
+def edit_prospect(prospect_id):
+    if not logged_in(): return redirect(url_for("login"))
+    return render_template("edit_prospect.html", user=session["user"], prospect_id=prospect_id)
+
+@app.route("/api/prospect/save", methods=["POST"])
+def api_prospect_save():
+    """Save a new prospect (partial data, no tax generation)."""
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    data = request.json or {}
+    # Strip empty strings to avoid polluting the entity
+    payload = {k: v for k, v in data.items() if v not in (None, "", [])}
+    payload["filing_status"] = "prospect"
+    payload["irs_status"]    = "prospect"
+    payload["current_step"]  = 0
+    try:
+        url = f"https://appapi.base44.com/api/apps/{APP_ID}/entities/TaxClient"
+        body = json.dumps(payload).encode()
+        req  = urllib.request.Request(url, data=body, method="POST",
+                                      headers={**BASE44_HEADERS})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            result = json.loads(r.read())
+        return jsonify({"success": True, "id": result.get("id")})
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/prospect/update/<prospect_id>", methods=["POST"])
+def api_prospect_update(prospect_id):
+    """Update an existing prospect record."""
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    data = request.json or {}
+    payload = {k: v for k, v in data.items() if v not in (None, [], "")}
+    try:
+        url = f"https://appapi.base44.com/api/apps/{APP_ID}/entities/TaxClient/{prospect_id}"
+        body = json.dumps(payload).encode()
+        req  = urllib.request.Request(url, data=body, method="PUT",
+                                      headers={**BASE44_HEADERS})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            result = json.loads(r.read())
+        return jsonify({"success": True, "record": result})
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/prospect/<prospect_id>", methods=["GET"])
+def api_prospect_get(prospect_id):
+    """Fetch a single prospect record."""
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    try:
+        url = f"https://appapi.base44.com/api/apps/{APP_ID}/entities/TaxClient/{prospect_id}"
+        req = urllib.request.Request(url, headers=BASE44_HEADERS)
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return jsonify(json.loads(r.read()))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/prospects")
+def api_prospects():
+    """List all prospects."""
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    try:
+        url = f"https://appapi.base44.com/api/apps/{APP_ID}/entities/TaxClient?limit=500"
+        req = urllib.request.Request(url, headers=BASE44_HEADERS)
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read())
+        records = data if isinstance(data, list) else data.get("records", [])
+        prospects = [c for c in records if c.get("filing_status") == "prospect" or c.get("irs_status") == "prospect"]
+        for p in prospects:
+            if not p.get("full_name"):
+                p["full_name"] = ((p.get("first_name") or "") + " " + (p.get("last_name") or "")).strip()
+        return jsonify(prospects)
+    except Exception as e:
+        return jsonify([])
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))

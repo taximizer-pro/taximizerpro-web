@@ -90,6 +90,10 @@
         style="flex:1;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-weight:700;padding:14px;border-radius:12px;border:none;cursor:not-allowed;font-size:14px;opacity:.45;transition:all .2s;box-shadow:0 4px 16px rgba(245,158,11,.3);">
         🔒 Sign First to Submit
       </button>
+      <button type="button" onclick="saveAsProspect()" style="padding:11px 20px;border-radius:10px;border:1px solid #f59e0b;background:#fff;color:#d97706;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+        Save as Prospect
+      </button>
       <a href="/clients" style="padding:14px 20px;border-radius:12px;border:1px solid #e2e8f0;color:#64748b;font-size:13px;text-decoration:none;display:flex;align-items:center;">Cancel</a>
     </div>
   </form>
@@ -135,6 +139,27 @@ function checkSig(){
     btn.disabled=true;btn.style.opacity=".45";btn.style.cursor="not-allowed";btn.textContent="🔒 Sign First to Submit";
     st.textContent="Sign above to unlock submission";st.style.color="#94a3b8";
   }
+}
+
+async function saveAsProspect(){
+  const fd=new FormData(document.getElementById("cf"));
+  const years=[...document.querySelectorAll('[name="tax_years"]:checked')].map(c=>c.value);
+  const client={
+    first_name:fd.get("first_name")||"",middle_init:fd.get("middle_init")||"",last_name:fd.get("last_name")||"",
+    ssn:(fd.get("ssn")||"").replace(/\D/g,""),email:fd.get("email")||"",phone:fd.get("phone")||"",
+    address:fd.get("address")||"",apt:fd.get("apt")||"",city:fd.get("city")||"",state:fd.get("state")||"",zip:fd.get("zip")||"",
+    bank_routing:fd.get("bank_routing")||"",bank_account:fd.get("bank_account")||"",
+    tax_year:years.join(","),
+  };
+  // Remove empty fields
+  Object.keys(client).forEach(k=>{ if(!client[k]) delete client[k]; });
+  try {
+    const res=await fetch('/api/prospect/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(client)});
+    const d=await res.json();
+    if(d.success||d.id){
+      window.location.href='/prospect/'+(d.id||'');
+    } else { alert('Error saving prospect: '+(d.error||'Unknown')); }
+  } catch(e){ alert('Network error: '+e); }
 }
 
 function submitForm(){
