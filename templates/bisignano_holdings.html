@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+{% block title %}Bisignano Holdings LLC — Private Dashboard{% endblock %}
+{% block content %}
+<div style="padding:28px 32px;max-width:1100px;">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:28px;">
+    <div style="width:52px;height:52px;background:linear-gradient(135deg,#0f172a,#1e293b);border:2px solid #f59e0b;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;">🏛️</div>
+    <div>
+      <div style="font-size:22px;font-weight:900;color:#0f172a;letter-spacing:-.5px;">Bisignano Holdings LLC</div>
+      <div style="font-size:12px;color:#64748b;">Private Investment &amp; Holdings Company · Master Dashboard</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:10px;">
+      <span style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;">● Active</span>
+      <a href="/shotgun/admin" style="background:#1a1a2e;color:#f8fafc;padding:7px 16px;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none;">Shotgun Admin →</a>
+    </div>
+  </div>
+
+  <!-- Corporate Structure Banner -->
+  <div style="background:linear-gradient(135deg,#0f172a,#1e3a5f);border-radius:16px;padding:20px 24px;margin-bottom:24px;border:1px solid rgba(245,158,11,.2);">
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Corporate Structure</div>
+    <div style="display:flex;align-items:center;gap:0;">
+      <div style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);border-radius:12px;padding:12px 20px;text-align:center;">
+        <div style="font-size:13px;font-weight:900;color:#f59e0b;">Bisignano Holdings LLC</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:2px;">Parent Company · Private</div>
+        <div style="font-size:10px;color:#f59e0b;margin-top:1px;">Eugene Bisignano — 100%</div>
+      </div>
+      <div style="flex:1;height:2px;background:linear-gradient(90deg,rgba(245,158,11,.5),rgba(233,69,96,.5));margin:0 12px;position:relative;">
+        <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.3);">owns 100%</div>
+      </div>
+      <div style="background:rgba(233,69,96,.15);border:1px solid rgba(233,69,96,.4);border-radius:12px;padding:12px 20px;text-align:center;">
+        <div style="font-size:13px;font-weight:900;color:#e94560;">Shotgun Banking LLC</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:2px;">Subsidiary · Seeking Investment</div>
+        <div style="font-size:10px;color:#e94560;margin-top:1px;">Banking by Wise</div>
+      </div>
+      <div style="flex:1;height:2px;background:linear-gradient(90deg,rgba(233,69,96,.5),rgba(34,197,94,.5));margin:0 12px;position:relative;">
+        <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.3);">fee revenue</div>
+      </div>
+      <div style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.4);border-radius:12px;padding:12px 20px;text-align:center;">
+        <div style="font-size:13px;font-weight:900;color:#22c55e;">Central Bank</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:2px;">Fee Reserve · Bisignano Holdings</div>
+        <div id="central-balance-mini" style="font-size:12px;color:#22c55e;margin-top:1px;font-weight:700;">$—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Row -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;">
+    <div class="stat-card">
+      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Total Fee Revenue</div>
+      <div id="kpi-fees" style="font-size:24px;font-weight:900;color:#22c55e;">$—</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Central bank balance</div>
+    </div>
+    <div class="stat-card">
+      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Total Transactions</div>
+      <div id="kpi-txns" style="font-size:24px;font-weight:900;color:#0f172a;">—</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px;">All-time volume</div>
+    </div>
+    <div class="stat-card">
+      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Shotgun Members</div>
+      <div id="kpi-members" style="font-size:24px;font-weight:900;color:#0f172a;">—</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Approved accounts</div>
+    </div>
+    <div class="stat-card">
+      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Money in System</div>
+      <div id="kpi-aum" style="font-size:24px;font-weight:900;color:#3b82f6;">$—</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Total member balances</div>
+    </div>
+    <div class="stat-card">
+      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Shares Issued</div>
+      <div id="kpi-shares" style="font-size:24px;font-weight:900;color:#f59e0b;">—</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Shotgun cap table</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+
+    <!-- Fee Revenue Timeline -->
+    <div class="card">
+      <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;">
+        <div style="font-size:14px;font-weight:800;color:#0f172a;">💰 Fee Revenue (Bisignano Holdings)</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px;">$1.50 × 2 per transaction — all fees stay in the central bank</div>
+      </div>
+      <div style="padding:16px;">
+        <div id="fee-txn-list" style="max-height:280px;overflow-y:auto;">
+          <div style="text-align:center;padding:20px;color:#64748b;font-size:12px;">Loading...</div>
+        </div>
+        <div style="border-top:1px solid #f1f5f9;margin-top:12px;padding-top:12px;display:flex;justify-content:space-between;">
+          <span style="font-size:12px;font-weight:700;color:#64748b;">Total Collected</span>
+          <span id="fee-total" style="font-size:14px;font-weight:900;color:#22c55e;">$0.00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cap Table -->
+    <div class="card">
+      <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:14px;font-weight:800;color:#0f172a;">📊 Shotgun Cap Table</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px;">Bisignano Holdings owns 100% at launch</div>
+        </div>
+        <button onclick="showInvestModal()" class="btn-primary" style="font-size:11px;padding:6px 14px;">+ Add Investor</button>
+      </div>
+      <div style="padding:16px;">
+        <div id="cap-table" style="max-height:280px;overflow-y:auto;">
+          <div style="text-align:center;padding:20px;color:#64748b;font-size:12px;">Loading...</div>
+        </div>
+        <div style="border-top:1px solid #f1f5f9;margin-top:12px;padding-top:12px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:11px;color:#64748b;font-weight:600;">Total Shares Outstanding</span>
+            <span id="total-shares" style="font-size:12px;font-weight:800;color:#0f172a;">10,000,000</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-size:11px;color:#64748b;font-weight:600;">Total Capital Raised</span>
+            <span id="total-raised" style="font-size:12px;font-weight:800;color:#f59e0b;">$0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Ownership Donut + Transaction Volume -->
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;margin-bottom:20px;">
+
+    <!-- Ownership visual -->
+    <div class="card" style="padding:20px;">
+      <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:16px;">🥧 Ownership</div>
+      <div style="position:relative;width:140px;height:140px;margin:0 auto 16px;">
+        <svg viewBox="0 0 100 100" style="width:140px;height:140px;transform:rotate(-90deg);">
+          <circle id="donut-bg" cx="50" cy="50" r="40" fill="none" stroke="#f1f5f9" stroke-width="18"/>
+          <circle id="donut-bisignano" cx="50" cy="50" r="40" fill="none" stroke="#f59e0b" stroke-width="18"
+            stroke-dasharray="251.2 0" stroke-dashoffset="0"/>
+          <circle id="donut-investors" cx="50" cy="50" r="40" fill="none" stroke="#e94560" stroke-width="18"
+            stroke-dasharray="0 251.2" stroke-dashoffset="0"/>
+        </svg>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+          <div id="donut-pct" style="font-size:20px;font-weight:900;color:#0f172a;">100%</div>
+          <div style="font-size:9px;color:#64748b;">BH</div>
+        </div>
+      </div>
+      <div id="ownership-legend" style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></div>
+          <div style="font-size:11px;color:#64748b;">Bisignano Holdings</div>
+          <div id="bh-pct" style="margin-left:auto;font-size:11px;font-weight:700;color:#0f172a;">100%</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:#e94560;flex-shrink:0;"></div>
+          <div style="font-size:11px;color:#64748b;">Outside Investors</div>
+          <div id="inv-pct" style="margin-left:auto;font-size:11px;font-weight:700;color:#0f172a;">0%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="card">
+      <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;">
+        <div style="font-size:14px;font-weight:800;color:#0f172a;">📋 All Shotgun Transactions</div>
+      </div>
+      <div style="padding:0 16px;max-height:320px;overflow-y:auto;" id="all-txn-list">
+        <div style="text-align:center;padding:20px;color:#64748b;font-size:12px;">Loading...</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Add Investor Modal -->
+<div id="invest-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:28px;width:460px;max-width:95vw;">
+    <div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:4px;">Add Investor</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:20px;">Issue Shotgun shares to a new investor</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div><label style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px;">Investor Name</label>
+        <input id="inv-name" class="input-field" placeholder="John Smith"></div>
+      <div><label style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px;">Email</label>
+        <input id="inv-email" class="input-field" placeholder="john@fund.com"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div><label style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px;">Shares</label>
+        <input id="inv-shares" class="input-field" type="number" placeholder="500000" oninput="calcInvest()"></div>
+      <div><label style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px;">Price/Share ($)</label>
+        <input id="inv-price" class="input-field" type="number" step="0.01" placeholder="0.10" oninput="calcInvest()"></div>
+      <div><label style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px;">Type</label>
+        <select id="inv-type" class="input-field">
+          <option value="angel">Angel</option>
+          <option value="seed">Seed</option>
+          <option value="series_a">Series A</option>
+          <option value="strategic">Strategic</option>
+        </select></div>
+    </div>
+    <div id="inv-calc" style="background:#f8fafc;border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:#64748b;">
+      Enter shares and price to see investment total
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px;">Notes</label>
+      <input id="inv-notes" class="input-field" placeholder="Terms, conditions, investor notes...">
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="saveInvestor()" class="btn-primary" style="flex:1;">Issue Shares</button>
+      <button onclick="hideInvestModal()" style="flex:1;background:#f1f5f9;border:none;border-radius:10px;padding:10px;font-size:13px;font-weight:700;color:#64748b;cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const APP_ID = '6a13ae4b43ea85cec629af77';
+const BASE_URL = `https://app.base44.com/api/apps/${APP_ID}/entities`;
+
+async function loadAll() {
+  await Promise.all([loadFeeRevenue(), loadCapTable(), loadAllTxns(), loadMemberStats()]);
+}
+
+async function loadMemberStats() {
+  try {
+    const [accts, txns] = await Promise.all([
+      fetch(`${BASE_URL}/ShotgunAccount?limit=500`).then(r=>r.json()),
+      fetch(`${BASE_URL}/ShotgunTransaction?limit=500`).then(r=>r.json()),
+    ]);
+    const approved = (accts||[]).filter(a=>a.status==='approved');
+    const totalBal = approved.reduce((s,a)=>s+parseFloat(a.balance||0),0);
+    const allTxns = txns||[];
+    document.getElementById('kpi-members').textContent = approved.length;
+    document.getElementById('kpi-aum').textContent = '$'+totalBal.toFixed(2);
+    document.getElementById('kpi-txns').textContent = allTxns.filter(t=>t.type!=='fee'&&t.type!=='beat_v').length;
+  } catch(e){}
+}
+
+async function loadFeeRevenue() {
+  try {
+    const txns = await fetch(`${BASE_URL}/ShotgunTransaction?limit=500`).then(r=>r.json());
+    const feeTxns = (txns||[]).filter(t=>t.type==='fee'&&t.status==='completed');
+    const total = feeTxns.reduce((s,t)=>s+parseFloat(t.amount||0),0);
+    document.getElementById('kpi-fees').textContent = '$'+total.toFixed(2);
+    document.getElementById('fee-total').textContent = '$'+total.toFixed(2);
+    document.getElementById('central-balance-mini').textContent = '$'+total.toFixed(2);
+    const list = document.getElementById('fee-txn-list');
+    if (!feeTxns.length) {
+      list.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:12px;">No fee revenue yet — transactions will show here</div>';
+      return;
+    }
+    feeTxns.sort((a,b)=>b.created_date>a.created_date?1:-1);
+    list.innerHTML = feeTxns.slice(0,20).map(t=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f8fafc;">
+        <div>
+          <div style="font-size:12px;font-weight:600;color:#0f172a;">${t.note||'Transaction fee'}</div>
+          <div style="font-size:10px;color:#94a3b8;">${new Date(t.created_date).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+        <div style="font-size:13px;font-weight:800;color:#22c55e;">+$${parseFloat(t.amount||0).toFixed(2)}</div>
+      </div>
+    `).join('');
+  } catch(e){}
+}
+
+async function loadCapTable() {
+  try {
+    const shares = await fetch(`${BASE_URL}/ShotgunShareholding?limit=100`).then(r=>r.json());
+    const totalShares = (shares||[]).reduce((s,sh)=>s+parseFloat(sh.shares||0),0);
+    const totalRaised = (shares||[]).filter(s=>s.investor_type!=='founder').reduce((s,sh)=>s+parseFloat(sh.total_invested||0),0);
+    const outsideShares = (shares||[]).filter(s=>s.investor_type!=='founder').reduce((s,sh)=>s+parseFloat(sh.shares||0),0);
+    const bhShares = totalShares - outsideShares;
+    const bhPct = totalShares > 0 ? (bhShares/totalShares*100).toFixed(1) : 100;
+    const invPct = totalShares > 0 ? (outsideShares/totalShares*100).toFixed(1) : 0;
+
+    document.getElementById('total-shares').textContent = totalShares.toLocaleString();
+    document.getElementById('total-raised').textContent = '$'+totalRaised.toLocaleString();
+    document.getElementById('kpi-shares').textContent = totalShares.toLocaleString();
+    document.getElementById('bh-pct').textContent = bhPct+'%';
+    document.getElementById('inv-pct').textContent = invPct+'%';
+    document.getElementById('donut-pct').textContent = bhPct+'%';
+
+    // Update donut
+    const circ = 251.2;
+    const bhDash = (bhPct/100)*circ;
+    const invDash = circ - bhDash;
+    document.getElementById('donut-bisignano').setAttribute('stroke-dasharray', `${bhDash} ${invDash}`);
+    document.getElementById('donut-investors').setAttribute('stroke-dasharray', `${invDash} ${bhDash}`);
+    document.getElementById('donut-investors').setAttribute('stroke-dashoffset', -bhDash);
+
+    const typeColors = {founder:'#f59e0b',angel:'#3b82f6',seed:'#8b5cf6',series_a:'#e94560',strategic:'#22c55e'};
+    const typeLabels = {founder:'🏛 Founder',angel:'👼 Angel',seed:'🌱 Seed',series_a:'📈 Series A',strategic:'🤝 Strategic'};
+    const cap = document.getElementById('cap-table');
+    cap.innerHTML = (shares||[]).map(s=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f8fafc;">
+        <div style="width:36px;height:36px;border-radius:10px;background:${typeColors[s.investor_type]||'#94a3b8'}22;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">
+          ${s.investor_type==='founder'?'🏛':'💼'}
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:700;color:#0f172a;">${s.investor_name}</div>
+          <div style="display:flex;gap:6px;align-items:center;margin-top:2px;">
+            <span style="background:${typeColors[s.investor_type]||'#94a3b8'}22;color:${typeColors[s.investor_type]||'#94a3b8'};padding:1px 7px;border-radius:8px;font-size:10px;font-weight:700;">${typeLabels[s.investor_type]||s.investor_type}</span>
+            <span style="font-size:10px;color:#94a3b8;">${parseFloat(s.shares||0).toLocaleString()} shares @ $${parseFloat(s.share_price||0).toFixed(3)}</span>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:13px;font-weight:800;color:#0f172a;">${parseFloat(s.ownership_pct||0).toFixed(1)}%</div>
+          <div style="font-size:10px;color:#64748b;">$${parseFloat(s.total_invested||0).toLocaleString()}</div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e){ console.error(e); }
+}
+
+async function loadAllTxns() {
+  try {
+    const txns = await fetch(`${BASE_URL}/ShotgunTransaction?limit=200`).then(r=>r.json());
+    const list = document.getElementById('all-txn-list');
+    const real = (txns||[]).filter(t=>t.type!=='fee'&&t.type!=='beat_v').sort((a,b)=>b.created_date>a.created_date?1:-1);
+    if (!real.length) {
+      list.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:12px;">No transactions yet</div>';
+      return;
+    }
+    const typeIcon = {transfer:'💸',deposit:'💰',withdrawal:'🏧',sos_response:'🆘',refund_credit:'🔄'};
+    const typeColor = {transfer:'#3b82f6',deposit:'#22c55e',withdrawal:'#e94560',sos_response:'#f59e0b',refund_credit:'#8b5cf6'};
+    list.innerHTML = real.slice(0,50).map(t=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f8fafc;">
+        <div style="width:34px;height:34px;border-radius:9px;background:${typeColor[t.type]||'#94a3b8'}18;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
+          ${typeIcon[t.type]||'💳'}
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:12px;font-weight:600;color:#0f172a;">#${t.from_hashtag||'?'} → #${t.to_hashtag||'?'}</div>
+          <div style="font-size:10px;color:#94a3b8;">${t.note||t.type} · ${new Date(t.created_date).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:13px;font-weight:800;color:#0f172a;">$${parseFloat(t.amount||0).toFixed(2)}</div>
+          ${t.fee?`<div style="font-size:10px;color:#22c55e;">fee $${parseFloat(t.fee||0).toFixed(2)}</div>`:''}
+        </div>
+      </div>
+    `).join('');
+  } catch(e){}
+}
+
+// ── Investor modal ──
+function showInvestModal() {
+  document.getElementById('invest-modal').style.display = 'flex';
+}
+function hideInvestModal() {
+  document.getElementById('invest-modal').style.display = 'none';
+}
+
+function calcInvest() {
+  const shares = parseFloat(document.getElementById('inv-shares').value) || 0;
+  const price  = parseFloat(document.getElementById('inv-price').value) || 0;
+  const total  = shares * price;
+  const totalShares = 10000000; // founder shares — will be recalculated on save
+  const pct = totalShares > 0 ? ((shares / (totalShares + shares)) * 100).toFixed(2) : 0;
+  document.getElementById('inv-calc').innerHTML = total > 0
+    ? `<b>Investment:</b> $${total.toLocaleString('en-US',{minimumFractionDigits:2})} &nbsp;·&nbsp; <b>Ownership:</b> ~${pct}% of Shotgun &nbsp;·&nbsp; <b>${shares.toLocaleString()} shares</b>`
+    : 'Enter shares and price to see investment total';
+}
+
+async function saveInvestor() {
+  const name   = document.getElementById('inv-name').value.trim();
+  const email  = document.getElementById('inv-email').value.trim();
+  const shares = parseFloat(document.getElementById('inv-shares').value) || 0;
+  const price  = parseFloat(document.getElementById('inv-price').value) || 0;
+  const type   = document.getElementById('inv-type').value;
+  const notes  = document.getElementById('inv-notes').value.trim();
+  if (!name || !shares || !price) { alert('Name, shares, and price are required'); return; }
+  const total = shares * price;
+  // Recalculate ownership %
+  let existingShares = 10000000;
+  try {
+    const existing = await fetch(`${BASE_URL}/ShotgunShareholding?limit=100`).then(r=>r.json());
+    existingShares = (existing||[]).reduce((s,sh)=>s+parseFloat(sh.shares||0),0);
+  } catch(e){}
+  const pct = ((shares / (existingShares + shares)) * 100);
+  // Dilute Bisignano Holdings
+  const bhRecord = await fetch(`${BASE_URL}/ShotgunShareholding?investor_type=founder&limit=1`).then(r=>r.json());
+  if (bhRecord && bhRecord[0]) {
+    const bhShares = parseFloat(bhRecord[0].shares||0);
+    const newBhPct = (bhShares / (existingShares + shares)) * 100;
+    await fetch(`${BASE_URL}/ShotgunShareholding/${bhRecord[0].id}`, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ownership_pct: newBhPct})
+    });
+  }
+  await fetch(`${BASE_URL}/ShotgunShareholding`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      investor_name: name, investor_email: email,
+      investor_type: type, shares, share_price: price,
+      total_invested: total, ownership_pct: pct,
+      status: 'active', investment_date: new Date().toISOString().split('T')[0],
+      notes,
+    })
+  });
+  hideInvestModal();
+  loadCapTable();
+  alert(`✓ ${shares.toLocaleString()} shares issued to ${name} for $${total.toLocaleString()}`);
+}
+
+loadAll();
+setInterval(loadAll, 30000); // refresh every 30s
+</script>
+{% endblock %}
