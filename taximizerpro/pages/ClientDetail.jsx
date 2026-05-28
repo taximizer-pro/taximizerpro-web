@@ -2,8 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { TaxClient } from "@/api/entities";
 import { useParams, useNavigate } from "react-router-dom";
 
-const RENDER_URL = "https://taximizerpro.onrender.com";
-const SYNC_SECRET = "txpro-sync-2026-italy";
 
 const MILESTONES = [
   "New Client",
@@ -174,35 +172,20 @@ export default function ClientDetail() {
       });
       setClient(prev => ({ ...prev, signature_url: signatureDataUrl, current_step: 4 }));
 
-      // 2. Push fresh tokens to Render
-      setStatusMsg("Connecting to form processor...");
-      try {
-        await fetch(`${RENDER_URL}/api/refresh-tokens`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Sync-Secret": SYNC_SECRET },
-          body: JSON.stringify({
-            drive: "", // Render uses its own stored tokens from last automation push
-            gmail: ""
-          })
-        });
-      } catch (e) { /* non-fatal */ }
-
-      // 3. Call Render generate
+      // Call Base44 backend function
       setStatusMsg("Generating tax forms...");
-      // Use already-loaded client state (avoids extra entity call)
-      const clientData = { ...client };
-      const res = await fetch(`${RENDER_URL}/api/generate/${id}`, {
+      const res = await fetch("/api/functions/generateTaxForms", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-Sync-Secret": SYNC_SECRET },
-        body: JSON.stringify({ client: clientData })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId: id })
       });
 
       const result = await res.json();
 
-      if (result.success) {
+      if (result.ok) {
         await TaxClient.update(id, { filing_status: "filed", current_step: 5 });
         setClient(prev => ({ ...prev, filing_status: "filed", current_step: 5 }));
-        setGenResult({ success: true, links: result.links, folder_url: result.folder_url });
+        setGenResult({ success: true, links: result.links, folder_url: result.folderUrl });
         setStatusMsg("");
       } else {
         setGenResult({ success: false, error: result.error || "Generation failed" });
@@ -215,31 +198,24 @@ export default function ClientDetail() {
     setGenerating(false);
   }
 
-  // Generate without signature (skip sig step)
+  // Generate without signature (admin override)
   async function generateWithoutSignature() {
     setGenerating(true);
     setGenResult(null);
-    setStatusMsg("Pushing tokens...");
+    setStatusMsg("Generating tax forms...");
 
     try {
-      await fetch(`${RENDER_URL}/api/refresh-tokens`, {
+      const res = await fetch("/api/functions/generateTaxForms", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-Sync-Secret": SYNC_SECRET },
-        body: JSON.stringify({ drive: "", gmail: "" })
-      }).catch(() => {});
-
-      setStatusMsg("Generating tax forms...");
-      const res = await fetch(`${RENDER_URL}/api/generate/${id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Sync-Secret": SYNC_SECRET },
-        body: JSON.stringify({ client })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId: id })
       });
 
       const result = await res.json();
-      if (result.success) {
+      if (result.ok) {
         await TaxClient.update(id, { filing_status: "filed", current_step: 3 });
         setClient(prev => ({ ...prev, filing_status: "filed", current_step: 3 }));
-        setGenResult({ success: true, links: result.links, folder_url: result.folder_url });
+        setGenResult({ success: true, links: result.links, folder_url: result.folderUrl });
       } else {
         setGenResult({ success: false, error: result.error || "Generation failed" });
       }

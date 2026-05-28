@@ -3,6 +3,7 @@ import { TaxClient } from "@/api/entities";
 import { Link } from "react-router-dom";
 
 const STATUS_COLORS = {
+  prospect: "bg-slate-100 text-slate-600",
   pending: "bg-amber-100 text-amber-800",
   active: "bg-blue-100 text-blue-800",
   filed: "bg-green-100 text-green-800",
@@ -79,6 +80,7 @@ export default function Clients() {
             className="border border-slate-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Statuses</option>
+            <option value="prospect">Prospect</option>
             <option value="pending">Pending</option>
             <option value="active">Active</option>
             <option value="filed">Filed</option>
