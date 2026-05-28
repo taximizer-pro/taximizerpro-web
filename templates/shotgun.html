@@ -420,7 +420,7 @@ body{background:var(--gun);color:var(--white);min-height:100vh;overflow-x:hidden
       <label class="sg-label">Note (optional)</label>
       <input class="sg-input" id="sg-send-note" placeholder="What's it for?">
     </div>
-    <div id="sg-send-fee-info" style="font-size:11px;color:var(--smoke);margin-bottom:12px;text-align:center;"></div>
+    <div id="sg-send-fee-info" style="font-size:11px;color:var(--gold);margin-bottom:12px;text-align:center;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:7px;">💡 $1.50 fee deducted from sender &amp; recipient — goes to Bisignano Holdings</div>
     <button class="sg-btn sg-btn-primary" onclick="sgSendMoney()">Send Now 🔫</button>
     <button class="sg-btn sg-btn-ghost" style="margin-top:8px;" onclick="showTab('dash')">← Back</button>
   </div>
@@ -704,8 +704,7 @@ function populateDash(acct) {
   // Presence
   updatePresenceUI(acct.is_silent, acct.is_online);
   // Fee info
-  document.getElementById('sg-send-fee-info').textContent = acct.fee_milestone_reached
-    ? '💡 $1.50 transaction fee applies' : '';
+  document.getElementById('sg-send-fee-info').textContent = '💡 $1.50 fee deducted from sender & recipient';
 }
 
 // ═══════════════════════════════════════
