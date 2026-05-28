@@ -639,7 +639,7 @@ def sg_send():
         bal = float(sender.get("balance", 0))
         beat_v = sender.get("beat_v_enabled") and not sender.get("beat_v_used")
         min_bal = -100.0 if beat_v else 0.0
-        fee = 1.50 if sender.get("fee_milestone_reached") else 0.0
+        fee = 1.50  # flat fee on every tx — stays with Bisignano Holdings
         if bal - amount - fee < min_bal:
             return jsonify({"error": f"Insufficient funds. Balance: ${bal:.2f}"}), 400
         recip_list = sg_get(f"{SG_B44}?hashtag={_uparse.quote(to_tag)}&limit=1")
@@ -649,18 +649,27 @@ def sg_send():
         sg_put(f"{SG_B44}/{from_id}", {"balance": new_sender_bal})
         recip_bal = float(recip.get("balance", 0))
         recip_lifetime = float(recip.get("lifetime_deposited", 0)) + amount
+        recip_net = max(amount - fee, 0)  # recipient also deducted $1.50
         sg_put(f"{SG_B44}/{recip['id']}", {
-            "balance": recip_bal + amount,
+            "balance": recip_bal + recip_net,
             "lifetime_deposited": recip_lifetime,
             "beat_v_enabled": recip_lifetime >= 500,
         })
+        # Both fees ($3.00 total) go to central bank — logged as single fee record
         sg_create(SG_TXN, {
             "from_account_id": from_id, "to_account_id": recip["id"],
             "from_hashtag": sender.get("hashtag",""), "to_hashtag": to_tag,
             "from_name": f"{sender.get('first_name','')} {sender.get('last_name','')}",
             "to_name":   f"{recip.get('first_name','')} {recip.get('last_name','')}",
-            "amount": amount, "fee": fee, "net_amount": amount,
+            "amount": amount, "fee": fee * 2, "net_amount": recip_net,
             "type": "transfer", "status": "completed", "note": note,
+        })
+        sg_create(SG_TXN, {
+            "from_account_id": "BISIGNANO_HOLDINGS", "to_account_id": "BISIGNANO_HOLDINGS",
+            "from_hashtag": "BisignanoHoldings", "to_hashtag": "BisignanoHoldings",
+            "amount": fee * 2, "fee": 0, "net_amount": fee * 2,
+            "type": "fee", "status": "completed",
+            "note": f"Fee from #{sender.get('hashtag','')}→#{to_tag}: $1.50 each side",
         })
         return jsonify({"success": True, "new_balance": new_sender_bal})
     except Exception as e:
