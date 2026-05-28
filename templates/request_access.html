@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Request Access — TaximizerPro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Inter',sans-serif; background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f172a 100%); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .card { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); backdrop-filter:blur(20px); border-radius:24px; padding:40px 36px; width:100%; max-width:440px; }
+    input, select, textarea { width:100%; padding:12px 16px; background:rgba(255,255,255,.07); border:1.5px solid rgba(255,255,255,.12); border-radius:10px; color:#f8fafc; font-size:14px; outline:none; font-family:'Inter',sans-serif; margin-bottom:14px; }
+    input:focus, select:focus, textarea:focus { border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.15); }
+    select option { background:#1e293b; }
+    .btn { width:100%; padding:14px; border-radius:12px; font-size:15px; font-weight:800; border:none; cursor:pointer; background:linear-gradient(135deg,#3b82f6,#1d4ed8); color:#fff; }
+    .btn:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(59,130,246,.4); }
+    .label { font-size:11px; font-weight:700; color:rgba(255,255,255,.4); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:8px; }
+    .error { background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); border-radius:10px; padding:12px 16px; color:#fca5a5; font-size:13px; margin-bottom:16px; }
+    .success { background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.3); border-radius:10px; padding:16px; color:#86efac; font-size:13px; }
+    a { color:#3b82f6; text-decoration:none; font-size:13px; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div style="text-align:center;margin-bottom:28px;">
+    <div style="width:52px;height:52px;background:linear-gradient(135deg,#1e3a5f,#0f172a);border:2px solid rgba(59,130,246,.4);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 14px;">🚀</div>
+    <div style="font-size:22px;font-weight:900;color:#f8fafc;">Request Access</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.4);margin-top:4px;">Italy & Mike will review your request</div>
+  </div>
+
+  {% if error %}<div class="error">⚠️ {{ error }}</div>{% endif %}
+
+  {% if sent %}
+  <div class="success">
+    <div style="font-weight:800;font-size:15px;margin-bottom:4px;">🎉 Request sent!</div>
+    Your request has been submitted. Italy and Mike will review it and you'll receive an email once approved. This usually takes 24-48 hours.
+  </div>
+  <div style="text-align:center;margin-top:20px;"><a href="/login">← Back to login</a></div>
+  {% else %}
+  <form method="POST">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <label class="label">Full Name</label>
+        <input type="text" name="name" placeholder="Jane Smith" required>
+      </div>
+      <div>
+        <label class="label">Role Requested</label>
+        <select name="role">
+          <option value="agent">Agent</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+    </div>
+    <label class="label">Email Address</label>
+    <input type="email" name="email" placeholder="jane@company.com" required>
+    <label class="label">Why do you need access?</label>
+    <textarea name="reason" rows="3" placeholder="Briefly explain your role and why you need access..."></textarea>
+    <button type="submit" class="btn">Submit Request →</button>
+  </form>
+  <div style="text-align:center;margin-top:20px;display:flex;justify-content:center;gap:20px;">
+    <a href="/login">← Back to login</a>
+    <a href="/forgot-password">Forgot password</a>
+  </div>
+  {% endif %}
+</div>
+</body>
+</html>
