@@ -42,6 +42,14 @@ P2 = {
     '2024': {'f2_33[0]':'RT','f2_35[0]':'AC','f2_39[0]':'OCC'},
     '2025': {'f2_32[0]':'RT','f2_33[0]':'AC','f2_40[0]':'OCC'},
 }
+# Line 27 (EIC) widget name per year — read back after fill for refund_amount
+LINE27_WIDGET = {
+    '2022': 'f2_14[0]',
+    '2023': 'f2_17[0]',
+    '2024': 'f2_17[0]',
+    '2025': 'f2_14[0]',
+}
+
 DATE_XY = {'2022':(250,651),'2023':(250,551),'2024':(250,551),'2025':(250,651)}
 
 # ── Drive helpers ─────────────────────────────────────────────────────────────
@@ -161,11 +169,26 @@ def fill_form(tmpl_bytes, yr, c):
 
     doc.save(out_path, garbage=4, deflate=True, incremental=False)
     doc.close()
+
+    # Read back line 27 (EIC) value from the filled PDF
+    line27_val = 0.0
+    try:
+        doc2 = fitz.open(out_path)
+        target_widget = LINE27_WIDGET.get(yr, '')
+        for w in doc2[1].widgets():
+            sn = w.field_name.split(".")[-1]
+            if sn == target_widget and w.field_value:
+                raw = str(w.field_value).replace("$","").replace(",","").strip()
+                try: line27_val = float(raw)
+                except: pass
+        doc2.close()
+    except: pass
+
     with open(out_path,"rb") as f: result = f.read()
     for p in [tmpl_path, tmp_path, out_path]:
         try: os.unlink(p)
         except: pass
-    return result
+    return result, line27_val
 
 def send_notification(to, first_name, links):
     rows = "".join(
@@ -316,19 +339,32 @@ def api_generate(client_id):
                        f"{'_'.join(sorted(years))}")
         root_id = get_or_create_folder(ROOT_FOLDER)
         cf      = get_or_create_folder(folder_name, root_id)
-        links   = {}
+        links        = {}
+        total_refund = 0.0
         for yr in years:
-            tmpl_bytes = dl_template(MASTER_IDS[yr])
-            pdf_bytes  = fill_form(tmpl_bytes, yr, c)
+            tmpl_bytes        = dl_template(MASTER_IDS[yr])
+            pdf_bytes, l27val = fill_form(tmpl_bytes, yr, c)
+            total_refund     += l27val
             fname = (f"{c.get('last_name','').strip()}_"
                      f"{c.get('first_name','').strip()}_"
                      f"{yr}_1040.pdf")
             links[yr] = upload_pdf(pdf_bytes, fname, cf)
+
+        # Store total refund (sum of line 27 across all years) on the client record
+        if client_id and total_refund > 0:
+            try:
+                upd_url  = f"{B44_BASE}/{client_id}"
+                upd_body = json.dumps({"refund_amount": total_refund}).encode()
+                upd_req  = urllib.request.Request(upd_url, data=upd_body, method="PUT",
+                                                  headers={**BASE44_HEADERS})
+                with urllib.request.urlopen(upd_req, timeout=15): pass
+            except: pass
+
         # Email client
         if c.get("email") and "@" in c.get("email",""):
             try: send_notification(c["email"], c.get("first_name",""), links)
             except: pass
-        return jsonify({"success":True,"links":links})
+        return jsonify({"success":True,"links":links,"refund_amount":total_refund})
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({"error":str(e)}), 500
