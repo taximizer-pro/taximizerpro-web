@@ -321,7 +321,7 @@ def login():
         # Verify CAPTCHA token
         cap_token = request.form.get("captcha_token","")
         if cap_token not in _captcha_store or _captcha_store.get(cap_token,0) < time.time():
-            error = "CAPTCHA expired — please reload and try again."
+            error = "Session timed out — please refresh the page."
             return render_template("login.html", error=error)
         _captcha_store.pop(cap_token, None)
         match = next((k for k in ADMINS if k.lower() == email), None)
@@ -394,8 +394,8 @@ def captcha_generate():
     a, b = random.randint(1,9), random.randint(1,9)
     answer = a + b
     token = secrets.token_hex(16)
-    # Store hashed answer with token, expires in 5 min
-    _captcha_store[token] = time.time() + 300
+    # Store hashed answer with token, expires in 30 min
+    _captcha_store[token] = time.time() + 1800
     # Store answer separately keyed by token
     _captcha_store[f"{token}_ans"] = str(answer)
     return jsonify({"question": f"{a} + {b} = ?", "token": token})
@@ -413,7 +413,7 @@ def captcha_verify():
         return jsonify({"valid": False, "error": "Wrong answer"}), 400
     # Issue a verified pass-token valid for 5 min
     pass_token = secrets.token_hex(24)
-    _captcha_store[pass_token] = time.time() + 300
+    _captcha_store[pass_token] = time.time() + 1800
     _captcha_store.pop(token, None)
     _captcha_store.pop(f"{token}_ans", None)
     return jsonify({"valid": True, "pass_token": pass_token})
