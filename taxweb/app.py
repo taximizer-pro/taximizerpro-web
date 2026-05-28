@@ -254,7 +254,7 @@ def fill_form(tmpl_bytes, yr, c):
         rx0, ry0, rx1, ry1 = ssn_rect_coords
         sr = fitz.Rect(rx0, ry0, rx1, ry1)
         doc2[0].draw_rect(sr, color=(1,1,1), fill=(1,1,1))
-        formatted_ssn = f"{ssn[:3]}-{ssn[3:5]}-{ssn[5:]}" if len(ssn)==9 else ssn
+        formatted_ssn = ssn  # raw digits only — comb field has no room for dashes
         doc2[0].insert_text((rx0+3, ry1-2), formatted_ssn, fontname="helv", fontsize=8, color=(0,0,0))
     doc2.save(out_path, garbage=4, deflate=True, incremental=False)
     doc2.close()
