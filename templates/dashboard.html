@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — TaximizerPro{% endblock %}
+{% block content %}
+<div style="padding:28px 32px;">
+
+  <!-- Header -->
+  <div style="margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <h1 style="font-size:22px;font-weight:800;color:#0f172a;margin:0;letter-spacing:-.3px;">Welcome back, {{ user.name }} 👊</h1>
+      <p style="color:#64748b;font-size:13px;margin-top:4px;">Here's your money pipeline right now.</p>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:11px;color:#94a3b8;font-weight:500;text-transform:uppercase;letter-spacing:.5px;">Today</div>
+      <div style="font-size:14px;color:#1e293b;font-weight:700;" id="today-date">—</div>
+    </div>
+  </div>
+
+  <!-- Stats Row -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+    <div class="stat-card">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Total Clients</div>
+      <div style="font-size:32px;font-weight:900;color:#0f172a;line-height:1;" id="stat-total">—</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px;">All time</div>
+    </div>
+    <div class="stat-card">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Filed ✓</div>
+      <div style="font-size:32px;font-weight:900;color:#16a34a;line-height:1;" id="stat-filed">—</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Forms generated</div>
+    </div>
+    <div class="stat-card">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Pending</div>
+      <div style="font-size:32px;font-weight:900;color:#d97706;line-height:1;" id="stat-pending">—</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Awaiting forms</div>
+    </div>
+    <div class="stat-card" style="background:linear-gradient(135deg,#0f172a,#1e293b);border-color:#0f172a;">
+      <div style="font-size:11px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">💰 Pipeline Value</div>
+      <div style="font-size:28px;font-weight:900;color:#fbbf24;line-height:1;" id="stat-pipeline">—</div>
+      <div style="font-size:11px;color:#475569;margin-top:4px;">Total refunds tracked</div>
+    </div>
+  </div>
+
+  <!-- Filing Pipeline -->
+  <div class="card" style="margin-bottom:20px;padding:22px 24px;">
+    <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:18px;display:flex;align-items:center;gap:8px;">
+      <span>Filing Pipeline</span>
+      <span style="font-size:11px;color:#94a3b8;font-weight:500;">Documents → Funded</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:0;">
+      {% for icon, label, sub, col in [('📁','Documents','Step 1','#64748b'),('🔍','Under Review','Step 2','#3b82f6'),('✍️','Ready to Sign','Step 3','#8b5cf6'),('📤','Filed','Step 4','#f59e0b'),('💸','Funded','Step 5','#16a34a')] %}
+      <div style="flex:1;text-align:center;padding:0 8px;">
+        <div style="width:44px;height:44px;border-radius:12px;background:{{ col }}18;display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto 8px;">{{ icon }}</div>
+        <div style="font-size:12px;font-weight:700;color:#1e293b;">{{ label }}</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:2px;">{{ sub }}</div>
+      </div>
+      {% if not loop.last %}
+      <div style="color:#e2e8f0;font-size:18px;flex-shrink:0;">›</div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <!-- Recent Clients -->
+    <div class="card">
+      <div style="padding:18px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:13px;font-weight:700;color:#0f172a;">Recent Clients</span>
+        <a href="/clients" style="font-size:12px;color:#f59e0b;font-weight:600;text-decoration:none;">View all →</a>
+      </div>
+      <div id="recent-clients"><div style="padding:32px;text-align:center;color:#94a3b8;font-size:13px;">Loading...</div></div>
+    </div>
+
+    <!-- Reviews -->
+    <div class="card">
+      <div style="padding:18px 20px;border-bottom:1px solid #f1f5f9;">
+        <div style="font-size:13px;font-weight:700;color:#0f172a;">Client Reviews</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;font-style:italic;">Nobody controls the IRS — not even Italy, and that says a lot...</div>
+      </div>
+      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;" id="reviews-box"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById("today-date").textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+
+const reviews = [
+  {n:"DeShawn M.",t:"Italy got my refund moving when nobody else could. Real one fr 🙌",s:5},
+  {n:"Maria G.",t:"Gracias Italy! Mis taxes listas en un día. No hay nadie mejor.",s:5},
+  {n:"Jean-Pierre B.",t:"Mwen pa janm wè yon moun travay rapid konsa. Merci Italy!",s:5},
+  {n:"Keisha T.",t:"Been with Italy 3 years. IRS slow but Italy stay on it 💯",s:5},
+  {n:"Marco D.",t:"Italia! Un professionista vero. Ha risolto il mio caso in 24 ore.",s:5},
+];
+const rb = document.getElementById("reviews-box");
+reviews.forEach(r=>{
+  rb.innerHTML += `<div style="background:#f8fafc;border-radius:10px;padding:12px 14px;border:1px solid #f1f5f9;">
+    <div style="color:#f59e0b;font-size:12px;margin-bottom:4px;">${"★".repeat(r.s)}</div>
+    <p style="color:#475569;font-size:12px;line-height:1.5;margin:0 0 6px;">"${r.t}"</p>
+    <div style="font-size:11px;font-weight:600;color:#94a3b8;">— ${r.n}</div>
+  </div>`;
+});
+
+fetch("/api/cache-stats").then(r=>r.json()).then(d=>{
+  document.getElementById("stat-total").textContent = d.total ?? "—";
+  document.getElementById("stat-filed").textContent = d.filed ?? "—";
+  document.getElementById("stat-pending").textContent = d.pending ?? "—";
+  document.getElementById("stat-pipeline").textContent = d.pipeline ?? "—";
+}).catch(()=>{});
+
+fetch("/api/cache-clients?limit=6").then(r=>r.json()).then(clients=>{
+  const box = document.getElementById("recent-clients");
+  if(!clients.length){box.innerHTML='<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">No clients yet</div>';return;}
+  box.innerHTML = clients.slice(0,6).map(c=>`
+    <div style="padding:12px 20px;border-bottom:1px solid #f8fafc;display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#fef3c7,#fde68a);display:flex;align-items:center;justify-content:center;color:#92400e;font-weight:700;font-size:13px;flex-shrink:0;">${(c.first_name||"?")[0]}</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#1e293b;">${c.full_name||((c.first_name||"")+" "+(c.last_name||"")).trim()}</div>
+          <div style="font-size:11px;color:#94a3b8;">${c.tax_year||''}</div>
+        </div>
+      </div>
+      <span class="${c.filing_status==='filed'?'badge-filed':'badge-pending'}">${c.filing_status||'pending'}</span>
+    </div>`).join("");
+}).catch(()=>{});
+</script>
+{% endblock %}
