@@ -140,6 +140,10 @@
       <!-- Divider -->
       <div style="height:1px;background:rgba(255,255,255,.06);margin:8px 4px;"></div>
       {% if user.role == 'superadmin' %}
+      <a href="/security" class="nav-link {% if request.path=='/security' %}active{% endif %}" style="color:#22c55e !important;">
+        <span style="font-size:17px;">🛡️</span>
+        Security
+      </a>
       <a href="/bisignano" class="nav-link {% if request.path=='/bisignano' %}active{% endif %}" style="color:#f59e0b !important;">
         <span style="font-size:17px;">🏛️</span>
         Holdings
