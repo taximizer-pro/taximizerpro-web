@@ -104,6 +104,10 @@ async function loadPending() {
           style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;">
           ✗ Deny
         </button>
+        <button onclick="ghostMode('${a.id}')"
+          style="background:#f59e0b;color:#000;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;">
+          👻 View
+        </button>
       </div>
     </div>
   `).join('');
@@ -168,6 +172,7 @@ function renderMembers(members) {
         <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;">Lifetime</th>
         <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;">Status</th>
         <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;">Beat V</th>
+        <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;">Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -184,6 +189,9 @@ function renderMembers(members) {
             <span style="background:${statusColors[m.status]||'#94a3b8'}22;color:${statusColors[m.status]||'#64748b'};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">${m.status||'—'}</span>
           </td>
           <td style="padding:10px 12px;font-size:12px;">${m.beat_v_enabled?'<span style="color:#7c3aed;font-weight:700;">⚡ Active</span>':'<span style="color:#94a3b8;">Locked</span>'}</td>
+          <td style="padding:10px 12px;">
+            <button onclick="ghostMode('${m.id}')" style="background:#f59e0b;color:#000;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:800;cursor:pointer;">👻 Ghost</button>
+          </td>
         </tr>
       `).join('')}
     </tbody>
@@ -201,8 +209,13 @@ function filterMembers(q) {
   ));
 }
 
+function ghostMode(accountId) {
+  window.open('/shotgun/admin/ghost/' + accountId, '_blank');
+}
+
 // Init
 loadPending();
 loadAllMembers();
 </script>
 {% endblock %}
+
