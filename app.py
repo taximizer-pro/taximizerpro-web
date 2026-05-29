@@ -848,6 +848,22 @@ def api_cache_clients():
 import urllib.parse as _uparse
 
 # ═══════════════════════════════════════════════════════════════
+
+@app.route("/bank")
+def shotgun_bank_portal():
+    """Standalone public-facing Shotgun Bank portal — no TaximizerPro login required."""
+    return render_template("shotgun_portal.html")
+
+@app.route("/shotgun/login")
+def shotgun_login_page():
+    """Redirect /shotgun/login to the public bank portal."""
+    return redirect("/bank#login")
+
+@app.route("/shotgun/signup")  
+def shotgun_signup_page():
+    """Redirect /shotgun/signup to the public bank portal."""
+    return redirect("/bank#signup")
+
 #  SHOTGUN BANKING ROUTES
 #  Owned by: Bisignano Holdings LLC | Banking by: Wise
 # ═══════════════════════════════════════════════════════════════
@@ -885,7 +901,9 @@ def sg_rand_digits(n):
 
 @app.route("/shotgun")
 def shotgun_page():
-    if not logged_in(): return redirect(url_for("login"))
+    if not logged_in():
+        # Non-TaximizerPro users go to public bank portal
+        return redirect("/bank")
     return render_template("shotgun.html", user=session["user"])
 
 @app.route("/api/shotgun/check-hashtag")
