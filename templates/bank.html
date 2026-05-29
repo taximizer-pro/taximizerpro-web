@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Shotgun Bank</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#07070f;--surface:#0f0f1a;--card:#161622;--border:rgba(255,255,255,.07);
+  --red:#e94560;--red2:#c0392b;--gold:#f59e0b;--green:#22c55e;--purple:#7c3aed;
+  --smoke:#64748b;--muted:#94a3b8;--white:#f1f5f9;
+}
+body{background:var(--bg);color:var(--white);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden;}
+input,button,select,textarea{font-family:inherit;}
+
+/* ── SCREENS ── */
+.screen{display:none;min-height:100vh;flex-direction:column;}
+.screen.active{display:flex;}
+
+/* ── SPLASH ── */
+#screen-splash{align-items:center;justify-content:center;text-align:center;padding:40px 24px;background:radial-gradient(ellipse at top,rgba(233,69,96,.15) 0%,transparent 60%);}
+.splash-logo{width:90px;height:90px;object-fit:contain;margin-bottom:20px;filter:drop-shadow(0 0 30px rgba(233,69,96,.5));}
+.splash-title{font-size:36px;font-weight:900;letter-spacing:-1px;margin-bottom:6px;}
+.splash-title span{color:var(--red);}
+.splash-sub{font-size:14px;color:var(--muted);margin-bottom:48px;line-height:1.6;}
+.btn-primary{width:100%;max-width:320px;padding:16px;background:linear-gradient(135deg,var(--red),var(--red2));border:none;border-radius:14px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;letter-spacing:.3px;transition:transform .15s,box-shadow .15s;}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(233,69,96,.4);}
+.btn-secondary{width:100%;max-width:320px;padding:16px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.12);border-radius:14px;color:var(--white);font-size:15px;font-weight:700;cursor:pointer;margin-top:12px;transition:all .15s;}
+.btn-secondary:hover{background:rgba(255,255,255,.1);}
+.splash-btns{display:flex;flex-direction:column;align-items:center;gap:0;width:100%;}
+
+/* ── AUTH SCREENS ── */
+#screen-login,#screen-signup{align-items:center;justify-content:center;padding:32px 24px;background:radial-gradient(ellipse at top,rgba(233,69,96,.1) 0%,transparent 60%);}
+.auth-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:32px 28px;}
+.auth-back{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;margin-bottom:20px;display:flex;align-items:center;gap:6px;padding:0;}
+.auth-back:hover{color:var(--white);}
+.auth-title{font-size:22px;font-weight:900;margin-bottom:4px;}
+.auth-sub{font-size:13px;color:var(--muted);margin-bottom:24px;}
+.field{margin-bottom:14px;}
+.field label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;}
+.field input{width:100%;padding:13px 16px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.08);border-radius:12px;color:var(--white);font-size:14px;outline:none;transition:border-color .2s;}
+.field input:focus{border-color:rgba(233,69,96,.5);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.auth-error{background:rgba(233,69,96,.12);border:1px solid rgba(233,69,96,.3);border-radius:10px;padding:10px 14px;font-size:12px;color:#f87171;margin-bottom:14px;display:none;}
+.auth-error.show{display:block;}
+.auth-note{text-align:center;font-size:12px;color:var(--smoke);margin-top:16px;}
+.auth-note a{color:var(--gold);text-decoration:none;font-weight:600;}
+.hashtag-check{font-size:11px;margin-top:4px;min-height:16px;}
+
+/* ── PENDING SCREEN ── */
+#screen-pending{align-items:center;justify-content:center;padding:40px 24px;text-align:center;}
+.pending-icon{font-size:64px;margin-bottom:20px;}
+.pending-title{font-size:22px;font-weight:900;margin-bottom:8px;}
+.pending-sub{font-size:14px;color:var(--muted);line-height:1.7;max-width:300px;}
+
+/* ── DASHBOARD ── */
+#screen-dashboard{flex-direction:column;}
+.dash-header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.dash-brand{display:flex;align-items:center;gap:10px;}
+.dash-brand img{width:30px;height:30px;object-fit:contain;}
+.dash-brand-name{font-size:16px;font-weight:900;}
+.dash-user{display:flex;align-items:center;gap:8px;}
+.dash-hashtag{font-size:12px;color:var(--red);font-weight:700;background:rgba(233,69,96,.1);padding:4px 10px;border-radius:20px;}
+.btn-logout{background:none;border:none;color:var(--smoke);cursor:pointer;font-size:12px;}
+
+.dash-body{flex:1;overflow-y:auto;padding:20px 16px 100px;}
+
+/* Balance card */
+.balance-card{background:linear-gradient(135deg,#1a0a10,#200f15);border:1px solid rgba(233,69,96,.2);border-radius:24px;padding:28px 24px;margin-bottom:20px;text-align:center;position:relative;overflow:hidden;}
+.balance-card::before{content:'';position:absolute;top:-40px;right:-40px;width:150px;height:150px;background:radial-gradient(circle,rgba(233,69,96,.15),transparent);border-radius:50%;}
+.balance-label{font-size:11px;font-weight:700;color:var(--smoke);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+.balance-amount{font-size:44px;font-weight:900;letter-spacing:-2px;margin-bottom:4px;}
+.balance-amount.negative{color:#f87171;}
+.balance-amount.positive{color:var(--white);}
+.balance-tag{font-size:13px;color:var(--muted);}
+.beat-v-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);border-radius:20px;padding:4px 12px;font-size:11px;color:#c4b5fd;font-weight:700;margin-top:10px;}
+
+/* Quick actions */
+.actions-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+.action-btn{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;transition:all .15s;text-decoration:none;}
+.action-btn:hover{background:rgba(233,69,96,.08);border-color:rgba(233,69,96,.3);}
+.action-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.action-icon.red{background:rgba(233,69,96,.15);}
+.action-icon.green{background:rgba(34,197,94,.15);}
+.action-icon.gold{background:rgba(245,158,11,.15);}
+.action-icon.purple{background:rgba(124,58,237,.15);}
+.action-label{font-size:11px;font-weight:700;color:var(--muted);text-align:center;}
+
+/* Card info */
+.card-section{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:20px;margin-bottom:16px;}
+.section-title{font-size:12px;font-weight:800;color:var(--smoke);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;}
+.card-number{font-size:18px;font-weight:700;letter-spacing:3px;margin-bottom:8px;font-family:monospace;}
+.card-row{display:flex;gap:24px;}
+.card-detail{font-size:12px;color:var(--muted);}
+.card-detail span{display:block;font-size:14px;font-weight:700;color:var(--white);margin-top:2px;}
+.copy-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--muted);cursor:pointer;margin-top:8px;}
+
+/* Transactions */
+.tx-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
+.tx-item:last-child{border-bottom:none;}
+.tx-icon{width:40px;height:40px;border-radius:12px;object-fit:contain;flex-shrink:0;}
+.tx-icon-fallback{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.tx-info{flex:1;}
+.tx-name{font-size:13px;font-weight:700;}
+.tx-note{font-size:11px;color:var(--muted);margin-top:2px;}
+.tx-amount{font-size:14px;font-weight:800;text-align:right;}
+.tx-amount.credit{color:var(--green);}
+.tx-amount.debit{color:#f87171;}
+.tx-time{font-size:10px;color:var(--smoke);margin-top:2px;text-align:right;}
+
+/* Bottom nav */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:none;grid-template-columns:repeat(4,1fr);padding:8px 0 env(safe-area-inset-bottom,8px);}
+.bottom-nav.show{display:grid;}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;cursor:pointer;border:none;background:none;color:var(--smoke);transition:color .15s;}
+.nav-item.active{color:var(--red);}
+.nav-item svg,.nav-icon{font-size:20px;}
+.nav-label{font-size:10px;font-weight:600;}
+
+/* Modals */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;display:none;align-items:flex-end;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-sheet{background:var(--surface);border-radius:28px 28px 0 0;border-top:1px solid var(--border);padding:24px 20px 40px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;}
+.modal-handle{width:40px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin:0 auto 20px;}
+.modal-title{font-size:18px;font-weight:900;margin-bottom:6px;}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:20px;}
+.amount-display{text-align:center;font-size:48px;font-weight:900;letter-spacing:-2px;margin:16px 0;min-height:60px;}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0;}
+.num-key{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;font-size:20px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center;}
+.num-key:hover{background:rgba(233,69,96,.1);border-color:var(--red);}
+.modal-error{background:rgba(233,69,96,.12);border:1px solid rgba(233,69,96,.3);border-radius:10px;padding:10px 14px;font-size:12px;color:#f87171;margin-bottom:14px;display:none;}
+.modal-error.show{display:block;}
+.pill-tabs{display:flex;gap:8px;margin-bottom:20px;}
+.pill-tab{flex:1;padding:10px;text-align:center;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);color:var(--muted);transition:all .15s;}
+.pill-tab.active{background:var(--red);border-color:var(--red);color:#fff;}
+
+/* Sections */
+.tab-section{display:none;}
+.tab-section.active{display:block;}
+.empty-state{text-align:center;padding:40px 20px;color:var(--smoke);}
+.empty-icon{font-size:48px;margin-bottom:12px;}
+
+/* Deposit success */
+#screen-deposit-success{align-items:center;justify-content:center;padding:40px 24px;text-align:center;}
+</style>
+</head>
+<body>
+
+<!-- ══ SPLASH ══════════════════════════════════════════════════════════════ -->
+<div id="screen-splash" class="screen active">
+  <img src="/static/shotgun_bank_main_logo_clean.png" class="splash-logo" onerror="this.style.fontSize='60px';this.outerHTML='<div style=\'font-size:60px;margin-bottom:20px;\'>🔫</div>'">
+  <div class="splash-title">Shotgun <span>Bank</span></div>
+  <div class="splash-sub">Your money, reloaded.<br>Send, receive, and grow — fast.</div>
+  <div class="splash-btns">
+    <button class="btn-primary" onclick="showScreen('login')">Sign In</button>
+    <button class="btn-secondary" onclick="showScreen('signup')">Create Account</button>
+  </div>
+  <div style="margin-top:32px;font-size:11px;color:var(--smoke);">A Bisignano Holdings LLC product</div>
+</div>
+
+<!-- ══ LOGIN ════════════════════════════════════════════════════════════════ -->
+<div id="screen-login" class="screen">
+  <div class="auth-card" style="margin:auto;">
+    <button class="auth-back" onclick="showScreen('splash')">← Back</button>
+    <div class="auth-title">Welcome back 👋</div>
+    <div class="auth-sub">Sign in with your hashtag or email + PIN</div>
+    <div id="login-error" class="auth-error"></div>
+    <div class="field">
+      <label>Hashtag or Email</label>
+      <input id="login-id" type="text" placeholder="#YourTag or email@gmail.com" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>4-Digit PIN</label>
+      <input id="login-pin" type="password" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" onclick="doLogin()" id="login-btn">Sign In →</button>
+    <div class="auth-note">No account? <a href="#" onclick="showScreen('signup')">Create one →</a></div>
+  </div>
+</div>
+
+<!-- ══ SIGNUP ═══════════════════════════════════════════════════════════════ -->
+<div id="screen-signup" class="screen">
+  <div class="auth-card" style="margin:auto;">
+    <button class="auth-back" onclick="showScreen('splash')">← Back</button>
+    <div class="auth-title">Join Shotgun 🔫</div>
+    <div class="auth-sub">Create your free account — approval takes minutes.</div>
+    <div id="signup-error" class="auth-error"></div>
+    <div class="field-row">
+      <div class="field">
+        <label>First Name</label>
+        <input id="su-first" type="text" placeholder="Tony">
+      </div>
+      <div class="field">
+        <label>Last Name</label>
+        <input id="su-last" type="text" placeholder="Montana">
+      </div>
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input id="su-email" type="email" placeholder="you@gmail.com">
+    </div>
+    <div class="field">
+      <label>Phone</label>
+      <input id="su-phone" type="tel" placeholder="(555) 000-0000">
+    </div>
+    <div class="field">
+      <label>Choose your #Hashtag</label>
+      <input id="su-tag" type="text" placeholder="YourUniqueName" oninput="checkHashtag(this.value)">
+      <div class="hashtag-check" id="tag-status"></div>
+    </div>
+    <div class="field">
+      <label>4-Digit PIN</label>
+      <input id="su-pin" type="password" inputmode="numeric" maxlength="4" placeholder="••••">
+    </div>
+    <button class="btn-primary" onclick="doSignup()" id="signup-btn">Apply Now →</button>
+    <div class="auth-note">Already have an account? <a href="#" onclick="showScreen('login')">Sign in →</a></div>
+  </div>
+</div>
+
+<!-- ══ PENDING ═══════════════════════════════════════════════════════════════ -->
+<div id="screen-pending" class="screen">
+  <div class="pending-icon">⏳</div>
+  <div class="pending-title">Application Submitted!</div>
+  <div class="pending-sub">Your account is under review by the Shotgun team. You'll get an email once you're approved — usually within minutes.</div>
+  <button class="btn-secondary" style="max-width:240px;margin-top:32px;" onclick="showScreen('login')">Check Status</button>
+</div>
+
+<!-- ══ DASHBOARD ════════════════════════════════════════════════════════════ -->
+<div id="screen-dashboard" class="screen">
+  <div class="dash-header">
+    <div class="dash-brand">
+      <img src="/static/shotgun_bank_main_logo_clean.png" onerror="this.outerHTML='🔫'" width="30">
+      <div class="dash-brand-name">Shotgun</div>
+    </div>
+    <div class="dash-user">
+      <div class="dash-hashtag" id="dash-tag">#Tag</div>
+      <button class="btn-logout" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="dash-body">
+    <!-- Balance -->
+    <div class="balance-card">
+      <div class="balance-label">Available Balance</div>
+      <div class="balance-amount" id="dash-balance">$0.00</div>
+      <div class="balance-tag" id="dash-name">Loading…</div>
+      <div id="beat-v-indicator" style="display:none;">
+        <div class="beat-v-badge">⚡ Beat the V — Active</div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="actions-grid">
+      <a class="action-btn" onclick="openModal('send')">
+        <div class="action-icon red"><img src="/static/shoot_it_clean.png" width="28" onerror="this.outerHTML='💸'"></div>
+        <div class="action-label">Send</div>
+      </a>
+      <a class="action-btn" onclick="openModal('request')">
+        <div class="action-icon green"><img src="/static/who_shot_ya_clean.png" width="28" onerror="this.outerHTML='📥'"></div>
+        <div class="action-label">Request</div>
+      </a>
+      <a class="action-btn" onclick="openModal('deposit')">
+        <div class="action-icon gold">💳</div>
+        <div class="action-label">Deposit</div>
+      </a>
+      <a class="action-btn" onclick="openModal('cashout')">
+        <div class="action-icon purple">🏦</div>
+        <div class="action-label">Cash Out</div>
+      </a>
+    </div>
+
+    <!-- Virtual Card -->
+    <div class="card-section">
+      <div class="section-title">Virtual Debit Card</div>
+      <div class="card-number" id="vcard-number">•••• •••• •••• ••••</div>
+      <div class="card-row">
+        <div class="card-detail">Exp <span id="vcard-exp">••/••</span></div>
+        <div class="card-detail">CVV <span id="vcard-cvv">•••</span></div>
+      </div>
+      <button class="copy-btn" onclick="toggleCard()">👁 Reveal Card</button>
+    </div>
+
+    <!-- Bank Info -->
+    <div class="card-section">
+      <div class="section-title">Bank Details</div>
+      <div class="card-detail" style="margin-bottom:8px;">Routing # <span id="bank-routing" style="font-family:monospace;font-size:15px;color:var(--white);display:inline;"></span></div>
+      <div class="card-detail">Account # <span id="bank-account" style="font-family:monospace;font-size:15px;color:var(--white);display:inline;"></span></div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="card-section">
+      <div class="section-title">Recent Activity</div>
+      <div id="tx-list"><div class="empty-state"><div class="empty-icon">🎯</div><div>No transactions yet</div></div></div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav show" id="bottom-nav">
+    <button class="nav-item active" onclick="navTab('home')">🏠<div class="nav-label">Home</div></button>
+    <button class="nav-item" onclick="navTab('send')">💸<div class="nav-label">Send</div></button>
+    <button class="nav-item" onclick="openModal('sos')">🆘<div class="nav-label">SOS</div></button>
+    <button class="nav-item" onclick="navTab('activity')">📋<div class="nav-label">Activity</div></button>
+  </nav>
+</div>
+
+<!-- ══ MODALS ════════════════════════════════════════════════════════════════ -->
+
+<!-- SEND MODAL -->
+<div class="modal-overlay" id="modal-send">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Send Money</div>
+    <div class="modal-sub">Enter hashtag and amount</div>
+    <div id="send-error" class="modal-error"></div>
+    <div class="field">
+      <label>To (#Hashtag or email)</label>
+      <input id="send-to" type="text" placeholder="#TheirTag">
+    </div>
+    <div class="amount-display" id="send-amount-display">$0</div>
+    <div class="numpad" id="send-numpad"></div>
+    <div class="field">
+      <label>Note (optional)</label>
+      <input id="send-note" type="text" placeholder="What's it for?">
+    </div>
+    <div style="font-size:11px;color:var(--smoke);margin-bottom:12px;">$1.50 fee applies to sender and recipient</div>
+    <button class="btn-primary" onclick="doSend()" id="send-btn">Shoot It 🔫</button>
+    <button class="btn-secondary" onclick="closeModal('send')" style="margin-top:10px;">Cancel</button>
+  </div>
+</div>
+
+<!-- DEPOSIT MODAL -->
+<div class="modal-overlay" id="modal-deposit">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">💳 Add Funds</div>
+    <div class="modal-sub">Deposit with your debit or credit card</div>
+    <div id="deposit-error" class="modal-error"></div>
+    <div class="amount-display" id="deposit-amount-display">$0</div>
+    <div class="numpad" id="deposit-numpad"></div>
+    <button class="btn-primary" onclick="doDeposit()" id="deposit-btn">Deposit →</button>
+    <button class="btn-secondary" onclick="closeModal('deposit')" style="margin-top:10px;">Cancel</button>
+  </div>
+</div>
+
+<!-- CASH OUT MODAL -->
+<div class="modal-overlay" id="modal-cashout">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🏦 Cash Out</div>
+    <div class="modal-sub">Transfer to your bank account</div>
+    <div id="cashout-error" class="modal-error"></div>
+    <div id="cashout-no-stripe" style="display:none;text-align:center;padding:20px;">
+      <div style="font-size:40px;margin-bottom:12px;">🔗</div>
+      <div style="font-weight:700;margin-bottom:8px;">Connect your bank first</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Link your bank account to enable cash outs.</div>
+      <button class="btn-primary" onclick="doStripeOnboard()" style="max-width:280px;">Connect Bank →</button>
+    </div>
+    <div id="cashout-form">
+      <div class="amount-display" id="cashout-amount-display">$0</div>
+      <div class="numpad" id="cashout-numpad"></div>
+      <button class="btn-primary" onclick="doCashout()" id="cashout-btn">Cash Out →</button>
+    </div>
+    <button class="btn-secondary" onclick="closeModal('cashout')" style="margin-top:10px;">Cancel</button>
+  </div>
+</div>
+
+<!-- REQUEST MODAL -->
+<div class="modal-overlay" id="modal-request">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📥 Request Money</div>
+    <div class="modal-sub">Share your hashtag to get paid</div>
+    <div style="background:var(--card);border-radius:16px;padding:24px;text-align:center;margin-bottom:16px;">
+      <div style="font-size:32px;font-weight:900;color:var(--red);margin-bottom:4px;" id="request-tag">#Tag</div>
+      <div style="font-size:13px;color:var(--muted);">Send money to this hashtag</div>
+    </div>
+    <div class="field">
+      <label>Amount to request (optional)</label>
+      <input id="request-amount" type="number" placeholder="0.00" step="0.01">
+    </div>
+    <div class="field">
+      <label>Note (optional)</label>
+      <input id="request-note" type="text" placeholder="For what?">
+    </div>
+    <button class="btn-primary" onclick="doShareRequest()">Share Request Link 🔗</button>
+    <button class="btn-secondary" onclick="closeModal('request')" style="margin-top:10px;">Close</button>
+  </div>
+</div>
+
+<!-- SOS MODAL -->
+<div class="modal-overlay" id="modal-sos">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🆘 SOS — Money Request</div>
+    <div class="modal-sub">Blast a money request to all your contacts</div>
+    <div id="sos-error" class="modal-error"></div>
+    <div class="field">
+      <label>Amount Needed</label>
+      <input id="sos-amount" type="number" placeholder="50.00" step="0.01">
+    </div>
+    <div class="field">
+      <label>Message</label>
+      <input id="sos-msg" type="text" placeholder="Need help with rent, please!">
+    </div>
+    <button class="btn-primary" style="background:linear-gradient(135deg,#dc2626,#991b1b);" onclick="doSOS()">🆘 Send SOS Blast</button>
+    <button class="btn-secondary" onclick="closeModal('sos')" style="margin-top:10px;">Cancel</button>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+let currentAccount = null;
+let sendAmount = '';
+let depositAmount = '';
+let cashoutAmount = '';
+let cardRevealed = false;
+let hashtagTimer = null;
+
+// ── SCREEN NAV ─────────────────────────────────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.getElementById('bottom-nav').classList.toggle('show', name === 'dashboard');
+}
+
+function navTab(tab) {
+  document.querySelectorAll('.nav-item').forEach((b,i) => {
+    b.classList.toggle('active', ['home','send','sos','activity'][i] === tab);
+  });
+  if (tab === 'send') openModal('send');
+}
+
+// ── MODALS ──────────────────────────────────────────────────────────────────
+function openModal(name) {
+  if (name === 'send')    { buildNumpad('send'); sendAmount = ''; updateAmountDisplay('send'); }
+  if (name === 'deposit') { buildNumpad('deposit'); depositAmount = ''; updateAmountDisplay('deposit'); }
+  if (name === 'cashout') {
+    buildNumpad('cashout'); cashoutAmount = ''; updateAmountDisplay('cashout');
+    const hasStripe = currentAccount && currentAccount.wise_account_id;
+    document.getElementById('cashout-no-stripe').style.display = hasStripe ? 'none' : 'block';
+    document.getElementById('cashout-form').style.display = hasStripe ? 'block' : 'none';
+  }
+  if (name === 'request' && currentAccount) {
+    document.getElementById('request-tag').textContent = '#' + currentAccount.hashtag;
+  }
+  document.getElementById('modal-' + name).classList.add('open');
+}
+function closeModal(name) {
+  document.getElementById('modal-' + name).classList.remove('open');
+  const err = document.getElementById(name + '-error');
+  if (err) { err.classList.remove('show'); err.textContent = ''; }
+}
+function showModalError(name, msg) {
+  const el = document.getElementById(name + '-error');
+  if (el) { el.textContent = msg; el.classList.add('show'); }
+}
+
+// ── NUMPAD ──────────────────────────────────────────────────────────────────
+function buildNumpad(id) {
+  const pad = document.getElementById(id + '-numpad');
+  pad.innerHTML = '';
+  [1,2,3,4,5,6,7,8,9,'.',0,'⌫'].forEach(k => {
+    const btn = document.createElement('button');
+    btn.className = 'num-key';
+    btn.textContent = k;
+    btn.onclick = () => handleNumpad(id, String(k));
+    pad.appendChild(btn);
+  });
+}
+function handleNumpad(id, key) {
+  let amt = id === 'send' ? sendAmount : id === 'deposit' ? depositAmount : cashoutAmount;
+  if (key === '⌫') amt = amt.slice(0, -1);
+  else if (key === '.' && amt.includes('.')) return;
+  else if (amt.split('.')[1]?.length >= 2) return;
+  else amt += key;
+  if (id === 'send') sendAmount = amt;
+  else if (id === 'deposit') depositAmount = amt;
+  else cashoutAmount = amt;
+  updateAmountDisplay(id);
+}
+function updateAmountDisplay(id) {
+  const amt = id === 'send' ? sendAmount : id === 'deposit' ? depositAmount : cashoutAmount;
+  document.getElementById(id + '-amount-display').textContent = '$' + (amt || '0');
+}
+
+// ── AUTH ────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const id  = document.getElementById('login-id').value.trim().replace(/^#/,'');
+  const pin = document.getElementById('login-pin').value.trim();
+  const err = document.getElementById('login-error');
+  err.classList.remove('show');
+  if (!id || !pin) { err.textContent = 'Enter hashtag/email and PIN.'; err.classList.add('show'); return; }
+  const btn = document.getElementById('login-btn');
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+  try {
+    const r = await fetch('/api/shotgun/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({identifier: id, pin: pin})
+    });
+    const d = await r.json();
+    if (d.status === 'pending') { showScreen('pending'); return; }
+    if (!d.success) { err.textContent = d.error || 'Login failed.'; err.classList.add('show'); return; }
+    currentAccount = d.account;
+    loadDashboard();
+    showScreen('dashboard');
+  } catch(e) {
+    err.textContent = 'Connection error. Try again.';
+    err.classList.add('show');
+  } finally {
+    btn.textContent = 'Sign In →'; btn.disabled = false;
+  }
+}
+
+let hashtagOk = false;
+function checkHashtag(val) {
+  clearTimeout(hashtagTimer);
+  const el = document.getElementById('tag-status');
+  if (!val || val.length < 3) { el.textContent = ''; hashtagOk = false; return; }
+  el.style.color = '#94a3b8'; el.textContent = 'Checking…';
+  hashtagTimer = setTimeout(async () => {
+    try {
+      const r = await fetch('/api/shotgun/check-hashtag?tag=' + encodeURIComponent(val));
+      const d = await r.json();
+      hashtagOk = d.available;
+      el.style.color = d.available ? '#22c55e' : '#f87171';
+      el.textContent = d.available ? '✓ Available!' : '✗ Already taken';
+    } catch { el.textContent = ''; }
+  }, 500);
+}
+
+async function doSignup() {
+  const first = document.getElementById('su-first').value.trim();
+  const last  = document.getElementById('su-last').value.trim();
+  const email = document.getElementById('su-email').value.trim();
+  const phone = document.getElementById('su-phone').value.trim();
+  const tag   = document.getElementById('su-tag').value.trim().replace(/^#/,'');
+  const pin   = document.getElementById('su-pin').value.trim();
+  const err   = document.getElementById('signup-error');
+  err.classList.remove('show');
+  if (!first||!last||!email||!tag||!pin) { err.textContent='Fill in all required fields.'; err.classList.add('show'); return; }
+  if (pin.length !== 4 || !/^\d+$/.test(pin)) { err.textContent='PIN must be exactly 4 digits.'; err.classList.add('show'); return; }
+  if (!hashtagOk) { err.textContent='Choose an available hashtag.'; err.classList.add('show'); return; }
+  const btn = document.getElementById('signup-btn');
+  btn.textContent = 'Submitting…'; btn.disabled = true;
+  try {
+    const r = await fetch('/api/shotgun/apply', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({first_name:first, last_name:last, email:email, phone:phone, hashtag:tag, pin:pin})
+    });
+    const d = await r.json();
+    if (d.success) { showScreen('pending'); }
+    else { err.textContent = d.error || 'Application failed.'; err.classList.add('show'); }
+  } catch(e) {
+    err.textContent = 'Connection error. Try again.';
+    err.classList.add('show');
+  } finally {
+    btn.textContent = 'Apply Now →'; btn.disabled = false;
+  }
+}
+
+function doLogout() {
+  currentAccount = null;
+  document.getElementById('login-id').value = '';
+  document.getElementById('login-pin').value = '';
+  showScreen('splash');
+}
+
+// ── DASHBOARD ───────────────────────────────────────────────────────────────
+function loadDashboard() {
+  if (!currentAccount) return;
+  const bal = parseFloat(currentAccount.balance || 0);
+  const balEl = document.getElementById('dash-balance');
+  balEl.textContent = '$' + Math.abs(bal).toFixed(2);
+  balEl.className = 'balance-amount ' + (bal < 0 ? 'negative' : 'positive');
+  if (bal < 0) balEl.textContent = '-$' + Math.abs(bal).toFixed(2);
+  document.getElementById('dash-tag').textContent = '#' + currentAccount.hashtag;
+  document.getElementById('dash-name').textContent = (currentAccount.first_name + ' ' + currentAccount.last_name).trim();
+  document.getElementById('beat-v-indicator').style.display = currentAccount.beat_v_enabled ? 'block' : 'none';
+  // Card
+  const card = currentAccount.virtual_card_number || '';
+  document.getElementById('vcard-number').textContent = card ? '•••• •••• •••• ' + card.slice(-4) : '•••• •••• •••• ••••';
+  document.getElementById('vcard-exp').textContent = currentAccount.virtual_card_expiry || '••/••';
+  document.getElementById('vcard-cvv').textContent = '•••';
+  document.getElementById('bank-routing').textContent = currentAccount.routing_number || '—';
+  document.getElementById('bank-account').textContent = currentAccount.account_number || '—';
+  loadTransactions();
+}
+
+function toggleCard() {
+  cardRevealed = !cardRevealed;
+  const card = currentAccount?.virtual_card_number || '';
+  document.getElementById('vcard-number').textContent = cardRevealed
+    ? (card.match(/.{1,4}/g)||[]).join(' ')
+    : '•••• •••• •••• ' + (card.slice(-4) || '••••');
+  document.getElementById('vcard-cvv').textContent = cardRevealed
+    ? (currentAccount?.virtual_card_cvv || '•••')
+    : '•••';
+  document.querySelector('.copy-btn').textContent = cardRevealed ? '🙈 Hide Card' : '👁 Reveal Card';
+}
+
+async function loadTransactions() {
+  if (!currentAccount) return;
+  try {
+    const r = await fetch('/api/shotgun/transactions/' + currentAccount.id);
+    const d = await r.json();
+    const txList = document.getElementById('tx-list');
+    if (!d.transactions || d.transactions.length === 0) {
+      txList.innerHTML = '<div class="empty-state"><div class="empty-icon">🎯</div><div>No transactions yet</div></div>';
+      return;
+    }
+    txList.innerHTML = d.transactions.map(tx => {
+      const isSender = tx.from_account_id === currentAccount.id;
+      const isCredit = !isSender;
+      const amt = parseFloat(tx.amount || 0);
+      const fee = parseFloat(tx.fee || 0);
+      const net = isCredit ? amt - fee : -(amt + fee);
+      const icon = tx.status === 'completed'
+        ? (isCredit ? '/static/gottem_bullseye_clean.png' : '/static/shoot_it_clean.png')
+        : '/static/dead_body_payment_failed_clean.png';
+      const name = isSender ? (tx.to_name || tx.to_hashtag || 'Unknown') : (tx.from_name || tx.from_hashtag || 'Unknown');
+      const date = new Date(tx.created_date || Date.now()).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      return `<div class="tx-item">
+        <img src="${icon}" class="tx-icon" onerror="this.outerHTML='<div class=tx-icon-fallback>${isCredit?'🎯':'💸'}</div>'">
+        <div class="tx-info">
+          <div class="tx-name">${isSender?'To':'From'} ${name}</div>
+          <div class="tx-note">${tx.note||''}</div>
+        </div>
+        <div>
+          <div class="tx-amount ${isCredit?'credit':'debit'}">${net>=0?'+':''}\$${Math.abs(net).toFixed(2)}</div>
+          <div class="tx-time">${date}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { console.error(e); }
+}
+
+// ── SEND ────────────────────────────────────────────────────────────────────
+async function doSend() {
+  const to  = document.getElementById('send-to').value.trim().replace(/^#/,'');
+  const amt = parseFloat(sendAmount);
+  const note = document.getElementById('send-note').value.trim();
+  if (!to || !amt || amt <= 0) { showModalError('send','Enter a recipient and amount.'); return; }
+  const btn = document.getElementById('send-btn');
+  btn.textContent = 'Sending…'; btn.disabled = true;
+  try {
+    const r = await fetch('/api/shotgun/send', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({from_account_id: currentAccount.id, to_hashtag: to, amount: amt, note: note})
+    });
+    const d = await r.json();
+    if (d.success) {
+      currentAccount.balance = d.new_balance;
+      closeModal('send');
+      loadDashboard();
+      showToast('💸 Sent $' + amt.toFixed(2) + ' to #' + to);
+    } else {
+      showModalError('send', d.error || 'Transfer failed.');
+    }
+  } catch(e) { showModalError('send','Connection error.'); }
+  finally { btn.textContent='Shoot It 🔫'; btn.disabled=false; }
+}
+
+// ── DEPOSIT ──────────────────────────────────────────────────────────────────
+async function doDeposit() {
+  const amt = parseFloat(depositAmount);
+  if (!amt || amt < 1) { showModalError('deposit','Minimum deposit is $1.'); return; }
+  const btn = document.getElementById('deposit-btn');
+  btn.textContent = 'Loading…'; btn.disabled = true;
+  try {
+    const r = await fetch('/api/stripe/create-deposit-session', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({sg_account_id: currentAccount.id, amount: amt})
+    });
+    const d = await r.json();
+    if (d.checkout_url) {
+      window.location.href = d.checkout_url;
+    } else {
+      showModalError('deposit', d.error || 'Could not start checkout.');
+    }
+  } catch(e) { showModalError('deposit','Connection error.'); }
+  finally { btn.textContent='Deposit →'; btn.disabled=false; }
+}
+
+// ── CASH OUT ──────────────────────────────────────────────────────────────────
+async function doCashout() {
+  const amt = parseFloat(cashoutAmount);
+  if (!amt || amt < 1) { showModalError('cashout','Enter an amount.'); return; }
+  const btn = document.getElementById('cashout-btn');
+  btn.textContent = 'Processing…'; btn.disabled = true;
+  try {
+    const r = await fetch('/api/stripe/create-payout', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({sg_account_id: currentAccount.id, amount: amt})
+    });
+    const d = await r.json();
+    if (d.success) {
+      currentAccount.balance = d.new_balance;
+      closeModal('cashout');
+      loadDashboard();
+      showToast('🏦 $' + amt.toFixed(2) + ' sent to your bank!');
+    } else {
+      showModalError('cashout', d.error || 'Payout failed.');
+    }
+  } catch(e) { showModalError('cashout','Connection error.'); }
+  finally { btn.textContent='Cash Out →'; btn.disabled=false; }
+}
+
+async function doStripeOnboard() {
+  try {
+    const r = await fetch('/api/stripe/create-connect-account', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        sg_account_id: currentAccount.id,
+        email: currentAccount.email,
+        first_name: currentAccount.first_name,
+        last_name: currentAccount.last_name
+      })
+    });
+    const d = await r.json();
+    if (d.onboarding_url) window.location.href = d.onboarding_url;
+    else showModalError('cashout', d.error || 'Could not start onboarding.');
+  } catch(e) { showModalError('cashout','Connection error.'); }
+}
+
+// ── SOS ──────────────────────────────────────────────────────────────────────
+async function doSOS() {
+  const amt = parseFloat(document.getElementById('sos-amount').value);
+  const msg = document.getElementById('sos-msg').value.trim();
+  if (!amt || amt <= 0) { showModalError('sos','Enter an amount.'); return; }
+  try {
+    const r = await fetch('/api/shotgun/sos', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({account_id: currentAccount.id, amount_requested: amt, message: msg})
+    });
+    const d = await r.json();
+    if (d.success) { closeModal('sos'); showToast('🆘 SOS sent to your contacts!'); }
+    else showModalError('sos', d.error || 'Failed to send SOS.');
+  } catch(e) { showModalError('sos','Connection error.'); }
+}
+
+// ── REQUEST LINK ────────────────────────────────────────────────────────────
+function doShareRequest() {
+  const amt = document.getElementById('request-amount').value;
+  const note = document.getElementById('request-note').value;
+  const base = window.location.origin + '/bank?pay=' + encodeURIComponent(currentAccount.hashtag);
+  const url  = base + (amt ? '&amount=' + amt : '') + (note ? '&note=' + encodeURIComponent(note) : '');
+  if (navigator.share) {
+    navigator.share({title: 'Pay me on Shotgun', text: 'Send money to #' + currentAccount.hashtag, url: url});
+  } else {
+    navigator.clipboard.writeText(url).then(() => showToast('🔗 Link copied!'));
+  }
+  closeModal('request');
+}
+
+// ── TOAST ────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1c1c26;border:1px solid rgba(255,255,255,.12);color:#f1f5f9;padding:12px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.5);';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ── DEEP LINK: ?pay=hashtag ──────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('pay')) {
+    showScreen('login');
+    setTimeout(() => {
+      document.getElementById('send-to').value = p.get('pay');
+    }, 100);
+  }
+  // Close modals on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+  });
+  // Enter key on login
+  document.getElementById('login-pin').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+});
+</script>
+</body>
+</html>
