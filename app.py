@@ -334,15 +334,7 @@ def login():
             return render_template("login.html", error="Too many attempts. Please wait a minute.")
         email = request.form.get("email","").strip().lower()
         pw    = request.form.get("password","")
-        # Verify CAPTCHA token — skip for known admin emails
-        cap_token = request.form.get("captcha_token","")
-        _known_admins = [k.lower() for k in ADMINS.keys()]
-        _is_admin_login = request.form.get("email","").strip().lower() in _known_admins
-        if not _is_admin_login:
-            if cap_token not in _captcha_store or _captcha_store.get(cap_token,0) < time.time():
-                error = "Please complete the CAPTCHA and try again."
-                return render_template("login.html", error=error)
-            _captcha_store.pop(cap_token, None)
+        # CAPTCHA removed
         match = next((k for k in ADMINS if k.lower() == email), None)
         if match and check_password_hash(ADMINS[match]["pw"], pw):
             # Generate 6-digit OTP
@@ -1882,6 +1874,7 @@ def deny_access(token):
         return "<h2>Link expired or already handled.</h2>", 400
     audit("access_denied", f"Access denied for {record.get('name')} <{record.get('email')}>")
     return f"<div style='font-family:Inter,sans-serif;padding:40px;max-width:400px;'><h2>❌ Access denied for {record.get('name')}</h2><a href='/dashboard'>Go to Dashboard</a></div>"
+
 
 
 
