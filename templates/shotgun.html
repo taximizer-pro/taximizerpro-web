@@ -730,10 +730,10 @@ async function sgSendMoney() {
       document.getElementById('sg-send-to').value = '';
       document.getElementById('sg-send-amount').value = '';
       document.getElementById('sg-send-note').value = '';
-      sgToast('💸 Sent $' + amount.toFixed(2) + ' to #' + to);
+      sgToast('🎯 Gottem! Sent $' + amount.toFixed(2) + ' to #' + to);
       showTab('dash');
     } else {
-      sgToast(d.error || 'Transfer failed');
+      sgToast('💀 Dead Body — ' + (d.error || 'Transfer failed'));
     }
   } catch(e) { sgToast('Error: ' + e.message); }
 }
@@ -753,14 +753,33 @@ async function loadTransactions() {
     }
     list.innerHTML = d.transactions.slice(0,10).map(t => {
       const isSend = t.from_account_id === sgAccount.id;
-      const icon = {deposit:'💰',transfer:isSend?'↑':'↓',refund_credit:'🔄',sos_response:'🆘',beat_v:'⚡'}[t.type] || '💳';
+      // Shotgun brand icons: Gottem=success/received, Dead Body=failed, Shoot It=send, Who Shot Ya=receive
+      const isSuccess = t.status !== 'failed';
+      let iconHtml;
+      if (t.type === 'transfer') {
+        if (!isSuccess) {
+          iconHtml = `<img src="${DEAD_BODY_URL}" style="width:32px;height:32px;object-fit:contain;" title="Payment Failed">`;
+        } else if (isSend) {
+          iconHtml = `<img src="${SHOOT_IT_URL}" style="width:32px;height:32px;object-fit:contain;" title="Shoot It — Sent">`;
+        } else {
+          iconHtml = `<img src="${WHO_SHOT_YA_URL}" style="width:32px;height:32px;object-fit:contain;" title="Who Shot Ya — Received">`;
+        }
+      } else if (t.type === 'deposit' || t.type === 'refund_credit' || t.type === 'sos_response') {
+        iconHtml = `<img src="${GOTTEM_URL}" style="width:32px;height:32px;object-fit:contain;" title="Gottem — Payment Received">`;
+      } else if (t.type === 'beat_v') {
+        iconHtml = '⚡';
+      } else {
+        iconHtml = isSuccess
+          ? `<img src="${GOTTEM_URL}" style="width:32px;height:32px;object-fit:contain;" title="Gottem">`
+          : `<img src="${DEAD_BODY_URL}" style="width:32px;height:32px;object-fit:contain;" title="Payment Failed">`;
+      }
       const name = isSend ? (t.to_hashtag ? '#'+t.to_hashtag : 'Transfer') : (t.from_hashtag ? '#'+t.from_hashtag : 'Deposit');
       const amtCls = isSend ? 'sg-txn-neg' : 'sg-txn-pos';
       const amtSign = isSend ? '-' : '+';
       const bg = isSend ? 'rgba(233,69,96,.1)' : 'rgba(34,197,94,.1)';
       const date = new Date(t.created_date).toLocaleDateString('en-US',{month:'short',day:'numeric'});
       return `<div class="sg-txn">
-        <div class="sg-txn-icon" style="background:${bg}">${icon}</div>
+        <div class="sg-txn-icon" style="background:${bg};display:flex;align-items:center;justify-content:center;">${iconHtml}</div>
         <div><div class="sg-txn-name">${name}</div><div class="sg-txn-sub">${t.note||t.type} · ${date}</div></div>
         <div class="sg-txn-amount"><div class="${amtCls}">${amtSign}$${parseFloat(t.amount).toFixed(2)}</div>${t.fee?`<div style="font-size:10px;color:var(--smoke);">fee $${t.fee}</div>`:''}</div>
       </div>`;
