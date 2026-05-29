@@ -319,6 +319,121 @@ def send_notification(to, first_name, links):
         headers={"Authorization":f"Bearer {gtok()}","Content-Type":"application/json"})
     with urllib.request.urlopen(req, timeout=15) as r: return json.loads(r.read())
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# GOOGLE OAUTH LOGIN
+# ═══════════════════════════════════════════════════════════════════════════════
+GOOGLE_CLIENT_ID     = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_REDIRECT_URI  = os.environ.get("GOOGLE_REDIRECT_URI", "https://taximizerpro.onrender.com/auth/google/callback")
+
+@app.route("/auth/google")
+def google_login():
+    """Redirect to Google OAuth consent screen."""
+    if not GOOGLE_CLIENT_ID:
+        return "Google login not configured.", 500
+    state = secrets.token_hex(16)
+    session["oauth_state"] = state
+    params = urllib.parse.urlencode({
+        "client_id":     GOOGLE_CLIENT_ID,
+        "redirect_uri":  GOOGLE_REDIRECT_URI,
+        "response_type": "code",
+        "scope":         "openid email profile",
+        "state":         state,
+        "access_type":   "offline",
+        "prompt":        "select_account",
+    })
+    return redirect(f"https://accounts.google.com/o/oauth2/v2/auth?{params}")
+
+
+@app.route("/auth/google/callback")
+def google_callback():
+    """Handle Google OAuth callback."""
+    error = request.args.get("error")
+    if error:
+        return redirect(url_for("login") + "?error=google_cancelled")
+
+    state = request.args.get("state","")
+    if state != session.get("oauth_state",""):
+        return redirect(url_for("login") + "?error=invalid_state")
+    session.pop("oauth_state", None)
+
+    code = request.args.get("code","")
+    if not code:
+        return redirect(url_for("login") + "?error=no_code")
+
+    # Exchange code for tokens
+    try:
+        token_data = urllib.parse.urlencode({
+            "code":          code,
+            "client_id":     GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uri":  GOOGLE_REDIRECT_URI,
+            "grant_type":    "authorization_code",
+        }).encode()
+        req = urllib.request.Request(
+            "https://oauth2.googleapis.com/token",
+            data=token_data, method="POST",
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+        with urllib.request.urlopen(req, timeout=15) as r:
+            token_resp = json.loads(r.read())
+    except Exception as e:
+        audit("google_oauth_error", f"Token exchange failed: {e}")
+        return redirect(url_for("login") + "?error=token_exchange")
+
+    access_token = token_resp.get("access_token","")
+    if not access_token:
+        return redirect(url_for("login") + "?error=no_access_token")
+
+    # Fetch user info from Google
+    try:
+        req2 = urllib.request.Request(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        with urllib.request.urlopen(req2, timeout=15) as r:
+            guser = json.loads(r.read())
+    except Exception as e:
+        audit("google_oauth_error", f"Userinfo fetch failed: {e}")
+        return redirect(url_for("login") + "?error=userinfo_failed")
+
+    google_email = guser.get("email","").lower().strip()
+    google_name  = guser.get("name", google_email)
+
+    if not google_email:
+        return redirect(url_for("login") + "?error=no_email")
+
+    # Check if this Google email maps to a known admin
+    match = next((k for k in ADMINS if k.lower() == google_email), None)
+    if match:
+        # Known admin — log in directly (no 2FA needed, Google IS the 2FA)
+        role = ADMINS[match]["role"]
+        name = ADMINS[match]["name"]
+        session["user"] = {"email": google_email, "name": name, "role": role}
+        session.permanent = True
+        audit("google_login_success", f"Admin {google_email} logged in via Google", google_email)
+        return redirect(url_for("dashboard"))
+
+    # Check if staff member exists in Base44
+    try:
+        staff_list = b44_get(f"{B44_BASE}/StaffMember?email={urllib.parse.quote(google_email)}&limit=1")
+        staff = staff_list[0] if staff_list else None
+    except:
+        staff = None
+
+    if staff and staff.get("status") == "active":
+        role = staff.get("role","staff")
+        name = staff.get("full_name", google_name)
+        session["user"] = {"email": google_email, "name": name, "role": role}
+        session.permanent = True
+        audit("google_login_success", f"Staff {google_email} logged in via Google", google_email)
+        return redirect(url_for("dashboard"))
+
+    # Not an authorized user — redirect to request access
+    audit("google_login_unauthorized", f"Unknown Google user: {google_email}")
+    return redirect(url_for("login") + "?error=not_authorized&email=" + urllib.parse.quote(google_email))
+
 # ── Auth ──────────────────────────────────────────────────────────────────────
 def logged_in(): return "user" in session
 
@@ -1874,6 +1989,7 @@ def deny_access(token):
         return "<h2>Link expired or already handled.</h2>", 400
     audit("access_denied", f"Access denied for {record.get('name')} <{record.get('email')}>")
     return f"<div style='font-family:Inter,sans-serif;padding:40px;max-width:400px;'><h2>❌ Access denied for {record.get('name')}</h2><a href='/dashboard'>Go to Dashboard</a></div>"
+
 
 
 
