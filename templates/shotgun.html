@@ -753,25 +753,29 @@ async function loadTransactions() {
     }
     list.innerHTML = d.transactions.slice(0,10).map(t => {
       const isSend = t.from_account_id === sgAccount.id;
-      // Shotgun brand icons: Gottem=success/received, Dead Body=failed, Shoot It=send, Who Shot Ya=receive
-      const isSuccess = t.status !== 'failed';
+      // Shotgun brand icons:
+      // GOTTEM (bullseye) = ANY payment successful — send or receive
+      // DEAD BODY         = payment failed
+      // SHOOT IT          = in-progress send (pending)
+      // WHO SHOT YA       = in-progress receive (pending)
+      // BEAT THE V        = overdraft event
+      const isSuccess = t.status === 'completed' || t.status === 'success' || (!t.status || t.status === '');
+      const isFailed  = t.status === 'failed';
+      const isPending = t.status === 'pending';
       let iconHtml;
-      if (t.type === 'transfer') {
-        if (!isSuccess) {
-          iconHtml = `<img src="${DEAD_BODY_URL}" style="width:32px;height:32px;object-fit:contain;" title="Payment Failed">`;
-        } else if (isSend) {
-          iconHtml = `<img src="${SHOOT_IT_URL}" style="width:32px;height:32px;object-fit:contain;" title="Shoot It — Sent">`;
-        } else {
-          iconHtml = `<img src="${WHO_SHOT_YA_URL}" style="width:32px;height:32px;object-fit:contain;" title="Who Shot Ya — Received">`;
-        }
-      } else if (t.type === 'deposit' || t.type === 'refund_credit' || t.type === 'sos_response') {
-        iconHtml = `<img src="${GOTTEM_URL}" style="width:32px;height:32px;object-fit:contain;" title="Gottem — Payment Received">`;
+      if (isFailed) {
+        // Dead Body — any failed transaction
+        iconHtml = `<img src="${DEAD_BODY_URL}" style="width:32px;height:32px;object-fit:contain;" title="Dead Body — Payment Failed">`;
+      } else if (isPending) {
+        // Pending: show directional icon while in flight
+        iconHtml = isSend
+          ? `<img src="${SHOOT_IT_URL}" style="width:32px;height:32px;object-fit:contain;" title="Shoot It — Sending...">`
+          : `<img src="${WHO_SHOT_YA_URL}" style="width:32px;height:32px;object-fit:contain;" title="Who Shot Ya — Incoming...">`;
       } else if (t.type === 'beat_v') {
         iconHtml = '⚡';
       } else {
-        iconHtml = isSuccess
-          ? `<img src="${GOTTEM_URL}" style="width:32px;height:32px;object-fit:contain;" title="Gottem">`
-          : `<img src="${DEAD_BODY_URL}" style="width:32px;height:32px;object-fit:contain;" title="Payment Failed">`;
+        // Gottem bullseye = payment successful (all types — send, receive, deposit, SOS, etc.)
+        iconHtml = `<img src="${GOTTEM_URL}" style="width:32px;height:32px;object-fit:contain;" title="Gottem! — Payment Successful">`;
       }
       const name = isSend ? (t.to_hashtag ? '#'+t.to_hashtag : 'Transfer') : (t.from_hashtag ? '#'+t.from_hashtag : 'Deposit');
       const amtCls = isSend ? 'sg-txn-neg' : 'sg-txn-pos';
