@@ -728,6 +728,49 @@ def api_prospects():
     except Exception as e:
         return jsonify([])
 
+@app.route("/chatbot")
+@require_login
+def chatbot():
+    return render_template("chatbot.html", user=session["user"])
+
+@app.route("/api/chatbot", methods=["POST"])
+@require_login
+def api_chatbot():
+    data = request.json or {}
+    msg  = data.get("message","").strip()
+    if not msg:
+        return jsonify({"reply": "What can I help you with?"})
+    msg_lower = msg.lower()
+    try:
+        records = _get_all_clients()
+        total    = len(records)
+        filed    = sum(1 for x in records if x.get("filing_status")=="filed")
+        pending  = sum(1 for x in records if x.get("filing_status")=="pending")
+        prospects = sum(1 for x in records if x.get("filing_status")=="prospect")
+    except:
+        total=filed=pending=prospects=0
+
+    if any(w in msg_lower for w in ["how many","total","count","clients"]):
+        reply = f"You have {total} total clients — {filed} filed, {pending} pending, {prospects} prospects."
+    elif any(w in msg_lower for w in ["prospect","new lead","leads"]):
+        reply = f"There are {prospects} prospects in the pipeline. Head to the Prospects tab to manage them."
+    elif any(w in msg_lower for w in ["filed","complete","done"]):
+        reply = f"{filed} returns have been filed. {pending} are still pending."
+    elif any(w in msg_lower for w in ["pending","waiting","outstanding"]):
+        reply = f"{pending} clients are pending. Want me to pull them up?"
+    elif any(w in msg_lower for w in ["shotgun","bank","banking"]):
+        reply = "Shotgun Bank is the Bisignano Holdings fintech platform — access it via the Shotgun tab."
+    elif any(w in msg_lower for w in ["hello","hi","hey","sup","wassup"]):
+        reply = f"Hey! {total} clients total, {pending} pending. What do you need?"
+    elif any(w in msg_lower for w in ["help","what can you","features"]):
+        reply = "Ask me about client counts, filing status, pending returns, prospects, or Shotgun Bank."
+    elif any(w in msg_lower for w in ["generate","file","create","form","1040"]):
+        reply = "Go to a client profile and click Generate Forms. I'll handle the PDF creation and email."
+    else:
+        reply = f"You have {total} clients — {filed} filed, {pending} pending, {prospects} prospects. How can I help?"
+    return jsonify({"reply": reply})
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     app.run(host="0.0.0.0", port=port, debug=False)
