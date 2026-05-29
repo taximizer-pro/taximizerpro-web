@@ -548,12 +548,11 @@ def staff():
 
 # ── API ───────────────────────────────────────────────────────────────────────
 BASE44_HEADERS = {
-    "app-id": APP_ID,
+    "Authorization": f"Bearer {os.environ.get('BASE44_API_KEY', '')}",
     "Content-Type": "application/json",
-    "x-api-key": os.environ.get("BASE44_API_KEY", ""),
 }
-# Correct Base44 API base (appapi is dead — use api.base44.com)
-B44_BASE = f"https://api.base44.com/api/apps/{APP_ID}/entities/TaxClient"
+# app.base44.com is the correct production endpoint
+B44_BASE = f"https://app.base44.com/api/apps/{APP_ID}/entities/TaxClient"
 
 @app.route("/api/clients")
 def api_clients():
@@ -778,7 +777,8 @@ B44_API   = "https://app.base44.com/api/apps/6a13ae4b43ea85cec629af77/entities"
 B44_KEY   = os.environ.get("BASE44_API_KEY", "")
 
 def b44_headers():
-    return {"Authorization": f"Bearer {B44_KEY}", "Content-Type": "application/json"}
+    key = os.environ.get("BASE44_API_KEY", B44_KEY)
+    return {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
 def sg_get(entity, query=None):
     url = f"{B44_API}/{entity}"
