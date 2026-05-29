@@ -334,12 +334,15 @@ def login():
             return render_template("login.html", error="Too many attempts. Please wait a minute.")
         email = request.form.get("email","").strip().lower()
         pw    = request.form.get("password","")
-        # Verify CAPTCHA token
+        # Verify CAPTCHA token — skip for known admin emails
         cap_token = request.form.get("captcha_token","")
-        if cap_token not in _captcha_store or _captcha_store.get(cap_token,0) < time.time():
-            error = "Session timed out — please refresh the page."
-            return render_template("login.html", error=error)
-        _captcha_store.pop(cap_token, None)
+        _known_admins = [k.lower() for k in ADMINS.keys()]
+        _is_admin_login = request.form.get("email","").strip().lower() in _known_admins
+        if not _is_admin_login:
+            if cap_token not in _captcha_store or _captcha_store.get(cap_token,0) < time.time():
+                error = "Please complete the CAPTCHA and try again."
+                return render_template("login.html", error=error)
+            _captcha_store.pop(cap_token, None)
         match = next((k for k in ADMINS if k.lower() == email), None)
         if match and check_password_hash(ADMINS[match]["pw"], pw):
             # Generate 6-digit OTP
@@ -355,12 +358,17 @@ def login():
                 _send_otp_email(email, otp, ADMINS[match]["name"])
                 audit("2fa_otp_sent", f"OTP sent to {email}", email)
             except Exception as e:
-                # Email failed — log the OTP to console so admin can still get in
+                # Email failed — log and show OTP inline for superadmin
                 print(f"[2FA EMAIL FAILED] OTP for {email}: {otp} | Error: {e}", flush=True)
-                # Still proceed to 2FA page — admin can check Render logs for OTP
-                session["pending_2fa"] = email
-                session["otp_fallback"] = True
-                return redirect(url_for("verify_2fa"))
+                role = ADMINS[match]["role"]
+                if role == "superadmin":
+                    # Show OTP directly on screen — Italy can always get in
+                    session["pending_2fa"] = email
+                    session["otp_fallback"] = True
+                    session["otp_inline"] = otp
+                    return redirect(url_for("verify_2fa"))
+                error = f"Could not send verification code. Contact Italy."
+                return render_template("login.html", error=error)
             session["pending_2fa"] = email
             return redirect(url_for("verify_2fa"))
         else:
@@ -373,25 +381,31 @@ def verify_2fa():
     email = session.get("pending_2fa","")
     if not email: return redirect(url_for("login"))
     fallback_mode = session.get("otp_fallback", False)
+    otp_inline = session.get("otp_inline", "")
     error = None
     if request.method == "POST":
         ip = request.remote_addr or "unknown"
         if not _check_rate(f"otp:{ip}", 10, 60):
-            return render_template("verify_2fa.html", error="Too many attempts. Please wait.", email=email)
+            return render_template("verify_2fa.html", error="Too many attempts. Please wait.", email=email, fallback_mode=fallback_mode, otp_inline=otp_inline)
         entered = request.form.get("otp","").strip()
         record = _otp_store.get(email, {})
         record["attempts"] = record.get("attempts",0) + 1
         if record["attempts"] > 5:
             _otp_store.pop(email, None)
             session.pop("pending_2fa", None)
+            session.pop("otp_inline", None)
+            session.pop("otp_fallback", None)
             audit("2fa_lockout", f"Too many OTP attempts for {email}", email)
             return redirect(url_for("login"))
         if not record or record.get("expires",0) < time.time():
-            error = "Code expired — please log in again."
             session.pop("pending_2fa", None)
-            return render_template("verify_2fa.html", error=error, email=email, fallback_mode=fallback_mode)
+            session.pop("otp_inline", None)
+            session.pop("otp_fallback", None)
+            return redirect(url_for("login"))
         if entered == record.get("otp",""):
             session.pop("pending_2fa", None)
+            session.pop("otp_inline", None)
+            session.pop("otp_fallback", None)
             _otp_store.pop(email, None)
             session["user"] = {"email": email, "name": record["name"], "role": record["role"]}
             session.permanent = True
@@ -400,7 +414,7 @@ def verify_2fa():
         else:
             audit("2fa_wrong_code", f"Wrong OTP for {email} (attempt {record['attempts']})", email)
             error = f"Incorrect code. {5 - record['attempts']} attempts remaining."
-    return render_template("verify_2fa.html", error=error, email=email, fallback_mode=fallback_mode)
+    return render_template("verify_2fa.html", error=error, email=email, fallback_mode=fallback_mode, otp_inline=otp_inline)
 
 @app.route("/api/captcha/generate")
 def captcha_generate():
@@ -1719,5 +1733,6 @@ def deny_access(token):
         return "<h2>Link expired or already handled.</h2>", 400
     audit("access_denied", f"Access denied for {record.get('name')} <{record.get('email')}>")
     return f"<div style='font-family:Inter,sans-serif;padding:40px;max-width:400px;'><h2>❌ Access denied for {record.get('name')}</h2><a href='/dashboard'>Go to Dashboard</a></div>"
+
 
 
