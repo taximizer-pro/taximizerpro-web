@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Shotgun Bank — Your Money Moves Fast</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Inter',system-ui,sans-serif;background:#0a0a0f;color:#f8fafc;min-height:100vh;overflow-x:hidden;}
+
+  /* ── NAV ── */
+  .sg-nav{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid rgba(255,255,255,.06);position:sticky;top:0;background:rgba(10,10,15,.9);backdrop-filter:blur(12px);z-index:100;}
+  .sg-logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:900;color:#f8fafc;text-decoration:none;}
+  .sg-logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#e94560,#c0392b);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .nav-btns{display:flex;gap:10px;}
+  .btn-ghost{background:none;border:1px solid rgba(255,255,255,.15);color:#f8fafc;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;}
+  .btn-red{background:linear-gradient(135deg,#e94560,#c0392b);border:none;color:#fff;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:800;box-shadow:0 4px 14px rgba(233,69,96,.4);}
+
+  /* ── SCREENS ── */
+  .screen{display:none;} .screen.active{display:block;}
+
+  /* ── HERO ── */
+  .hero{text-align:center;padding:80px 24px 60px;}
+  .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(233,69,96,.12);border:1px solid rgba(233,69,96,.3);color:#f87171;font-size:11px;font-weight:700;padding:5px 14px;border-radius:20px;margin-bottom:24px;letter-spacing:.5px;}
+  .hero h1{font-size:clamp(36px,7vw,72px);font-weight:900;line-height:1.05;margin-bottom:20px;}
+  .hero h1 span{background:linear-gradient(135deg,#e94560,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .hero p{font-size:16px;color:#94a3b8;max-width:480px;margin:0 auto 36px;line-height:1.6;}
+  .hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+  .hero-btn-primary{background:linear-gradient(135deg,#e94560,#c0392b);color:#fff;padding:14px 32px;border-radius:12px;font-size:15px;font-weight:800;border:none;cursor:pointer;box-shadow:0 6px 24px rgba(233,69,96,.45);transition:transform .15s;}
+  .hero-btn-primary:hover{transform:translateY(-2px);}
+  .hero-btn-secondary{background:rgba(255,255,255,.06);color:#f8fafc;padding:14px 32px;border-radius:12px;font-size:15px;font-weight:700;border:1px solid rgba(255,255,255,.12);cursor:pointer;transition:background .15s;}
+  .hero-btn-secondary:hover{background:rgba(255,255,255,.1);}
+
+  /* ── FEATURES ── */
+  .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;padding:0 24px 60px;max-width:900px;margin:0 auto;}
+  .feat-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:24px;transition:border-color .2s;}
+  .feat-card:hover{border-color:rgba(233,69,96,.3);}
+  .feat-icon{font-size:28px;margin-bottom:12px;}
+  .feat-title{font-size:14px;font-weight:800;margin-bottom:6px;}
+  .feat-desc{font-size:12px;color:#64748b;line-height:1.5;}
+
+  /* ── MODAL OVERLAY ── */
+  .sg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:200;display:none;align-items:center;justify-content:center;padding:16px;}
+  .sg-overlay.open{display:flex;}
+  .sg-modal{background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:24px;width:100%;max-width:400px;overflow:hidden;animation:slide-up .25s ease;}
+  @keyframes slide-up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  .modal-header{padding:24px 24px 0;display:flex;align-items:center;justify-content:space-between;}
+  .modal-close{background:none;border:none;color:#475569;cursor:pointer;font-size:22px;padding:4px 8px;}
+  .modal-body{padding:24px;}
+  .modal-title{font-size:20px;font-weight:900;margin-bottom:4px;}
+  .modal-sub{font-size:13px;color:#64748b;margin-bottom:24px;}
+
+  /* ── FORM ELEMENTS ── */
+  .sg-label{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block;}
+  .sg-input{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#f8fafc;font-size:14px;padding:12px 14px;outline:none;transition:border-color .15s;margin-bottom:14px;}
+  .sg-input:focus{border-color:rgba(233,69,96,.5);}
+  .sg-input-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .sg-btn-full{width:100%;padding:13px;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-top:6px;}
+  .sg-btn-red{background:linear-gradient(135deg,#e94560,#c0392b);color:#fff;box-shadow:0 4px 14px rgba(233,69,96,.4);}
+  .sg-btn-red:hover{filter:brightness(1.1);}
+  .sg-btn-outline{background:none;border:1px solid rgba(255,255,255,.12);color:#f8fafc;margin-top:10px;}
+  .sg-err{color:#f87171;font-size:12px;margin-top:8px;display:none;}
+  .sg-succ{color:#4ade80;font-size:12px;margin-top:8px;display:none;}
+
+  /* ── PIN DOTS ── */
+  .pin-dots{display:flex;gap:12px;justify-content:center;margin:16px 0;}
+  .pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.2);transition:all .15s;}
+  .pin-dot.filled{background:#e94560;border-color:#e94560;}
+  .pin-numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:240px;margin:0 auto 16px;}
+  .pin-key{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;font-size:18px;font-weight:700;cursor:pointer;text-align:center;transition:background .1s;}
+  .pin-key:hover{background:rgba(233,69,96,.15);}
+  .pin-key.del{color:#f87171;}
+
+  /* ── DASHBOARD ── */
+  .sg-dash{max-width:480px;margin:0 auto;padding:24px;}
+  .dash-balance{background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid rgba(233,69,96,.2);border-radius:20px;padding:28px;text-align:center;margin-bottom:20px;}
+  .dash-label{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+  .dash-amount{font-size:48px;font-weight:900;letter-spacing:-2px;}
+  .dash-tag{font-size:13px;color:#64748b;margin-top:8px;}
+  .dash-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+  .dash-action{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 8px;text-align:center;cursor:pointer;transition:all .15s;}
+  .dash-action:hover{background:rgba(233,69,96,.1);border-color:rgba(233,69,96,.3);}
+  .dash-action-icon{font-size:22px;margin-bottom:6px;}
+  .dash-action-label{font-size:10px;font-weight:700;color:#94a3b8;}
+  .tx-list{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:16px;overflow:hidden;}
+  .tx-header{padding:14px 16px;font-size:12px;font-weight:700;color:#64748b;border-bottom:1px solid rgba(255,255,255,.05);}
+  .tx-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.04);}
+  .tx-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+  .tx-icon.send{background:rgba(239,68,68,.12);}
+  .tx-icon.recv{background:rgba(74,222,128,.12);}
+  .tx-icon.dep{background:rgba(96,165,250,.12);}
+  .tx-info{flex:1;}
+  .tx-name{font-size:13px;font-weight:600;}
+  .tx-date{font-size:11px;color:#475569;}
+  .tx-amt{font-size:14px;font-weight:800;}
+  .tx-amt.neg{color:#f87171;}
+  .tx-amt.pos{color:#4ade80;}
+
+  /* ── SEND FORM ── */
+  .send-numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:280px;margin:0 auto 16px;}
+  .send-key{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:14px;font-size:20px;font-weight:700;cursor:pointer;text-align:center;transition:background .1s;}
+  .send-key:hover{background:rgba(233,69,96,.1);}
+  .amount-display{font-size:48px;font-weight:900;text-align:center;letter-spacing:-2px;margin:20px 0;color:#f8fafc;}
+  .amount-display span{font-size:28px;color:#64748b;}
+
+  /* ── PENDING BADGE ── */
+  .status-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;}
+  .status-pending{background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);}
+  .status-active{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.3);}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="sg-nav">
+  <a class="sg-logo" href="/bank" onclick="showScreen('home');return false;">
+    <div class="sg-logo-icon">🔫</div>
+    Shotgun Bank
+  </a>
+  <div class="nav-btns" id="nav-guest">
+    <button class="btn-ghost" onclick="openLogin()">Log In</button>
+    <button class="btn-red"   onclick="openSignup()">Create Account</button>
+  </div>
+  <div class="nav-btns" id="nav-user" style="display:none;">
+    <span style="font-size:13px;color:#64748b;padding:0 8px;" id="nav-hashtag"></span>
+    <button class="btn-ghost" onclick="sgLogout()">Log Out</button>
+  </div>
+</nav>
+
+<!-- ══ SCREEN: HOME / HERO ══ -->
+<div id="screen-home" class="screen active">
+  <div class="hero">
+    <div class="hero-badge">🔫 Powered by Bisignano Holdings LLC</div>
+    <h1>Your Money<br><span>Moves Fast</span></h1>
+    <p>Send, receive, and cash out instantly. Get your tax refund <strong style="color:#fbbf24;">up to 2 weeks early</strong> when you file through TaximizerPro.</p>
+    <div class="hero-btns">
+      <button class="hero-btn-primary" onclick="openSignup()">Create Free Account</button>
+      <button class="hero-btn-secondary" onclick="openLogin()">I Already Have an Account</button>
+    </div>
+  </div>
+
+  <div class="features">
+    <div class="feat-card">
+      <div class="feat-icon">⚡</div>
+      <div class="feat-title">Instant Transfers</div>
+      <div class="feat-desc">Send money to anyone on Shotgun in seconds using their #hashtag.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">💸</div>
+      <div class="feat-title">Early Refund</div>
+      <div class="feat-desc">TaximizerPro clients can receive their IRS refund up to 2 weeks early.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🎯</div>
+      <div class="feat-title">Beat the V</div>
+      <div class="feat-desc">After $500 in activity, unlock a $100 overdraft — never get stuck with a $0 balance.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🏦</div>
+      <div class="feat-title">Virtual Debit Card</div>
+      <div class="feat-desc">Your Shotgun account comes with a virtual card for online purchases instantly.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN: DASHBOARD ══ -->
+<div id="screen-dash" class="screen">
+  <div class="sg-dash">
+    <div class="dash-balance">
+      <div class="dash-label">Available Balance</div>
+      <div class="dash-amount" id="dash-balance-amt">$0.00</div>
+      <div class="dash-tag" id="dash-hashtag-tag"></div>
+    </div>
+
+    <div class="dash-actions">
+      <div class="dash-action" onclick="openSend()">
+        <div class="dash-action-icon">🔫</div>
+        <div class="dash-action-label">Shoot It</div>
+      </div>
+      <div class="dash-action" onclick="openRequest()">
+        <div class="dash-action-icon">👋</div>
+        <div class="dash-action-label">Who Shot Ya?</div>
+      </div>
+      <div class="dash-action" onclick="openDeposit()">
+        <div class="dash-action-icon">💳</div>
+        <div class="dash-action-label">Add Funds</div>
+      </div>
+      <div class="dash-action" onclick="openCashout()">
+        <div class="dash-action-icon">🏦</div>
+        <div class="dash-action-label">Cash Out</div>
+      </div>
+    </div>
+
+    <div class="tx-list">
+      <div class="tx-header">Recent Activity</div>
+      <div id="tx-feed"><div style="padding:24px;text-align:center;color:#475569;font-size:13px;">No transactions yet</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOGIN OVERLAY ══ -->
+<div class="sg-overlay" id="overlay-login">
+  <div class="sg-modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Welcome back 🔫</div>
+        <div class="modal-sub">Enter your hashtag or email + PIN</div>
+      </div>
+      <button class="modal-close" onclick="closeOverlay('overlay-login')">×</button>
+    </div>
+    <div class="modal-body">
+      <label class="sg-label">Hashtag or Email</label>
+      <input class="sg-input" id="login-identifier" placeholder="#yourname or email@example.com" type="text">
+      <label class="sg-label">PIN</label>
+      <div class="pin-dots" id="login-pin-dots">
+        <div class="pin-dot" id="lpd0"></div><div class="pin-dot" id="lpd1"></div>
+        <div class="pin-dot" id="lpd2"></div><div class="pin-dot" id="lpd3"></div>
+      </div>
+      <div class="pin-numpad" id="login-numpad"></div>
+      <div class="sg-err" id="login-err"></div>
+      <button class="sg-btn-full sg-btn-red" onclick="doLogin()" id="login-submit-btn">Log In →</button>
+      <button class="sg-btn-full sg-btn-outline" onclick="closeOverlay('overlay-login');openSignup()">New here? Create account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SIGNUP OVERLAY ══ -->
+<div class="sg-overlay" id="overlay-signup">
+  <div class="sg-modal" style="max-width:440px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Create Account 🔫</div>
+        <div class="modal-sub">Get your refund early & send money fast</div>
+      </div>
+      <button class="modal-close" onclick="closeOverlay('overlay-signup')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="sg-input-row">
+        <div><label class="sg-label">First Name</label><input class="sg-input" id="sg-fname" placeholder="First"></div>
+        <div><label class="sg-label">Last Name</label><input class="sg-input" id="sg-lname" placeholder="Last"></div>
+      </div>
+      <label class="sg-label">Email</label>
+      <input class="sg-input" id="sg-email" placeholder="you@example.com" type="email">
+      <label class="sg-label">Phone</label>
+      <input class="sg-input" id="sg-phone" placeholder="(555) 000-0000" type="tel">
+      <label class="sg-label">Choose Your #Hashtag</label>
+      <div style="position:relative;">
+        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#64748b;font-weight:700;">#</span>
+        <input class="sg-input" id="sg-hashtag" placeholder="yourname" style="padding-left:26px;" oninput="checkHashtag(this.value)">
+        <span id="sg-hashtag-check" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:13px;"></span>
+      </div>
+      <label class="sg-label">Set 4-Digit PIN</label>
+      <div class="pin-dots" id="signup-pin-dots">
+        <div class="pin-dot" id="spd0"></div><div class="pin-dot" id="spd1"></div>
+        <div class="pin-dot" id="spd2"></div><div class="pin-dot" id="spd3"></div>
+      </div>
+      <div class="pin-numpad" id="signup-numpad"></div>
+      <div class="sg-err" id="signup-err"></div>
+      <div class="sg-succ" id="signup-succ"></div>
+      <button class="sg-btn-full sg-btn-red" onclick="doSignup()">Create My Account →</button>
+      <button class="sg-btn-full sg-btn-outline" onclick="closeOverlay('overlay-signup');openLogin()">Already have an account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SEND OVERLAY ══ -->
+<div class="sg-overlay" id="overlay-send">
+  <div class="sg-modal">
+    <div class="modal-header">
+      <div><div class="modal-title">🔫 Shoot It</div><div class="modal-sub">Send money instantly</div></div>
+      <button class="modal-close" onclick="closeOverlay('overlay-send')">×</button>
+    </div>
+    <div class="modal-body">
+      <label class="sg-label">Send To (#hashtag or email)</label>
+      <input class="sg-input" id="send-to" placeholder="#friend or email@example.com">
+      <label class="sg-label">Amount</label>
+      <div class="amount-display"><span>$</span><span id="send-amount-display">0</span></div>
+      <div class="send-numpad" id="send-numpad"></div>
+      <label class="sg-label">Note (optional)</label>
+      <input class="sg-input" id="send-note" placeholder="What's it for?">
+      <div class="sg-err" id="send-err"></div>
+      <button class="sg-btn-full sg-btn-red" onclick="doSend()">Send Money →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DEPOSIT OVERLAY ══ -->
+<div class="sg-overlay" id="overlay-deposit">
+  <div class="sg-modal">
+    <div class="modal-header">
+      <div><div class="modal-title">💳 Add Funds</div><div class="modal-sub">Load your Shotgun balance</div></div>
+      <button class="modal-close" onclick="closeOverlay('overlay-deposit')">×</button>
+    </div>
+    <div class="modal-body">
+      <label class="sg-label">Amount to Load</label>
+      <div class="amount-display"><span>$</span><span id="dep-amount-display">0</span></div>
+      <div class="send-numpad" id="dep-numpad"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
+        <button class="sg-btn-full sg-btn-outline" style="margin:0;padding:8px;" onclick="setDepAmt('25')">$25</button>
+        <button class="sg-btn-full sg-btn-outline" style="margin:0;padding:8px;" onclick="setDepAmt('50')">$50</button>
+        <button class="sg-btn-full sg-btn-outline" style="margin:0;padding:8px;" onclick="setDepAmt('100')">$100</button>
+      </div>
+      <div class="sg-err" id="dep-err"></div>
+      <button class="sg-btn-full sg-btn-red" onclick="doDeposit()">Load Funds via Stripe →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let sgUser = null;
+let loginPin = '', signupPin = '', sendAmtStr = '0', depAmtStr = '0';
+
+// ── SCREENS ──
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('screen-' + name);
+  if (el) el.classList.add('active');
+}
+
+// ── OVERLAYS ──
+function openLogin()  { buildNumpad('login'); closeOverlay('overlay-signup'); document.getElementById('overlay-login').classList.add('open'); }
+function openSignup() { buildNumpad('signup'); closeOverlay('overlay-login'); document.getElementById('overlay-signup').classList.add('open'); }
+function openSend()   { buildSendNumpad('send'); document.getElementById('overlay-send').classList.add('open'); }
+function openDeposit(){ buildSendNumpad('dep'); document.getElementById('overlay-deposit').classList.add('open'); }
+function openRequest(){ alert('Copy your hashtag: ' + (sgUser?.hashtag || '')); }
+function openCashout(){ alert('Cash Out via Stripe — coming soon. Email taximizerpro@gmail.com for manual payout.'); }
+function closeOverlay(id){ document.getElementById(id)?.classList.remove('open'); }
+
+// ── NUMPAD BUILDER ──
+function buildNumpad(prefix) {
+  const el = document.getElementById(prefix + '-numpad');
+  if (!el) return;
+  el.innerHTML = '';
+  const keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  keys.forEach(k => {
+    const b = document.createElement('button');
+    b.className = 'pin-key' + (k === '⌫' ? ' del' : '');
+    b.textContent = k;
+    b.style.visibility = k === '' ? 'hidden' : 'visible';
+    b.onclick = () => pinKey(prefix, k);
+    el.appendChild(b);
+  });
+}
+
+function pinKey(prefix, k) {
+  let pin = prefix === 'login' ? loginPin : signupPin;
+  if (k === '⌫') { pin = pin.slice(0, -1); }
+  else if (pin.length < 4) { pin += k; }
+  if (prefix === 'login') loginPin = pin;
+  else signupPin = pin;
+  // Update dots
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById(prefix[0] + 'pd' + i);
+    if (dot) dot.classList.toggle('filled', i < pin.length);
+  }
+}
+
+// ── SEND NUMPAD ──
+function buildSendNumpad(prefix) {
+  const el = document.getElementById(prefix + '-numpad');
+  if (!el) return;
+  if (prefix === 'send') sendAmtStr = '0';
+  else depAmtStr = '0';
+  el.innerHTML = '';
+  const keys = ['1','2','3','4','5','6','7','8','9','.','0','⌫'];
+  keys.forEach(k => {
+    const b = document.createElement('button');
+    b.className = 'send-key' + (k === '⌫' ? ' del' : '');
+    b.textContent = k;
+    b.onclick = () => sendKey(prefix, k);
+    el.appendChild(b);
+  });
+}
+
+function sendKey(prefix, k) {
+  let s = prefix === 'send' ? sendAmtStr : depAmtStr;
+  if (k === '⌫') { s = s.length > 1 ? s.slice(0,-1) : '0'; }
+  else if (k === '.' && s.includes('.')) { return; }
+  else if (s === '0' && k !== '.') { s = k; }
+  else { s += k; }
+  if (prefix === 'send') sendAmtStr = s;
+  else depAmtStr = s;
+  const disp = document.getElementById(prefix + '-amount-display');
+  if (disp) disp.textContent = s;
+}
+
+function setDepAmt(v) { depAmtStr = v; document.getElementById('dep-amount-display').textContent = v; }
+
+// ── HASHTAG CHECK ──
+let htTimer;
+function checkHashtag(val) {
+  clearTimeout(htTimer);
+  const check = document.getElementById('sg-hashtag-check');
+  if (!val || val.length < 2) { check.textContent = ''; return; }
+  check.textContent = '⏳';
+  htTimer = setTimeout(() => {
+    fetch('/api/shotgun/check-hashtag?tag=' + encodeURIComponent(val))
+      .then(r => r.json())
+      .then(d => { check.textContent = d.available ? '✅' : '❌'; })
+      .catch(() => { check.textContent = ''; });
+  }, 500);
+}
+
+// ── LOGIN ──
+function doLogin() {
+  const btn = document.getElementById('login-submit-btn');
+  const err = document.getElementById('login-err');
+  const id  = document.getElementById('login-identifier').value.trim();
+  err.style.display = 'none';
+  if (!id || loginPin.length < 4) { err.textContent = 'Enter your hashtag/email and full 4-digit PIN.'; err.style.display = 'block'; return; }
+  btn.textContent = 'Logging in…'; btn.disabled = true;
+  fetch('/api/shotgun/login', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ identifier: id, pin: loginPin })
+  })
+  .then(r => r.json())
+  .then(d => {
+    btn.textContent = 'Log In →'; btn.disabled = false;
+    if (d.success) {
+      sgUser = d.account;
+      closeOverlay('overlay-login');
+      afterLogin();
+    } else if (d.status === 'pending') {
+      err.textContent = '⏳ Your account is pending approval. We'll notify you by email.';
+      err.style.display = 'block';
+    } else {
+      err.textContent = d.error || 'Login failed.';
+      err.style.display = 'block';
+    }
+  })
+  .catch(() => { btn.textContent = 'Log In →'; btn.disabled = false; err.textContent = 'Network error — try again.'; err.style.display = 'block'; });
+}
+
+// ── SIGNUP ──
+function doSignup() {
+  const err  = document.getElementById('signup-err');
+  const succ = document.getElementById('signup-succ');
+  err.style.display = succ.style.display = 'none';
+  const fname = document.getElementById('sg-fname').value.trim();
+  const lname = document.getElementById('sg-lname').value.trim();
+  const email = document.getElementById('sg-email').value.trim();
+  const phone = document.getElementById('sg-phone').value.trim();
+  const tag   = document.getElementById('sg-hashtag').value.trim().replace(/^#/,'');
+  if (!fname || !lname || !email || !tag || signupPin.length < 4) {
+    err.textContent = 'Fill in all fields and set your 4-digit PIN.'; err.style.display = 'block'; return;
+  }
+  fetch('/api/shotgun/apply', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ first_name:fname, last_name:lname, email, phone, hashtag:tag, pin:signupPin })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success || d.message) {
+      succ.textContent = '🎯 Account submitted! Check your email — approval takes ~1 hour.';
+      succ.style.display = 'block';
+    } else {
+      err.textContent = d.error || 'Signup failed.'; err.style.display = 'block';
+    }
+  })
+  .catch(() => { err.textContent = 'Network error.'; err.style.display = 'block'; });
+}
+
+// ── SEND ──
+function doSend() {
+  const err = document.getElementById('send-err');
+  err.style.display = 'none';
+  const to  = document.getElementById('send-to').value.trim();
+  const amt = parseFloat(sendAmtStr);
+  const note= document.getElementById('send-note').value.trim();
+  if (!to || amt <= 0) { err.textContent = 'Enter recipient and amount.'; err.style.display = 'block'; return; }
+  fetch('/api/shotgun/send', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ from_account_id: sgUser.id, to_identifier: to, amount: amt, note })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    if (d.success) { closeOverlay('overlay-send'); loadDashboard(); }
+    else { err.textContent = d.error || 'Transfer failed.'; err.style.display = 'block'; }
+  })
+  .catch(() => { err.textContent = 'Network error.'; err.style.display = 'block'; });
+}
+
+// ── DEPOSIT ──
+function doDeposit() {
+  const err = document.getElementById('dep-err');
+  err.style.display = 'none';
+  const amt = parseFloat(depAmtStr);
+  if (amt < 5) { err.textContent = 'Minimum deposit is $5.'; err.style.display = 'block'; return; }
+  fetch('/api/stripe/create-deposit-session', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ account_id: sgUser.id, amount: amt })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    if (d.url) { window.location.href = d.url; }
+    else { err.textContent = d.error || 'Could not start deposit.'; err.style.display = 'block'; }
+  })
+  .catch(() => { err.textContent = 'Network error.'; err.style.display = 'block'; });
+}
+
+// ── AFTER LOGIN ──
+function afterLogin() {
+  document.getElementById('nav-guest').style.display = 'none';
+  document.getElementById('nav-user').style.display  = 'flex';
+  document.getElementById('nav-hashtag').textContent = '#' + sgUser.hashtag;
+  loadDashboard();
+  showScreen('dash');
+}
+
+function loadDashboard() {
+  if (!sgUser) return;
+  const bal = parseFloat(sgUser.balance || 0);
+  document.getElementById('dash-balance-amt').textContent = '$' + bal.toFixed(2);
+  document.getElementById('dash-balance-amt').style.color = bal < 0 ? '#f87171' : '#f8fafc';
+  document.getElementById('dash-hashtag-tag').textContent = '#' + sgUser.hashtag + ' · Shotgun Bank';
+  // Fetch transactions
+  fetch('/api/shotgun/transactions/' + sgUser.id)
+    .then(r=>r.json())
+    .then(txs=>{
+      const feed = document.getElementById('tx-feed');
+      if (!txs.length) { feed.innerHTML='<div style="padding:24px;text-align:center;color:#475569;font-size:13px;">No transactions yet</div>'; return; }
+      feed.innerHTML = txs.slice(0,20).map(tx => {
+        const isOut  = tx.from_account_id === sgUser.id;
+        const icon   = isOut ? '🔫' : '🎯';
+        const cls    = isOut ? 'send' : 'recv';
+        const amt    = isOut ? '-$'+parseFloat(tx.amount).toFixed(2) : '+$'+parseFloat(tx.amount).toFixed(2);
+        const amtCls = isOut ? 'neg' : 'pos';
+        const who    = isOut ? (tx.to_hashtag ? '#'+tx.to_hashtag : tx.to_name||'Someone') : (tx.from_hashtag ? '#'+tx.from_hashtag : tx.from_name||'Someone');
+        const date   = tx.created_date ? new Date(tx.created_date).toLocaleDateString() : '';
+        return `<div class="tx-item">
+          <div class="tx-icon ${cls}">${icon}</div>
+          <div class="tx-info"><div class="tx-name">${who}</div><div class="tx-date">${tx.note||''} ${date}</div></div>
+          <div class="tx-amt ${amtCls}">${amt}</div>
+        </div>`;
+      }).join('');
+    }).catch(()=>{});
+}
+
+function sgLogout() {
+  sgUser = null;
+  loginPin = ''; signupPin = '';
+  document.getElementById('nav-guest').style.display = 'flex';
+  document.getElementById('nav-user').style.display  = 'none';
+  showScreen('home');
+}
+
+// ── DEEP LINK ──
+const hash = window.location.hash;
+if (hash === '#signup') openSignup();
+if (hash === '#login')  openLogin();
+</script>
+</body>
+</html>
