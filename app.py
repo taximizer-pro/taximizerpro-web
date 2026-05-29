@@ -320,119 +320,91 @@ def send_notification(to, first_name, links):
     with urllib.request.urlopen(req, timeout=15) as r: return json.loads(r.read())
 
 
+
 # ═══════════════════════════════════════════════════════════════════════════════
-# GOOGLE OAUTH LOGIN
+# GOOGLE MAGIC LINK LOGIN (no Google Cloud needed)
+# User enters their Gmail → gets a one-click login link emailed to them
 # ═══════════════════════════════════════════════════════════════════════════════
-GOOGLE_CLIENT_ID     = os.environ.get("GOOGLE_CLIENT_ID", "")
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
-GOOGLE_REDIRECT_URI  = os.environ.get("GOOGLE_REDIRECT_URI", "https://taximizerpro.onrender.com/auth/google/callback")
+_magic_store = {}   # token -> {email, name, role, expires}
 
-@app.route("/auth/google")
-def google_login():
-    """Redirect to Google OAuth consent screen."""
-    if not GOOGLE_CLIENT_ID:
-        return "Google login not configured.", 500
-    state = secrets.token_hex(16)
-    session["oauth_state"] = state
-    params = urllib.parse.urlencode({
-        "client_id":     GOOGLE_CLIENT_ID,
-        "redirect_uri":  GOOGLE_REDIRECT_URI,
-        "response_type": "code",
-        "scope":         "openid email profile",
-        "state":         state,
-        "access_type":   "offline",
-        "prompt":        "select_account",
-    })
-    return redirect(f"https://accounts.google.com/o/oauth2/v2/auth?{params}")
+@app.route("/auth/magic-request", methods=["POST"])
+def magic_request():
+    """Send a magic login link to the user's Gmail."""
+    email = (request.form.get("email","") or request.json.get("email","") if request.is_json else request.form.get("email","")).strip().lower()
+    if not email:
+        return jsonify({"error": "Email required"}), 400
 
-
-@app.route("/auth/google/callback")
-def google_callback():
-    """Handle Google OAuth callback."""
-    error = request.args.get("error")
-    if error:
-        return redirect(url_for("login") + "?error=google_cancelled")
-
-    state = request.args.get("state","")
-    if state != session.get("oauth_state",""):
-        return redirect(url_for("login") + "?error=invalid_state")
-    session.pop("oauth_state", None)
-
-    code = request.args.get("code","")
-    if not code:
-        return redirect(url_for("login") + "?error=no_code")
-
-    # Exchange code for tokens
-    try:
-        token_data = urllib.parse.urlencode({
-            "code":          code,
-            "client_id":     GOOGLE_CLIENT_ID,
-            "client_secret": GOOGLE_CLIENT_SECRET,
-            "redirect_uri":  GOOGLE_REDIRECT_URI,
-            "grant_type":    "authorization_code",
-        }).encode()
-        req = urllib.request.Request(
-            "https://oauth2.googleapis.com/token",
-            data=token_data, method="POST",
-            headers={"Content-Type": "application/x-www-form-urlencoded"}
-        )
-        with urllib.request.urlopen(req, timeout=15) as r:
-            token_resp = json.loads(r.read())
-    except Exception as e:
-        audit("google_oauth_error", f"Token exchange failed: {e}")
-        return redirect(url_for("login") + "?error=token_exchange")
-
-    access_token = token_resp.get("access_token","")
-    if not access_token:
-        return redirect(url_for("login") + "?error=no_access_token")
-
-    # Fetch user info from Google
-    try:
-        req2 = urllib.request.Request(
-            "https://www.googleapis.com/oauth2/v2/userinfo",
-            headers={"Authorization": f"Bearer {access_token}"}
-        )
-        with urllib.request.urlopen(req2, timeout=15) as r:
-            guser = json.loads(r.read())
-    except Exception as e:
-        audit("google_oauth_error", f"Userinfo fetch failed: {e}")
-        return redirect(url_for("login") + "?error=userinfo_failed")
-
-    google_email = guser.get("email","").lower().strip()
-    google_name  = guser.get("name", google_email)
-
-    if not google_email:
-        return redirect(url_for("login") + "?error=no_email")
-
-    # Check if this Google email maps to a known admin
-    match = next((k for k in ADMINS if k.lower() == google_email), None)
+    # Check if this email is an authorized admin or staff
+    match = next((k for k in ADMINS if k.lower() == email), None)
+    role = name = None
     if match:
-        # Known admin — log in directly (no 2FA needed, Google IS the 2FA)
         role = ADMINS[match]["role"]
         name = ADMINS[match]["name"]
-        session["user"] = {"email": google_email, "name": name, "role": role}
-        session.permanent = True
-        audit("google_login_success", f"Admin {google_email} logged in via Google", google_email)
-        return redirect(url_for("dashboard"))
+    else:
+        try:
+            staff_list = b44_get(f"{B44_BASE}/StaffMember?email={urllib.parse.quote(email)}&limit=1")
+            staff = staff_list[0] if staff_list else None
+            if staff and staff.get("status") == "active":
+                role = staff.get("role","staff")
+                name = staff.get("full_name", email.split("@")[0].title())
+        except:
+            pass
 
-    # Check if staff member exists in Base44
-    try:
-        staff_list = b44_get(f"{B44_BASE}/StaffMember?email={urllib.parse.quote(google_email)}&limit=1")
-        staff = staff_list[0] if staff_list else None
-    except:
-        staff = None
+    if not role:
+        # Not authorized — send them to request access instead
+        return jsonify({"status": "not_found"}), 200   # soft fail — don't leak info
 
-    if staff and staff.get("status") == "active":
-        role = staff.get("role","staff")
-        name = staff.get("full_name", google_name)
-        session["user"] = {"email": google_email, "name": name, "role": role}
-        session.permanent = True
-        audit("google_login_success", f"Staff {google_email} logged in via Google", google_email)
-        return redirect(url_for("dashboard"))
+    # Generate secure token
+    token  = secrets.token_urlsafe(32)
+    expires = time.time() + 900  # 15 min
+    _magic_store[token] = {"email": email, "name": name, "role": role, "expires": expires}
 
-    # Not an authorized user — redirect to request access
-    audit("google_login_unauthorized", f"Unknown Google user: {google_email}")
-    return redirect(url_for("login") + "?error=not_authorized&email=" + urllib.parse.quote(google_email))
+    link = f"https://taximizerpro.onrender.com/auth/magic-verify?token={token}"
+
+    gmail_token = os.environ.get("GMAIL_ACCESS_TOKEN","")
+    if gmail_token:
+        try:
+            body = f"""<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#0f172a;border-radius:16px;color:#f1f5f9;">
+  <div style="font-size:28px;margin-bottom:8px;">🔑</div>
+  <h2 style="margin:0 0 8px;font-size:20px;">Sign in to TaximizerPro</h2>
+  <p style="color:#94a3b8;font-size:14px;margin-bottom:24px;">Click the button below to sign in. This link expires in 15 minutes.</p>
+  <a href="{link}" style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-weight:700;padding:14px 28px;border-radius:10px;text-decoration:none;font-size:14px;">Sign In Now →</a>
+  <p style="color:#475569;font-size:11px;margin-top:24px;">If you didn't request this, ignore this email.<br>TaximizerPro · Bisignano Holdings LLC</p>
+</div>"""
+            raw = f"From: TaximizerPro <taximizerpro@gmail.com>\nTo: {email}\nSubject: Your TaximizerPro sign-in link\nMIME-Version: 1.0\nContent-Type: text/html\n\n{body}"
+            import base64 as _b64
+            msg = {"raw": _b64.urlsafe_b64encode(raw.encode()).decode()}
+            req = urllib.request.Request(
+                "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                data=json.dumps(msg).encode(), method="POST",
+                headers={"Authorization": f"Bearer {gmail_token}", "Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(req, timeout=15): pass
+            audit("magic_link_sent", f"Magic link sent to {email}", email)
+        except Exception as e:
+            print(f"[MAGIC LINK EMAIL FAIL] {e}", flush=True)
+            # Fallback — show link directly on screen for superadmin
+            if role == "superadmin":
+                return jsonify({"status":"ok","fallback_link": link})
+
+    return jsonify({"status": "ok"})
+
+
+@app.route("/auth/magic-verify")
+def magic_verify():
+    """Verify magic link token and log user in."""
+    token = request.args.get("token","")
+    record = _magic_store.get(token)
+    if not record:
+        return redirect(url_for("login") + "?error=invalid_link")
+    if record["expires"] < time.time():
+        _magic_store.pop(token, None)
+        return redirect(url_for("login") + "?error=link_expired")
+    _magic_store.pop(token, None)
+    session["user"] = {"email": record["email"], "name": record["name"], "role": record["role"]}
+    session.permanent = True
+    audit("magic_login_success", f"{record['email']} signed in via magic link", record["email"])
+    return redirect(url_for("dashboard"))
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 def logged_in(): return "user" in session
@@ -1989,6 +1961,7 @@ def deny_access(token):
         return "<h2>Link expired or already handled.</h2>", 400
     audit("access_denied", f"Access denied for {record.get('name')} <{record.get('email')}>")
     return f"<div style='font-family:Inter,sans-serif;padding:40px;max-width:400px;'><h2>❌ Access denied for {record.get('name')}</h2><a href='/dashboard'>Go to Dashboard</a></div>"
+
 
 
 
