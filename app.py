@@ -547,12 +547,11 @@ def staff():
     return render_template("staff.html", user=session["user"])
 
 # ── API ───────────────────────────────────────────────────────────────────────
-BASE44_HEADERS = {
-    "app-id": APP_ID,
-    "Content-Type": "application/json",
-    "Authorization": f"Bearer {os.environ.get('BASE44_API_KEY', '')}",
-}
-# Correct Base44 API base (appapi is dead — use api.base44.com)
+def b44_headers():
+    key = os.environ.get("BASE44_API_KEY", "")
+    return {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+
+BASE44_HEADERS = b44_headers()  # static fallback — routes use b44_headers()
 B44_BASE = f"https://app.base44.com/api/apps/{APP_ID}/entities/TaxClient"
 
 @app.route("/api/clients")
