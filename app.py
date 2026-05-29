@@ -439,15 +439,11 @@ def login():
             except Exception as e:
                 # Email failed — log and show OTP inline for superadmin
                 print(f"[2FA EMAIL FAILED] OTP for {email}: {otp} | Error: {e}", flush=True)
-                role = ADMINS[match]["role"]
-                if role == "superadmin":
-                    # Show OTP directly on screen — Italy can always get in
-                    session["pending_2fa"] = email
-                    session["otp_fallback"] = True
-                    session["otp_inline"] = otp
-                    return redirect(url_for("verify_2fa"))
-                error = f"Could not send verification code. Contact Italy."
-                return render_template("login.html", error=error)
+                # Always show OTP on screen — never lock out admins
+                session["pending_2fa"] = email
+                session["otp_fallback"] = True
+                session["otp_inline"] = otp
+                return redirect(url_for("verify_2fa"))
             session["pending_2fa"] = email
             return redirect(url_for("verify_2fa"))
         else:
