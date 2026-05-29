@@ -1528,6 +1528,155 @@ def sg_admin_all():
     except Exception as e:
         return jsonify({"accounts": [], "error": str(e)})
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# GHOST MODE — Admin impersonation for tech support
+# Superadmin/admin can view & act as any Shotgun user
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/shotgun/admin/ghost/<account_id>", methods=["POST"])
+def sg_ghost_enter(account_id):
+    """Enter ghost mode — view/act as a Shotgun user for tech support."""
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    if session["user"].get("role") not in ("superadmin","admin"):
+        return jsonify({"error":"Admins only"}), 403
+    try:
+        acct = sg_get(f"{SG_B44}/{account_id}")
+        if isinstance(acct, list): acct = acct[0]
+        if not acct: return jsonify({"error":"Account not found"}), 404
+        # Save real admin identity so we can restore later
+        session["ghost_admin"]   = dict(session["user"])
+        session["ghost_account"] = acct
+        audit("ghost_enter", f"{session['ghost_admin']['email']} entered ghost mode as #{acct.get('hashtag','')} ({account_id})", session["ghost_admin"]["email"])
+        return jsonify({"success": True, "account": acct})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/shotgun/admin/ghost/exit", methods=["POST"])
+def sg_ghost_exit():
+    """Exit ghost mode — restore admin identity."""
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    ghost_admin = session.get("ghost_admin")
+    ghost_acct  = session.get("ghost_account", {})
+    if ghost_admin:
+        audit("ghost_exit", f"{ghost_admin['email']} exited ghost mode (was #{ghost_acct.get('hashtag','')})", ghost_admin["email"])
+        session.pop("ghost_account", None)
+        session.pop("ghost_admin", None)
+    return jsonify({"success": True})
+
+
+@app.route("/api/shotgun/admin/ghost/send", methods=["POST"])
+def sg_ghost_send():
+    """Admin sends money AS a ghost user — full audit trail."""
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    if not session.get("ghost_account"): return jsonify({"error":"Not in ghost mode"}), 400
+    if session["user"].get("role") not in ("superadmin","admin"):
+        return jsonify({"error":"Admins only"}), 403
+    data        = request.json or {}
+    ghost_acct  = session["ghost_account"]
+    from_id     = ghost_acct["id"]
+    to_hashtag  = data.get("to_hashtag","").strip().lstrip("#")
+    amount      = float(data.get("amount", 0))
+    note        = data.get("note","[Admin ghost transfer]")
+    FEE = 1.50
+    if not to_hashtag or amount <= 0:
+        return jsonify({"error":"Missing fields"}), 400
+    try:
+        sender    = sg_get(f"{SG_B44}/{from_id}")
+        sender    = sender if isinstance(sender, dict) else (sender[0] if sender else None)
+        if not sender: return jsonify({"error":"Ghost account not found"}), 404
+        recipients = sg_get(f"{SG_B44}?hashtag={_uparse.quote(to_hashtag)}&limit=1")
+        if not recipients: return jsonify({"error":"Recipient not found"}), 404
+        recipient = recipients[0]
+        new_sender_bal    = round(float(sender.get("balance",0))    - amount - FEE, 2)
+        new_recipient_bal = round(float(recipient.get("balance",0)) + amount - FEE, 2)
+        sg_put(f"{SG_B44}/{from_id}",        {"balance": new_sender_bal})
+        sg_put(f"{SG_B44}/{recipient['id']}", {"balance": new_recipient_bal})
+        sg_create(SG_TXN_B44, {
+            "from_account_id": from_id, "to_account_id": recipient["id"],
+            "from_hashtag": sender.get("hashtag",""), "to_hashtag": to_hashtag,
+            "from_name": f"{sender.get('first_name','')} {sender.get('last_name','')}".strip(),
+            "to_name":   f"{recipient.get('first_name','')} {recipient.get('last_name','')}".strip(),
+            "amount": amount, "fee": FEE, "net_amount": round(amount - FEE, 2),
+            "type": "transfer", "status": "completed",
+            "note": f"[GHOST by {session['user']['email']}] {note}",
+        })
+        # Update ghost session balance
+        session["ghost_account"] = dict(sender)
+        session["ghost_account"]["balance"] = new_sender_bal
+        audit("ghost_send", f"Admin {session['user']['email']} sent ${amount} from #{sender.get('hashtag','')} to #{to_hashtag}", session["user"]["email"])
+        return jsonify({"success": True, "new_balance": new_sender_bal})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/shotgun/admin/ghost/transactions/<account_id>")
+def sg_ghost_transactions(account_id):
+    """Get full transaction history for any account (admin view)."""
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    if session["user"].get("role") not in ("superadmin","admin"):
+        return jsonify({"error":"Admins only"}), 403
+    try:
+        sent     = sg_get(f"{SG_TXN_B44}?from_account_id={_uparse.quote(account_id)}&limit=200")
+        received = sg_get(f"{SG_TXN_B44}?to_account_id={_uparse.quote(account_id)}&limit=200")
+        all_txns = {t["id"]: t for t in (sent or []) + (received or [])}
+        sorted_txns = sorted(all_txns.values(), key=lambda t: t.get("created_date",""), reverse=True)
+        return jsonify({"transactions": sorted_txns})
+    except Exception as e:
+        return jsonify({"transactions": [], "error": str(e)})
+
+
+@app.route("/api/shotgun/admin/ghost/adjust-balance", methods=["POST"])
+def sg_ghost_adjust():
+    """Admin manually adjusts a user balance (credit/debit) with audit trail."""
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
+    if session["user"].get("role") != "superadmin":
+        return jsonify({"error":"Only Italy can adjust balances"}), 403
+    data       = request.json or {}
+    account_id = data.get("account_id","")
+    amount     = float(data.get("amount", 0))   # positive = credit, negative = debit
+    reason     = data.get("reason","Admin adjustment")
+    if not account_id or amount == 0:
+        return jsonify({"error":"Missing account_id or amount"}), 400
+    try:
+        acct = sg_get(f"{SG_B44}/{account_id}")
+        acct = acct if isinstance(acct, dict) else (acct[0] if acct else None)
+        if not acct: return jsonify({"error":"Account not found"}), 404
+        new_bal = round(float(acct.get("balance",0)) + amount, 2)
+        sg_put(f"{SG_B44}/{account_id}", {"balance": new_bal})
+        sg_create(SG_TXN_B44, {
+            "to_account_id" if amount > 0 else "from_account_id": account_id,
+            "to_hashtag" if amount > 0 else "from_hashtag": acct.get("hashtag",""),
+            "to_name"    if amount > 0 else "from_name":    f"{acct.get('first_name','')} {acct.get('last_name','')}".strip(),
+            "amount": abs(amount), "fee": 0, "net_amount": abs(amount),
+            "type": "credit" if amount > 0 else "debit",
+            "status": "completed",
+            "note": f"[ADMIN ADJUSTMENT by {session['user']['email']}] {reason}",
+        })
+        audit("balance_adjust", f"{session['user']['email']} adjusted #{acct.get('hashtag','')} by ${amount:+.2f} — {reason}", session["user"]["email"])
+        return jsonify({"success": True, "new_balance": new_bal})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/shotgun/admin/ghost/<account_id>")
+def sg_ghost_view(account_id):
+    """Full ghost view page — renders user's Shotgun portal as them."""
+    if not logged_in(): return redirect(url_for("login"))
+    if session["user"].get("role") not in ("superadmin","admin"):
+        return "Not authorized", 403
+    try:
+        acct = sg_get(f"{SG_B44}/{account_id}")
+        acct = acct if isinstance(acct, dict) else (acct[0] if acct else None)
+        if not acct: return "Account not found", 404
+        session["ghost_account"] = acct
+        session["ghost_admin"]   = dict(session["user"])
+        audit("ghost_view", f"{session['user']['email']} viewing ghost portal for #{acct.get('hashtag','')} ({account_id})", session["user"]["email"])
+        return render_template("shotgun_ghost.html", acct=acct, admin=session["user"])
+    except Exception as e:
+        return f"Error: {e}", 500
+
 @app.route("/bisignano")
 def bisignano_holdings():
     if not logged_in(): return redirect(url_for("login"))
@@ -1733,6 +1882,7 @@ def deny_access(token):
         return "<h2>Link expired or already handled.</h2>", 400
     audit("access_denied", f"Access denied for {record.get('name')} <{record.get('email')}>")
     return f"<div style='font-family:Inter,sans-serif;padding:40px;max-width:400px;'><h2>❌ Access denied for {record.get('name')}</h2><a href='/dashboard'>Go to Dashboard</a></div>"
+
 
 
 
