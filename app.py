@@ -424,28 +424,10 @@ def login():
         # CAPTCHA removed
         match = next((k for k in ADMINS if k.lower() == email), None)
         if match and check_password_hash(ADMINS[match]["pw"], pw):
-            # Generate 6-digit OTP
-            otp = str(secrets.randbelow(900000) + 100000)
-            _otp_store[email] = {
-                "otp": otp,
-                "expires": time.time() + 600,  # 10 min
-                "attempts": 0,
-                "name": ADMINS[match]["name"],
-                "role": ADMINS[match]["role"],
-            }
-            try:
-                _send_otp_email(email, otp, ADMINS[match]["name"])
-                audit("2fa_otp_sent", f"OTP sent to {email}", email)
-            except Exception as e:
-                # Email failed — log and show OTP inline for superadmin
-                print(f"[2FA EMAIL FAILED] OTP for {email}: {otp} | Error: {e}", flush=True)
-                # Always show OTP on screen — never lock out admins
-                session["pending_2fa"] = email
-                session["otp_fallback"] = True
-                session["otp_inline"] = otp
-                return redirect(url_for("verify_2fa"))
-            session["pending_2fa"] = email
-            return redirect(url_for("verify_2fa"))
+            # 2FA disabled — direct login
+            session["user"] = {"email": email, "name": ADMINS[match]["name"], "role": ADMINS[match]["role"]}
+            audit("login_success", f"Direct login for {email}", email)
+            return redirect(url_for("dashboard"))
         else:
             audit("login_failed", f"Bad credentials for {email}")
             error = "Invalid email or password."
