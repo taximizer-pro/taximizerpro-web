@@ -2,666 +2,1046 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Shotgun — Bank with Con-fidence</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Shotgun Bank — Your Money, Reloaded</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 :root{
-  --gun:#1a1a2e;
-  --shell:#16213e;
-  --barrel:#0f3460;
-  --blast:#e94560;
+  --bg:#0a0a0f;
+  --surface:#13131a;
+  --card:#1c1c26;
+  --border:rgba(255,255,255,.07);
+  --red:#e94560;
+  --red2:#c0392b;
   --gold:#f59e0b;
-  --smoke:#94a3b8;
-  --white:#f8fafc;
+  --green:#22c55e;
+  --purple:#7c3aed;
+  --smoke:#64748b;
+  --muted:#94a3b8;
+  --white:#f1f5f9;
+  --panel-w:420px;
+  --panel-h:700px;
 }
-body{background:var(--gun);color:var(--white);min-height:100vh;overflow-x:hidden;}
 
-/* ── FLOATING TRIGGER (in TaximizerPro sidebar) ── */
-#shotgun-trigger{
-  position:fixed;bottom:24px;right:24px;z-index:9000;
-  width:56px;height:56px;border-radius:50%;
-  background:linear-gradient(135deg,var(--blast),#c0392b);
+/* ── TRIGGER ── */
+#sg-trigger{
+  position:fixed;bottom:28px;right:28px;z-index:9999;
+  width:60px;height:60px;border-radius:50%;
+  background:linear-gradient(135deg,var(--red),var(--red2));
   border:none;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 20px rgba(233,69,96,.5);
-  transition:all .2s;
+  box-shadow:0 0 0 0 rgba(233,69,96,.4);
+  animation:trigger-pulse 2.5s infinite;
+  transition:transform .2s;
 }
-#shotgun-trigger:hover{transform:scale(1.1);box-shadow:0 6px 28px rgba(233,69,96,.7);}
-#shotgun-trigger svg{width:26px;height:26px;color:#fff;stroke:#fff;}
+#sg-trigger:hover{transform:scale(1.08);}
+#sg-trigger img{width:34px;height:34px;object-fit:contain;}
+@keyframes trigger-pulse{
+  0%{box-shadow:0 0 0 0 rgba(233,69,96,.4);}
+  70%{box-shadow:0 0 0 14px rgba(233,69,96,0);}
+  100%{box-shadow:0 0 0 0 rgba(233,69,96,0);}
+}
 
-/* ── FLOATING PANEL ── */
-#shotgun-panel{
-  position:fixed;bottom:90px;right:24px;z-index:8999;
-  width:400px;height:680px;
-  background:var(--gun);
-  border-radius:24px;
-  border:1px solid rgba(233,69,96,.3);
-  box-shadow:0 20px 60px rgba(0,0,0,.6);
+/* ── PANEL ── */
+#sg-panel{
+  position:fixed;bottom:100px;right:28px;z-index:9998;
+  width:var(--panel-w);height:var(--panel-h);
+  background:var(--bg);
+  border-radius:28px;
+  border:1px solid rgba(233,69,96,.2);
+  box-shadow:0 32px 80px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.03);
   display:none;flex-direction:column;overflow:hidden;
-  transition:all .3s cubic-bezier(.34,1.56,.64,1);
+  transform:scale(.95) translateY(10px);opacity:0;
+  transition:all .25s cubic-bezier(.34,1.56,.64,1);
 }
-#shotgun-panel.open{display:flex;}
+#sg-panel.open{
+  display:flex;transform:scale(1) translateY(0);opacity:1;
+}
 
-/* Header */
+/* ── HEADER ── */
 .sg-header{
-  background:linear-gradient(135deg,var(--shell),var(--barrel));
-  padding:16px 20px;
+  padding:16px 20px 12px;
   display:flex;align-items:center;justify-content:space-between;
-  border-bottom:1px solid rgba(233,69,96,.2);
   flex-shrink:0;
+  border-bottom:1px solid var(--border);
+  background:var(--surface);
 }
-.sg-logo{display:flex;align-items:center;gap:10px;}
-.sg-logo-icon{
-  width:38px;height:38px;
-  background:linear-gradient(135deg,var(--blast),#c0392b);
-  border-radius:10px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:20px;
-}
-.sg-logo-text{font-size:18px;font-weight:900;letter-spacing:-.5px;}
-.sg-logo-sub{font-size:9px;color:var(--smoke);font-weight:500;letter-spacing:1px;text-transform:uppercase;}
-.sg-close{background:none;border:none;color:var(--smoke);cursor:pointer;padding:4px;}
-.sg-close:hover{color:var(--white);}
+.sg-brand{display:flex;align-items:center;gap:10px;}
+.sg-brand-logo{width:36px;height:36px;object-fit:contain;}
+.sg-brand-name{font-size:17px;font-weight:900;letter-spacing:-.5px;color:var(--white);}
+.sg-brand-tag{font-size:9px;color:var(--smoke);font-weight:600;letter-spacing:1.2px;text-transform:uppercase;}
+.sg-close-btn{background:rgba(255,255,255,.06);border:none;color:var(--muted);
+  width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;
+  display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.sg-close-btn:hover{background:rgba(233,69,96,.2);color:var(--red);}
 
-/* Screens */
-.sg-screen{flex:1;overflow-y:auto;padding:20px;}
-.sg-screen::-webkit-scrollbar{width:4px;}
-.sg-screen::-webkit-scrollbar-track{background:transparent;}
-.sg-screen::-webkit-scrollbar-thumb{background:rgba(233,69,96,.3);border-radius:2px;}
+/* ── SCREENS ── */
+.sg-screen{flex:1;overflow-y:auto;overscroll-behavior:contain;}
+.sg-screen::-webkit-scrollbar{width:3px;}
+.sg-screen::-webkit-scrollbar-thumb{background:rgba(233,69,96,.2);border-radius:2px;}
 
-/* Bottom nav */
+/* ── BOTTOM NAV ── */
 .sg-nav{
-  display:flex;border-top:1px solid rgba(255,255,255,.06);
-  flex-shrink:0;background:var(--shell);
+  display:none;flex-shrink:0;
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  padding:6px 0 10px;
 }
-.sg-nav-btn{
-  flex:1;padding:10px 4px;
-  background:none;border:none;color:var(--smoke);
-  font-size:9px;font-weight:600;text-transform:uppercase;
-  letter-spacing:.4px;cursor:pointer;
-  display:flex;flex-direction:column;align-items:center;gap:3px;
-  transition:all .15s;
+.sg-nav-item{
+  flex:1;background:none;border:none;
+  color:var(--smoke);font-size:8.5px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.5px;
+  cursor:pointer;padding:6px 4px 2px;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  transition:color .15s;position:relative;
 }
-.sg-nav-btn svg{width:18px;height:18px;}
-.sg-nav-btn.active,.sg-nav-btn:hover{color:var(--blast);}
-.sg-nav-btn.active{border-top:2px solid var(--blast);}
+.sg-nav-item svg{width:20px;height:20px;stroke-width:1.8;}
+.sg-nav-item.active{color:var(--red);}
+.sg-nav-item.active::before{
+  content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:28px;height:2px;background:var(--red);border-radius:0 0 3px 3px;
+}
 
-/* Cards & inputs */
-.sg-card{
-  background:var(--shell);border-radius:14px;
-  border:1px solid rgba(255,255,255,.07);
-  padding:16px;margin-bottom:12px;
+/* ── TOAST ── */
+#sg-toast{
+  position:absolute;top:68px;left:50%;transform:translateX(-50%) translateY(-8px);
+  background:var(--card);color:var(--white);
+  padding:9px 18px;border-radius:30px;
+  font-size:12px;font-weight:700;
+  z-index:100;white-space:nowrap;
+  pointer-events:none;opacity:0;
+  border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 8px 24px rgba(0,0,0,.4);
+  transition:all .25s cubic-bezier(.34,1.56,.64,1);
 }
+#sg-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── AUTH SCREEN ── */
+.sg-auth-wrap{padding:32px 28px;}
+.sg-auth-hero{text-align:center;margin-bottom:32px;}
+.sg-auth-hero-img{width:80px;height:80px;object-fit:contain;margin:0 auto 14px;display:block;}
+.sg-auth-hero h2{font-size:24px;font-weight:900;color:var(--white);margin-bottom:6px;}
+.sg-auth-hero p{font-size:13px;color:var(--muted);}
+
+/* ── FORM ELEMENTS ── */
+.sg-field{margin-bottom:14px;}
+.sg-label{display:block;font-size:10px;font-weight:700;color:var(--smoke);
+  text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
 .sg-input{
-  width:100%;padding:10px 14px;
-  background:rgba(255,255,255,.05);
-  border:1.5px solid rgba(255,255,255,.1);
-  border-radius:10px;color:var(--white);
-  font-size:13px;outline:none;transition:all .15s;
+  width:100%;padding:12px 16px;
+  background:var(--card);
+  border:1.5px solid var(--border);
+  border-radius:12px;color:var(--white);
+  font-size:14px;font-family:'Inter',sans-serif;
+  outline:none;transition:all .15s;
+  -webkit-appearance:none;
 }
-.sg-input:focus{border-color:var(--blast);background:rgba(233,69,96,.06);}
+.sg-input:focus{border-color:var(--red);background:rgba(233,69,96,.05);
+  box-shadow:0 0 0 3px rgba(233,69,96,.1);}
 .sg-input::placeholder{color:var(--smoke);}
-.sg-label{font-size:10px;font-weight:600;color:var(--smoke);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;display:block;}
-.sg-btn{
-  width:100%;padding:12px;border:none;border-radius:10px;
-  font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;
-}
-.sg-btn-primary{background:linear-gradient(135deg,var(--blast),#c0392b);color:#fff;}
-.sg-btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(233,69,96,.4);}
-.sg-btn-ghost{background:rgba(255,255,255,.05);color:var(--smoke);border:1px solid rgba(255,255,255,.1);}
-.sg-btn-ghost:hover{background:rgba(255,255,255,.08);color:var(--white);}
-.sg-btn-gold{background:linear-gradient(135deg,var(--gold),#d97706);color:#fff;}
+.sg-input-icon{position:relative;}
+.sg-input-icon .sg-input{padding-left:42px;}
+.sg-input-icon .icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  color:var(--smoke);font-size:15px;}
 
-/* Balance card */
-.sg-balance-card{
-  background:linear-gradient(135deg,var(--barrel),var(--blast) 150%);
-  border-radius:18px;padding:20px;margin-bottom:16px;
+/* ── BUTTONS ── */
+.sg-btn{
+  width:100%;padding:14px;border:none;border-radius:14px;
+  font-size:14px;font-weight:800;cursor:pointer;
+  transition:all .15s;font-family:'Inter',sans-serif;
+  letter-spacing:-.2px;
+}
+.sg-btn-red{background:linear-gradient(135deg,var(--red),var(--red2));color:#fff;}
+.sg-btn-red:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(233,69,96,.4);}
+.sg-btn-red:active{transform:translateY(0);}
+.sg-btn-ghost{background:var(--card);color:var(--muted);border:1px solid var(--border);}
+.sg-btn-ghost:hover{color:var(--white);border-color:rgba(255,255,255,.15);}
+.sg-btn-gold{background:linear-gradient(135deg,var(--gold),#d97706);color:#fff;}
+.sg-btn-green{background:linear-gradient(135deg,var(--green),#16a34a);color:#fff;}
+.sg-btn-sm{padding:8px 16px;width:auto;font-size:12px;border-radius:10px;}
+
+/* ── BALANCE HERO ── */
+.sg-balance-hero{
+  background:linear-gradient(160deg,#1a0a2e 0%,#2d0a1e 50%,#1a0a0e 100%);
+  padding:28px 24px 24px;
   position:relative;overflow:hidden;
 }
-.sg-balance-card::before{
-  content:'';position:absolute;top:-40px;right:-40px;
-  width:120px;height:120px;border-radius:50%;
-  background:rgba(255,255,255,.05);
+.sg-balance-hero::before{
+  content:'';position:absolute;top:-60px;right:-60px;
+  width:200px;height:200px;border-radius:50%;
+  background:radial-gradient(circle,rgba(233,69,96,.15),transparent 70%);
 }
-.sg-balance-label{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.6);margin-bottom:6px;}
-.sg-balance-amount{font-size:32px;font-weight:900;letter-spacing:-1px;}
-.sg-balance-sub{font-size:11px;color:rgba(255,255,255,.5);margin-top:4px;}
+.sg-balance-hero::after{
+  content:'';position:absolute;bottom:-40px;left:-40px;
+  width:160px;height:160px;border-radius:50%;
+  background:radial-gradient(circle,rgba(124,58,237,.1),transparent 70%);
+}
+.sg-bal-label{font-size:10px;font-weight:700;color:var(--smoke);
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+.sg-bal-amount{font-size:48px;font-weight:900;color:var(--white);
+  letter-spacing:-2px;line-height:1;margin-bottom:6px;}
+.sg-bal-amount.negative{color:var(--red);}
+.sg-bal-tag{font-size:12px;color:rgba(255,255,255,.4);font-weight:500;}
+.sg-quick-actions{
+  display:grid;grid-template-columns:1fr 1fr 1fr 1fr;
+  gap:8px;padding:16px 20px;
+  background:var(--surface);border-bottom:1px solid var(--border);
+}
+.sg-qa-btn{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:12px 6px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  cursor:pointer;transition:all .15s;
+}
+.sg-qa-btn:hover{background:rgba(233,69,96,.1);border-color:rgba(233,69,96,.3);}
+.sg-qa-icon{width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:16px;}
+.sg-qa-icon img{width:24px;height:24px;object-fit:contain;}
+.sg-qa-label{font-size:9.5px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.3px;}
 
-/* Virtual card */
+/* ── ACTIVITY FEED ── */
+.sg-feed{padding:0 20px 20px;}
+.sg-feed-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 0 10px;
+}
+.sg-feed-title{font-size:13px;font-weight:800;color:var(--white);}
+.sg-feed-all{font-size:11px;color:var(--red);font-weight:600;cursor:pointer;background:none;border:none;}
+.sg-txn{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 0;border-bottom:1px solid var(--border);
+}
+.sg-txn:last-child{border-bottom:none;}
+.sg-txn-icon{
+  width:42px;height:42px;border-radius:12px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+.sg-txn-icon img{width:34px;height:34px;object-fit:contain;}
+.sg-txn-body{flex:1;min-width:0;}
+.sg-txn-name{font-size:13px;font-weight:700;color:var(--white);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sg-txn-sub{font-size:11px;color:var(--smoke);margin-top:1px;}
+.sg-txn-right{text-align:right;flex-shrink:0;}
+.sg-txn-amt{font-size:14px;font-weight:800;}
+.sg-txn-amt.pos{color:var(--green);}
+.sg-txn-amt.neg{color:var(--red);}
+.sg-txn-fee{font-size:9px;color:var(--smoke);margin-top:1px;}
+.sg-txn-status{
+  font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;
+  text-transform:uppercase;letter-spacing:.4px;margin-top:3px;display:inline-block;
+}
+.sg-txn-status.success{background:rgba(34,197,94,.1);color:var(--green);}
+.sg-txn-status.failed{background:rgba(233,69,96,.1);color:var(--red);}
+.sg-txn-status.pending{background:rgba(245,158,11,.1);color:var(--gold);}
+
+/* ── SEND SCREEN ── */
+.sg-send-wrap{padding:24px;}
+.sg-send-hero{text-align:center;margin-bottom:24px;}
+.sg-amount-display{
+  font-size:52px;font-weight:900;color:var(--white);
+  letter-spacing:-2px;text-align:center;
+  padding:20px 0 8px;min-height:90px;
+  display:flex;align-items:center;justify-content:center;
+}
+.sg-amount-display.has-value{color:var(--green);}
+.sg-numpad{
+  display:grid;grid-template-columns:1fr 1fr 1fr;
+  gap:10px;margin:16px 0;
+}
+.sg-num-btn{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:16px;
+  font-size:20px;font-weight:600;color:var(--white);
+  cursor:pointer;transition:all .1s;text-align:center;
+}
+.sg-num-btn:active{background:rgba(233,69,96,.15);transform:scale(.95);}
+.sg-num-btn.del{font-size:16px;color:var(--muted);}
+.sg-num-btn.clear{font-size:12px;color:var(--red);font-weight:700;}
+
+/* ── VIRTUAL CARD ── */
 .sg-vcard{
-  background:linear-gradient(135deg,#1a1a2e,#e94560 200%);
-  border-radius:16px;padding:18px;
-  border:1px solid rgba(233,69,96,.3);
-  position:relative;overflow:hidden;margin-bottom:12px;
+  background:linear-gradient(135deg,#1a0a2e,#e94560 200%);
+  border-radius:18px;padding:20px;margin:16px 20px;
+  border:1px solid rgba(233,69,96,.25);
+  position:relative;overflow:hidden;
 }
 .sg-vcard::after{
-  content:'';position:absolute;bottom:-20px;right:-20px;
-  width:100px;height:100px;border-radius:50%;
-  background:rgba(233,69,96,.1);
+  content:'SHOTGUN';
+  position:absolute;bottom:16px;right:16px;
+  font-size:9px;font-weight:900;letter-spacing:3px;
+  color:rgba(255,255,255,.15);
 }
-.sg-vcard-brand{font-size:11px;font-weight:800;letter-spacing:2px;color:rgba(255,255,255,.4);margin-bottom:14px;}
-.sg-vcard-number{font-size:15px;font-weight:600;letter-spacing:3px;font-family:monospace;margin-bottom:12px;}
+.sg-vcard-chip{
+  width:32px;height:24px;background:linear-gradient(135deg,var(--gold),#d97706);
+  border-radius:4px;margin-bottom:16px;
+}
+.sg-vcard-num{font-size:14px;font-weight:600;letter-spacing:3px;
+  font-family:monospace;margin-bottom:14px;color:rgba(255,255,255,.9);}
 .sg-vcard-row{display:flex;justify-content:space-between;align-items:flex-end;}
-.sg-vcard-label{font-size:8px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;}
-.sg-vcard-value{font-size:12px;font-weight:600;font-family:monospace;}
+.sg-vcard-info{font-size:8px;color:rgba(255,255,255,.4);
+  text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px;}
+.sg-vcard-val{font-size:12px;font-weight:700;font-family:monospace;color:var(--white);}
 
-/* Transaction item */
-.sg-txn{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);}
-.sg-txn-icon{
-  width:36px;height:36px;border-radius:10px;
+/* ── CONTACTS ── */
+.sg-contact-item{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 20px;cursor:pointer;transition:background .1s;
+}
+.sg-contact-item:hover{background:rgba(255,255,255,.03);}
+.sg-avatar{
+  width:42px;height:42px;border-radius:50%;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
-  font-size:16px;flex-shrink:0;
+  font-size:16px;font-weight:800;color:#fff;
 }
-.sg-txn-name{font-size:13px;font-weight:600;color:var(--white);}
-.sg-txn-sub{font-size:11px;color:var(--smoke);}
-.sg-txn-amount{margin-left:auto;text-align:right;}
-.sg-txn-pos{color:#22c55e;font-weight:700;font-size:13px;}
-.sg-txn-neg{color:var(--blast);font-weight:700;font-size:13px;}
-
-/* Hashtag badge */
-.sg-tag{
-  display:inline-flex;align-items:center;gap:4px;
-  background:rgba(233,69,96,.15);border:1px solid rgba(233,69,96,.3);
-  padding:3px 10px;border-radius:20px;
-  font-size:12px;font-weight:700;color:var(--blast);
+.sg-contact-name{font-size:13px;font-weight:700;color:var(--white);}
+.sg-contact-tag{font-size:11px;color:var(--smoke);}
+.sg-online-dot{
+  width:9px;height:9px;border-radius:50%;margin-left:auto;flex-shrink:0;
 }
+.sg-online-dot.online{background:var(--green);box-shadow:0 0 6px rgba(34,197,94,.6);}
+.sg-online-dot.offline{background:var(--smoke);}
+.sg-online-dot.silent{background:var(--gold);}
 
-/* Online dot */
-.sg-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;}
-.sg-dot.offline{background:var(--smoke);}
-.sg-dot.silent{background:var(--gold);}
-
-/* Beat the V badge */
+/* ── BEAT THE V ── */
 .sg-beatv{
-  background:linear-gradient(135deg,#7c3aed,#4f46e5);
-  border-radius:12px;padding:12px;margin-bottom:12px;
-  border:1px solid rgba(124,58,237,.4);
+  margin:0 20px 16px;padding:16px;
+  background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(79,70,229,.1));
+  border-radius:16px;border:1px solid rgba(124,58,237,.3);
 }
+.sg-beatv-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.sg-beatv-img{width:32px;height:32px;object-fit:contain;}
+.sg-beatv-title{font-size:13px;font-weight:800;color:var(--white);}
+.sg-beatv-sub{font-size:11px;color:rgba(255,255,255,.5);}
+.sg-progress{background:rgba(255,255,255,.1);border-radius:20px;height:6px;margin:10px 0 6px;}
+.sg-progress-bar{height:6px;border-radius:20px;background:linear-gradient(90deg,var(--purple),var(--red));
+  transition:width .6s cubic-bezier(.34,1.56,.64,1);}
+.sg-progress-label{font-size:10px;color:var(--smoke);display:flex;justify-content:space-between;}
 
-/* Toast */
-#sg-toast{
-  position:absolute;top:60px;left:50%;transform:translateX(-50%);
-  background:#1e293b;color:#fff;
-  padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;
-  z-index:10;white-space:nowrap;display:none;
-  border:1px solid rgba(233,69,96,.3);
+/* ── REQUEST MONEY ── */
+.sg-request-link{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:12px;padding:12px 14px;
+  font-size:12px;color:var(--smoke);
+  display:flex;align-items:center;justify-content:space-between;
+  margin-top:12px;
 }
+.sg-request-link span{color:var(--red);font-weight:700;cursor:pointer;}
 
-/* SOS button */
+/* ── SETTINGS / ACCOUNT ── */
+.sg-setting-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;border-bottom:1px solid var(--border);cursor:pointer;
+  transition:background .1s;
+}
+.sg-setting-row:hover{background:rgba(255,255,255,.02);}
+.sg-setting-label{font-size:13px;font-weight:600;color:var(--white);}
+.sg-setting-sub{font-size:11px;color:var(--smoke);}
+.sg-toggle{
+  width:40px;height:22px;border-radius:11px;
+  background:var(--smoke);cursor:pointer;
+  position:relative;transition:background .2s;border:none;
+}
+.sg-toggle.on{background:var(--red);}
+.sg-toggle::after{
+  content:'';position:absolute;
+  top:3px;left:3px;width:16px;height:16px;
+  border-radius:50%;background:#fff;
+  transition:left .2s;
+}
+.sg-toggle.on::after{left:21px;}
+
+/* ── SOS ── */
 .sg-sos{
-  background:linear-gradient(135deg,#dc2626,#991b1b);
-  border:2px solid #ef4444;
-  border-radius:50%;width:64px;height:64px;
-  font-size:11px;font-weight:900;color:#fff;
-  cursor:pointer;letter-spacing:.5px;
-  box-shadow:0 0 20px rgba(220,38,38,.5);
-  animation:pulse-red 2s infinite;
+  width:72px;height:72px;border-radius:50%;
+  background:linear-gradient(135deg,#dc2626,#7f1d1d);
+  border:2px solid #ef4444;color:#fff;
+  font-size:11px;font-weight:900;letter-spacing:.5px;
+  cursor:pointer;animation:sos-pulse 2s infinite;
 }
-@keyframes pulse-red{
-  0%,100%{box-shadow:0 0 20px rgba(220,38,38,.5);}
-  50%{box-shadow:0 0 35px rgba(220,38,38,.8);}
+@keyframes sos-pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.5);}
+  50%{box-shadow:0 0 0 12px rgba(220,38,38,0);}
 }
 
-/* Scrollbar */
-::-webkit-scrollbar{width:4px;}
-::-webkit-scrollbar-track{background:transparent;}
-::-webkit-scrollbar-thumb{background:rgba(233,69,96,.2);border-radius:2px;}
+/* ── MISC ── */
+.sg-divider{height:1px;background:var(--border);margin:8px 0;}
+.sg-section-label{font-size:10px;font-weight:700;color:var(--smoke);
+  text-transform:uppercase;letter-spacing:.8px;padding:16px 20px 8px;}
+.sg-pill{display:inline-flex;align-items:center;gap:4px;
+  padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;}
+.sg-pill-red{background:rgba(233,69,96,.15);color:var(--red);border:1px solid rgba(233,69,96,.2);}
+.sg-pill-green{background:rgba(34,197,94,.1);color:var(--green);}
+.sg-empty{text-align:center;padding:40px 20px;color:var(--smoke);font-size:13px;}
+.sg-empty-icon{font-size:36px;margin-bottom:10px;}
+body.dark{background:var(--bg);}
 
-/* Separator */
-.sg-sep{height:1px;background:rgba(255,255,255,.05);margin:12px 0;}
-.sg-section-title{font-size:10px;font-weight:700;color:var(--smoke);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;}
+/* ── PENDING SCREEN ── */
+.sg-pending-wrap{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:40px 28px;text-align:center;height:100%;
+}
+.sg-pending-wrap h3{font-size:20px;font-weight:900;margin:16px 0 8px;color:var(--white);}
+.sg-pending-wrap p{font-size:13px;color:var(--muted);line-height:1.6;}
+
+/* ── APPLY SCREEN ── */
+.sg-apply-wrap{padding:24px 24px 20px;}
+.sg-apply-wrap h3{font-size:18px;font-weight:900;color:var(--white);margin-bottom:4px;}
+.sg-apply-wrap p{font-size:12px;color:var(--muted);margin-bottom:20px;}
+.sg-two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* ── MODAL OVERLAY ── */
+.sg-modal-overlay{
+  position:absolute;inset:0;background:rgba(0,0,0,.7);
+  z-index:50;display:none;align-items:flex-end;
+  border-radius:28px;overflow:hidden;
+}
+.sg-modal-overlay.open{display:flex;}
+.sg-modal{
+  background:var(--surface);width:100%;
+  border-radius:24px 24px 0 0;
+  padding:20px 24px 28px;
+  border-top:1px solid var(--border);
+}
+.sg-modal-handle{width:36px;height:4px;border-radius:2px;
+  background:rgba(255,255,255,.15);margin:0 auto 16px;}
+.sg-modal-title{font-size:17px;font-weight:900;color:var(--white);margin-bottom:16px;}
+
+/* ── DEPOSIT MODAL ── */
+.sg-deposit-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.sg-deposit-opt{
+  background:var(--card);border:1.5px solid var(--border);
+  border-radius:14px;padding:14px 12px;cursor:pointer;
+  text-align:center;transition:all .15s;
+}
+.sg-deposit-opt:hover,.sg-deposit-opt.selected{
+  border-color:var(--red);background:rgba(233,69,96,.08);
+}
+.sg-deposit-opt-icon{font-size:24px;margin-bottom:6px;}
+.sg-deposit-opt-label{font-size:11px;font-weight:700;color:var(--white);}
+.sg-deposit-opt-sub{font-size:9px;color:var(--smoke);}
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════
-     FLOATING TRIGGER BUTTON
-══════════════════════════════════════════════ -->
-<button id="shotgun-trigger" onclick="toggleShotgun()" title="Open Shotgun Banking">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-    <path d="M12 6v6l4 2"/>
-  </svg>
+<!-- TRIGGER -->
+<button id="sg-trigger" onclick="toggleShotgun()" title="Shotgun Bank">
+  <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/95e1e7553_shotgun_bank_main_logo_clean.png" alt="Shotgun">
 </button>
 
-<!-- ══════════════════════════════════════════════
-     SHOTGUN PANEL
-══════════════════════════════════════════════ -->
-<div id="shotgun-panel">
+<!-- PANEL -->
+<div id="sg-panel">
 
   <!-- Header -->
   <div class="sg-header">
-    <div class="sg-logo">
-      <div class="sg-logo-icon">🔫</div>
+    <div class="sg-brand">
+      <img class="sg-brand-logo" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/95e1e7553_shotgun_bank_main_logo_clean.png" alt="Shotgun">
       <div>
-        <div class="sg-logo-text">SHOTGUN</div>
-        <div class="sg-logo-sub">Bank with Con-fidence</div>
+        <div class="sg-brand-name">SHOTGUN</div>
+        <div class="sg-brand-tag">Your Money, Reloaded</div>
       </div>
     </div>
-    <button class="sg-close" onclick="toggleShotgun()">
-      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-    </button>
+    <button class="sg-close-btn" onclick="toggleShotgun()">✕</button>
   </div>
 
   <!-- Toast -->
   <div id="sg-toast"></div>
 
-  <!-- ── SCREEN: AUTH ── -->
-  <div id="sg-auth" class="sg-screen">
-    <div style="text-align:center;padding:24px 0 20px;">
-      <div style="font-size:42px;margin-bottom:8px;">🔫</div>
-      <div style="font-size:20px;font-weight:900;margin-bottom:4px;">SHOTGUN</div>
-      <div style="font-size:11px;color:var(--smoke);">Powered by Bisignano Holdings LLC</div>
-      <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px;">Banking infrastructure by Wise</div>
-    </div>
-
-    <div id="sg-login-form">
-      <div style="margin-bottom:12px;">
-        <label class="sg-label">Email or #Hashtag</label>
-        <input class="sg-input" id="sg-login-id" placeholder="you@email.com or #YourTag">
+  <!-- SCREEN: AUTH -->
+  <div id="sg-auth" class="sg-screen" style="display:none;">
+    <div class="sg-auth-wrap">
+      <div class="sg-auth-hero">
+        <img class="sg-auth-hero-img"
+          src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/95e1e7553_shotgun_bank_main_logo_clean.png" alt="Shotgun">
+        <h2>Welcome Back</h2>
+        <p>Sign in with your hashtag or email</p>
       </div>
-      <div style="margin-bottom:16px;">
+      <div class="sg-field">
+        <label class="sg-label">Hashtag or Email</label>
+        <div class="sg-input-icon">
+          <span class="icon">#</span>
+          <input class="sg-input" id="sg-login-id" type="text" placeholder="yourhashtag or email"
+            autocomplete="off" autocorrect="off" spellcheck="false">
+        </div>
+      </div>
+      <div class="sg-field">
         <label class="sg-label">PIN</label>
-        <input class="sg-input" id="sg-login-pin" type="password" maxlength="6" placeholder="6-digit PIN">
+        <input class="sg-input" id="sg-login-pin" type="password" placeholder="••••"
+          maxlength="8" inputmode="numeric" pattern="[0-9]*">
       </div>
-      <button class="sg-btn sg-btn-primary" onclick="sgLogin()">Sign In</button>
-      <div class="sg-sep"></div>
-      <button class="sg-btn sg-btn-ghost" onclick="showScreen('sg-apply')">Open a Shotgun Account →</button>
-      <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--smoke);">
-        Start shooting money in as little as 20 minutes
-      </div>
-    </div>
-  </div>
-
-  <!-- ── SCREEN: APPLY ── -->
-  <div id="sg-apply" class="sg-screen" style="display:none;">
-    <div style="margin-bottom:16px;">
-      <div style="font-size:16px;font-weight:800;margin-bottom:4px;">Open Your Shotgun Account</div>
-      <div style="font-size:11px;color:var(--smoke);">Quick verification. Approved by Italy personally.</div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-      <div><label class="sg-label">First Name</label><input class="sg-input" id="sg-app-first" placeholder="John"></div>
-      <div><label class="sg-label">Last Name</label><input class="sg-input" id="sg-app-last" placeholder="Doe"></div>
-    </div>
-    <div style="margin-bottom:10px;">
-      <label class="sg-label">Email</label>
-      <input class="sg-input" id="sg-app-email" type="email" placeholder="john@email.com">
-    </div>
-    <div style="margin-bottom:10px;">
-      <label class="sg-label">Phone</label>
-      <input class="sg-input" id="sg-app-phone" placeholder="(305) 555-0100">
-    </div>
-    <div style="margin-bottom:10px;">
-      <label class="sg-label">Choose Your #Hashtag</label>
-      <div style="position:relative;">
-        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--blast);font-weight:700;font-size:14px;">#</span>
-        <input class="sg-input" id="sg-app-tag" placeholder="YourUniqueTag" style="padding-left:26px;" oninput="checkHashtag(this.value)">
-      </div>
-      <div id="sg-tag-status" style="font-size:11px;margin-top:4px;"></div>
-    </div>
-    <div style="margin-bottom:10px;">
-      <label class="sg-label">Set 6-Digit PIN</label>
-      <input class="sg-input" id="sg-app-pin" type="password" maxlength="6" placeholder="Choose a PIN">
-    </div>
-    <div style="margin-bottom:10px;">
-      <label class="sg-label">Link Checking Account (Routing)</label>
-      <input class="sg-input" id="sg-app-routing" placeholder="021000021" maxlength="9" style="font-family:monospace;">
-    </div>
-    <div style="margin-bottom:16px;">
-      <label class="sg-label">Link Checking Account (Account #)</label>
-      <input class="sg-input" id="sg-app-acct" placeholder="1234567890" style="font-family:monospace;">
-    </div>
-    <button class="sg-btn sg-btn-primary" onclick="sgApply()">Apply Now 🔫</button>
-    <button class="sg-btn sg-btn-ghost" style="margin-top:8px;" onclick="showScreen('sg-auth')">← Back</button>
-  </div>
-
-  <!-- ── SCREEN: PENDING ── -->
-  <div id="sg-pending" class="sg-screen" style="display:none;text-align:center;padding-top:60px;">
-    <div style="font-size:48px;margin-bottom:16px;">⏳</div>
-    <div style="font-size:18px;font-weight:800;margin-bottom:8px;">Application Submitted</div>
-    <div style="font-size:13px;color:var(--smoke);line-height:1.6;margin-bottom:24px;">
-      Your Shotgun account is being reviewed.<br>Italy will approve or deny it personally.<br><br>
-      You'll get an email once it's ready — usually within 20 minutes.
-    </div>
-    <div style="background:rgba(233,69,96,.1);border:1px solid rgba(233,69,96,.3);border-radius:12px;padding:14px;font-size:12px;color:rgba(255,255,255,.6);text-align:left;">
-      <div style="font-weight:700;color:var(--white);margin-bottom:6px;">What happens next:</div>
-      <div>✓ Account verification by Italy</div>
-      <div>✓ Unique routing + account number issued</div>
-      <div>✓ Virtual debit card activated</div>
-      <div>✓ Ready to shoot money 🔫</div>
-    </div>
-    <button class="sg-btn sg-btn-ghost" style="margin-top:20px;" onclick="showScreen('sg-auth')">Back to Login</button>
-  </div>
-
-  <!-- ── SCREEN: DASHBOARD ── -->
-  <div id="sg-dash" class="sg-screen" style="display:none;">
-
-    <!-- Presence toggle -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span id="sg-presence-dot" class="sg-dot"></span>
-        <span id="sg-presence-label" style="font-size:11px;color:var(--smoke);">Online</span>
-      </div>
-      <button onclick="toggleSilent()" id="sg-silent-btn" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:4px 12px;font-size:10px;font-weight:600;color:var(--smoke);cursor:pointer;">
-        Go Silent 🔇
+      <button class="sg-btn sg-btn-red" onclick="sgLogin()" style="margin-top:8px;">
+        🔫 Lock and Load
+      </button>
+      <button class="sg-btn sg-btn-ghost" onclick="showScreen('sg-apply')" style="margin-top:10px;">
+        New? Open an Account →
       </button>
     </div>
+  </div>
 
-    <!-- Balance -->
-    <div class="sg-balance-card">
-      <div class="sg-balance-label">Available Balance</div>
-      <div class="sg-balance-amount" id="sg-balance-display">$0.00</div>
-      <div class="sg-balance-sub" id="sg-hashtag-display">#YourTag · Shotgun Member</div>
-      <div style="display:flex;gap:8px;margin-top:14px;">
-        <button class="sg-btn sg-btn-primary" style="flex:1;padding:8px;" onclick="showTab('send')">Send 💸</button>
-        <button class="sg-btn sg-btn-ghost" style="flex:1;padding:8px;" onclick="showTab('deposit')">Add Money +</button>
+  <!-- SCREEN: APPLY -->
+  <div id="sg-apply" class="sg-screen" style="display:none;">
+    <div class="sg-apply-wrap">
+      <h3>Open Your Account</h3>
+      <p>Takes 60 seconds. No credit check.</p>
+      <div class="sg-two-col">
+        <div class="sg-field">
+          <label class="sg-label">First Name *</label>
+          <input class="sg-input" id="sg-app-first" type="text" placeholder="First">
+        </div>
+        <div class="sg-field">
+          <label class="sg-label">Last Name *</label>
+          <input class="sg-input" id="sg-app-last" type="text" placeholder="Last">
+        </div>
       </div>
+      <div class="sg-field">
+        <label class="sg-label">Email *</label>
+        <input class="sg-input" id="sg-app-email" type="email" placeholder="you@email.com">
+      </div>
+      <div class="sg-field">
+        <label class="sg-label">Phone</label>
+        <input class="sg-input" id="sg-app-phone" type="tel" placeholder="(555) 000-0000">
+      </div>
+      <div class="sg-field">
+        <label class="sg-label">Your Hashtag * — This is your identity</label>
+        <div class="sg-input-icon">
+          <span class="icon">#</span>
+          <input class="sg-input" id="sg-app-tag" type="text" placeholder="yourcallsign"
+            oninput="checkHashtag(this.value)" autocomplete="off" autocorrect="off" spellcheck="false">
+        </div>
+        <div id="sg-tag-status" style="font-size:11px;margin-top:5px;font-weight:600;"></div>
+      </div>
+      <div class="sg-field">
+        <label class="sg-label">PIN * (4-8 digits)</label>
+        <input class="sg-input" id="sg-app-pin" type="password" placeholder="••••••"
+          maxlength="8" inputmode="numeric">
+      </div>
+      <div style="background:var(--card);border-radius:12px;padding:14px;margin-bottom:14px;">
+        <div style="font-size:10px;font-weight:700;color:var(--smoke);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">
+          Link Bank Account (Optional)
+        </div>
+        <div class="sg-two-col">
+          <div class="sg-field" style="margin-bottom:0;">
+            <label class="sg-label">Routing #</label>
+            <input class="sg-input" id="sg-app-routing" type="text" placeholder="021000021" inputmode="numeric">
+          </div>
+          <div class="sg-field" style="margin-bottom:0;">
+            <label class="sg-label">Account #</label>
+            <input class="sg-input" id="sg-app-acct" type="text" placeholder="Account" inputmode="numeric">
+          </div>
+        </div>
+      </div>
+      <button class="sg-btn sg-btn-red" onclick="sgApply()">Open Account — Free</button>
+      <button class="sg-btn sg-btn-ghost" onclick="showScreen('sg-auth')" style="margin-top:10px;">← Back to Sign In</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: PENDING -->
+  <div id="sg-pending" class="sg-screen" style="display:none;">
+    <div class="sg-pending-wrap">
+      <div style="font-size:52px;">⏳</div>
+      <h3>Under Review</h3>
+      <p>Your application is in the queue.<br>Italy or Mike will approve you shortly.<br>You'll get an email when you're live.</p>
+      <button class="sg-btn sg-btn-ghost" onclick="showScreen('sg-auth')" style="margin-top:24px;width:auto;padding:10px 24px;">← Back</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: DASHBOARD (home) -->
+  <div id="sg-dash" class="sg-screen" style="display:none;">
+
+    <!-- Balance Hero -->
+    <div class="sg-balance-hero">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div class="sg-bal-label">Available Balance</div>
+        <div id="sg-presence-badge" style="cursor:pointer;" onclick="togglePresence()"></div>
+      </div>
+      <div class="sg-bal-amount" id="sg-balance-display">$0.00</div>
+      <div class="sg-bal-tag" id="sg-hashtag-display">#username · Shotgun Member</div>
+    </div>
+
+    <!-- Quick Actions (Cash App style) -->
+    <div class="sg-quick-actions">
+      <button class="sg-qa-btn" onclick="showTab('send')">
+        <div class="sg-qa-icon" style="background:rgba(233,69,96,.15);">
+          <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/c1eec9cba_shoot_it_clean.png" alt="Send">
+        </div>
+        <div class="sg-qa-label">Send</div>
+      </button>
+      <button class="sg-qa-btn" onclick="openRequestModal()">
+        <div class="sg-qa-icon" style="background:rgba(34,197,94,.1);">
+          <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/460840062_who_shot_ya_clean.png" alt="Request">
+        </div>
+        <div class="sg-qa-label">Request</div>
+      </button>
+      <button class="sg-qa-btn" onclick="openDepositModal()">
+        <div class="sg-qa-icon" style="background:rgba(245,158,11,.1);">
+          <span style="font-size:18px;">💳</span>
+        </div>
+        <div class="sg-qa-label">Add $</div>
+      </button>
+      <button class="sg-qa-btn" onclick="openCashOutModal()">
+        <div class="sg-qa-icon" style="background:rgba(124,58,237,.15);">
+          <span style="font-size:18px;">🏦</span>
+        </div>
+        <div class="sg-qa-label">Cash Out</div>
+      </button>
     </div>
 
     <!-- Beat the V -->
-    <div id="sg-beatv-widget" class="sg-beatv">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <div class="sg-beatv" id="sg-beatv-card">
+      <div class="sg-beatv-header">
+        <img class="sg-beatv-img"
+          src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/1a25abbf1_beat_the_v_clean.png" alt="Beat the V">
         <div>
-          <div style="font-size:12px;font-weight:800;color:#c4b5fd;">⚡ Beat the "V"</div>
-          <div style="font-size:10px;color:rgba(196,181,253,.6);margin-top:2px;">Go -$100 to dodge a violation. $500/mo activity required.</div>
+          <div class="sg-beatv-title">Beat the V</div>
+          <div class="sg-beatv-sub">$100 emergency overdraft</div>
         </div>
-        <button id="beatv-btn" onclick="activateBeatV()" style="background:rgba(124,58,237,.4);border:1px solid rgba(124,58,237,.5);border-radius:8px;padding:6px 12px;color:#c4b5fd;font-size:11px;font-weight:700;cursor:pointer;">
-          Request
-        </button>
+        <button id="sg-beatv-btn" class="sg-btn sg-btn-sm sg-btn-ghost" style="margin-left:auto;width:auto;" onclick="activateBeatV()">Unlock</button>
       </div>
-      <div style="height:5px;background:rgba(255,255,255,.1);border-radius:3px;margin-bottom:4px;">
-        <div id="beatv-progress-bar" style="height:100%;background:linear-gradient(90deg,#7c3aed,#c4b5fd);border-radius:3px;width:0%;transition:width .5s;"></div>
+      <div class="sg-progress"><div class="sg-progress-bar" id="sg-beatv-bar" style="width:0%"></div></div>
+      <div class="sg-progress-label">
+        <span id="sg-beatv-progress-text">$0 / $500 monthly activity</span>
+        <span id="sg-beatv-status-text" style="color:var(--smoke);">Locked</span>
       </div>
-      <div id="beatv-progress-label" style="font-size:10px;color:rgba(196,181,253,.5);">$0 / $500 this month</div>
     </div>
 
+    <!-- Activity Feed -->
+    <div class="sg-feed">
+      <div class="sg-feed-header">
+        <div class="sg-feed-title">Activity</div>
+        <button class="sg-feed-all" onclick="showAllTransactions()">See all</button>
+      </div>
+      <div id="sg-txn-list">
+        <div class="sg-empty"><div class="sg-empty-icon">🎯</div>No shots fired yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN: SEND (numpad like Apple/Cash App) -->
+  <div id="sg-send" class="sg-screen" style="display:none;">
+    <div class="sg-send-wrap">
+      <div class="sg-field">
+        <label class="sg-label">Send To (# hashtag)</label>
+        <div class="sg-input-icon">
+          <span class="icon">#</span>
+          <input class="sg-input" id="sg-send-to" type="text" placeholder="theirhashtag"
+            autocomplete="off" autocorrect="off" spellcheck="false"
+            oninput="lookupRecipient(this.value)">
+        </div>
+        <div id="sg-recipient-preview" style="margin-top:6px;"></div>
+      </div>
+      <!-- Big amount display -->
+      <div class="sg-amount-display" id="sg-amount-display">$0</div>
+      <!-- Note field -->
+      <div class="sg-field">
+        <input class="sg-input" id="sg-send-note" type="text" placeholder="💬 What's this for? (optional)" maxlength="60">
+      </div>
+      <!-- Numpad -->
+      <div class="sg-numpad">
+        <button class="sg-num-btn" onclick="numpad('1')">1</button>
+        <button class="sg-num-btn" onclick="numpad('2')">2</button>
+        <button class="sg-num-btn" onclick="numpad('3')">3</button>
+        <button class="sg-num-btn" onclick="numpad('4')">4</button>
+        <button class="sg-num-btn" onclick="numpad('5')">5</button>
+        <button class="sg-num-btn" onclick="numpad('6')">6</button>
+        <button class="sg-num-btn" onclick="numpad('7')">7</button>
+        <button class="sg-num-btn" onclick="numpad('8')">8</button>
+        <button class="sg-num-btn" onclick="numpad('9')">9</button>
+        <button class="sg-num-btn clear" onclick="numpad('clear')">CLR</button>
+        <button class="sg-num-btn" onclick="numpad('0')">0</button>
+        <button class="sg-num-btn del" onclick="numpad('del')">⌫</button>
+      </div>
+      <div style="font-size:11px;color:var(--smoke);text-align:center;margin-bottom:12px;">
+        $1.50 fee · Both sender &amp; recipient
+      </div>
+      <button class="sg-btn sg-btn-red" onclick="sgSendMoney()">
+        🎯 Shoot It — Send Money
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN: CONTACTS -->
+  <div id="sg-contacts" class="sg-screen" style="display:none;">
+    <div style="padding:16px 20px 10px;">
+      <div class="sg-input-icon">
+        <span class="icon">🔍</span>
+        <input class="sg-input" id="sg-contact-search" type="text" placeholder="Search by # hashtag"
+          oninput="filterContacts(this.value)" autocorrect="off" spellcheck="false">
+      </div>
+    </div>
+    <div style="padding:8px 20px 12px;display:flex;gap:8px;align-items:center;">
+      <input class="sg-input" id="sg-add-contact-tag" type="text" placeholder="#addthem" style="flex:1;">
+      <button class="sg-btn sg-btn-red sg-btn-sm" onclick="addContact()">Add</button>
+    </div>
+    <div class="sg-divider"></div>
+    <div class="sg-section-label">Online Now</div>
+    <div id="sg-online-contacts"></div>
+    <div class="sg-section-label">All Contacts</div>
+    <div id="sg-all-contacts"></div>
+    <div class="sg-divider"></div>
+    <div style="padding:16px 20px;">
+      <div class="sg-section-label" style="padding:0 0 8px;">Invite Someone</div>
+      <div style="display:flex;gap:8px;">
+        <input class="sg-input" id="sg-invite-email" type="email" placeholder="friend@email.com" style="flex:1;">
+        <button class="sg-btn sg-btn-ghost sg-btn-sm" onclick="sendInvite()">Invite</button>
+      </div>
+    </div>
+    <!-- SOS section -->
+    <div style="text-align:center;padding:16px 20px 24px;">
+      <div class="sg-section-label" style="padding-bottom:10px;">S.O.S. — Request from All Contacts</div>
+      <div style="display:flex;align-items:center;gap:12px;background:var(--card);border-radius:14px;padding:14px;">
+        <button class="sg-sos" onclick="sendSOS()">S.O.S.</button>
+        <div style="flex:1;">
+          <input class="sg-input" id="sg-sos-amount" type="number" placeholder="Amount needed" style="margin-bottom:6px;">
+          <input class="sg-input" id="sg-sos-msg" type="text" placeholder="Emergency message...">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN: ACCOUNT -->
+  <div id="sg-account" class="sg-screen" style="display:none;">
     <!-- Virtual Card -->
-    <div class="sg-vcard" id="sg-vcard-widget">
-      <div class="sg-vcard-brand">SHOTGUN VIRTUAL ·  BISIGNANO HOLDINGS LLC</div>
-      <div class="sg-vcard-number" id="sg-card-number">•••• •••• •••• ••••</div>
+    <div class="sg-vcard">
+      <div class="sg-vcard-chip"></div>
+      <div class="sg-vcard-num" id="sg-card-number">•••• •••• •••• ••••</div>
       <div class="sg-vcard-row">
         <div>
-          <div class="sg-vcard-label">Card Holder</div>
-          <div class="sg-vcard-value" id="sg-card-name">—</div>
+          <div class="sg-vcard-info">Card Holder</div>
+          <div class="sg-vcard-val" id="sg-card-name">YOUR NAME</div>
         </div>
         <div>
-          <div class="sg-vcard-label">Expires</div>
-          <div class="sg-vcard-value" id="sg-card-expiry">••/••</div>
+          <div class="sg-vcard-info">Expires</div>
+          <div class="sg-vcard-val" id="sg-card-expiry">••/••</div>
         </div>
         <div>
-          <div class="sg-vcard-label">CVV</div>
-          <div class="sg-vcard-value" id="sg-card-cvv" style="filter:blur(4px);cursor:pointer;" onclick="this.style.filter='none'">•••</div>
+          <div class="sg-vcard-info">CVV</div>
+          <div class="sg-vcard-val" id="sg-card-cvv">•••</div>
         </div>
       </div>
     </div>
-
-    <!-- Recent Transactions -->
-    <div class="sg-section-title">Recent Activity</div>
-    <div id="sg-txn-list">
-      <div style="text-align:center;padding:20px 0;color:var(--smoke);font-size:12px;">No transactions yet</div>
-    </div>
-  </div>
-
-  <!-- ── SCREEN: SEND ── -->
-  <div id="sg-send" class="sg-screen" style="display:none;">
-    <div style="font-size:16px;font-weight:800;margin-bottom:16px;">Send Money 💸</div>
-
-    <div style="margin-bottom:12px;">
-      <label class="sg-label">To (#Hashtag or email)</label>
-      <div style="position:relative;">
-        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--blast);font-weight:700;">#</span>
-        <input class="sg-input" id="sg-send-to" placeholder="TheirHashtag" style="padding-left:26px;">
+    <!-- Account Details -->
+    <div class="sg-section-label">Account Details</div>
+    <div style="padding:0 20px 16px;display:grid;gap:8px;">
+      <div style="background:var(--card);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;">
+        <span style="font-size:12px;color:var(--smoke);">Routing #</span>
+        <span style="font-size:12px;font-weight:700;font-family:monospace;" id="sg-acct-routing">—</span>
+      </div>
+      <div style="background:var(--card);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;">
+        <span style="font-size:12px;color:var(--smoke);">Account #</span>
+        <span style="font-size:12px;font-weight:700;font-family:monospace;" id="sg-acct-number">—</span>
+      </div>
+      <div style="background:var(--card);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;">
+        <span style="font-size:12px;color:var(--smoke);">Hashtag</span>
+        <span class="sg-pill sg-pill-red" id="sg-acct-tag">#—</span>
       </div>
     </div>
-    <div style="margin-bottom:12px;">
-      <label class="sg-label">Amount ($)</label>
-      <input class="sg-input" id="sg-send-amount" type="number" step="0.01" placeholder="0.00" style="font-size:22px;font-weight:700;text-align:center;">
-    </div>
-    <div style="margin-bottom:16px;">
-      <label class="sg-label">Note (optional)</label>
-      <input class="sg-input" id="sg-send-note" placeholder="What's it for?">
-    </div>
-    <div id="sg-send-fee-info" style="font-size:11px;color:var(--gold);margin-bottom:12px;text-align:center;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:7px;">💡 $1.50 fee deducted from sender &amp; recipient — goes to Bisignano Holdings</div>
-    <button class="sg-btn sg-btn-primary" onclick="sgSendMoney()">Send Now 🔫</button>
-    <button class="sg-btn sg-btn-ghost" style="margin-top:8px;" onclick="showTab('dash')">← Back</button>
-  </div>
-
-  <!-- ── SCREEN: CONTACTS ── -->
-  <div id="sg-contacts" class="sg-screen" style="display:none;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <div style="font-size:16px;font-weight:800;">Contacts</div>
-      <button class="sg-sos" onclick="sgSOS()">S.O.S</button>
-    </div>
-
-    <!-- Add contact -->
-    <div class="sg-card" style="margin-bottom:16px;">
-      <div class="sg-section-title">Add Contact</div>
-      <div style="display:flex;gap:8px;">
-        <div style="position:relative;flex:1;">
-          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--blast);font-weight:700;">#</span>
-          <input class="sg-input" id="sg-add-contact-tag" placeholder="TheirTag" style="padding-left:22px;">
-        </div>
-        <button onclick="sgAddContact()" style="background:var(--blast);border:none;border-radius:10px;padding:0 14px;color:#fff;font-weight:700;cursor:pointer;">Add</button>
-      </div>
-      <div style="margin-top:8px;">
-        <label class="sg-label" style="margin-bottom:4px;">Or invite by email</label>
-        <div style="display:flex;gap:8px;">
-          <input class="sg-input" id="sg-invite-email" placeholder="friend@email.com" style="flex:1;">
-          <button onclick="sgInvite()" style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:0 12px;color:var(--gold);font-size:12px;font-weight:700;cursor:pointer;">Invite</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Online contacts -->
-    <div class="sg-section-title">Online Now</div>
-    <div id="sg-online-contacts" style="margin-bottom:16px;">
-      <div style="font-size:12px;color:var(--smoke);text-align:center;padding:10px 0;">No contacts online</div>
-    </div>
-
-    <!-- All contacts -->
-    <div class="sg-section-title">All Contacts</div>
-    <div id="sg-all-contacts">
-      <div style="font-size:12px;color:var(--smoke);text-align:center;padding:10px 0;">No contacts yet</div>
-    </div>
-  </div>
-
-  <!-- ── SCREEN: ACCOUNT ── -->
-  <div id="sg-account" class="sg-screen" style="display:none;">
-    <div style="font-size:16px;font-weight:800;margin-bottom:16px;">My Account</div>
-
-    <!-- Account details -->
-    <div class="sg-card">
-      <div class="sg-section-title">Banking Details</div>
-      <div style="margin-bottom:10px;">
-        <div class="sg-label">Routing Number</div>
-        <div style="font-family:monospace;font-size:14px;font-weight:600;color:var(--white);" id="sg-acct-routing">—</div>
-      </div>
-      <div style="margin-bottom:10px;">
-        <div class="sg-label">Account Number</div>
-        <div style="font-family:monospace;font-size:14px;font-weight:600;color:var(--white);" id="sg-acct-number">—</div>
-      </div>
-      <div>
-        <div class="sg-label">Your Hashtag</div>
-        <div id="sg-acct-tag" class="sg-tag">#—</div>
-      </div>
-    </div>
-
     <!-- Milestones -->
-    <div class="sg-card">
-      <div class="sg-section-title">Milestones</div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-        <div style="font-size:12px;color:var(--smoke);">Lifetime Deposited</div>
-        <div style="font-size:12px;font-weight:700;" id="sg-lifetime-dep">$0.00</div>
+    <div class="sg-section-label">Activity Milestone</div>
+    <div style="padding:0 20px 16px;">
+      <div style="background:var(--card);border-radius:14px;padding:14px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--white);font-weight:700;">Lifetime Deposited</span>
+          <span style="font-size:12px;font-weight:800;color:var(--gold);" id="sg-lifetime-dep">$0.00</span>
+        </div>
+        <div class="sg-progress"><div class="sg-progress-bar" id="sg-milestone-bar" style="width:0%;background:linear-gradient(90deg,var(--gold),var(--red));"></div></div>
+        <div style="font-size:10px;color:var(--smoke);margin-top:4px;">$500 = Beat the V unlocked</div>
       </div>
-      <div style="height:6px;background:rgba(255,255,255,.08);border-radius:3px;margin-bottom:4px;">
-        <div id="sg-milestone-bar" style="height:100%;background:linear-gradient(90deg,var(--blast),var(--gold));border-radius:3px;width:0%;transition:width .5s;"></div>
-      </div>
-      <div style="font-size:10px;color:var(--smoke);">$500 unlocks Beat the "V" overdraft protection</div>
     </div>
-
     <!-- Settings -->
-    <div class="sg-card">
-      <div class="sg-section-title">Settings</div>
-      <button onclick="toggleSilent()" class="sg-btn sg-btn-ghost" style="margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:8px;">
-        🔇 <span>Toggle Silent Mode</span>
-      </button>
-      <button onclick="sgLogout()" class="sg-btn" style="background:rgba(233,69,96,.1);color:var(--blast);border:1px solid rgba(233,69,96,.2);">
-        Sign Out
-      </button>
+    <div class="sg-section-label">Settings</div>
+    <div class="sg-setting-row" onclick="togglePresence()">
+      <div>
+        <div class="sg-setting-label">Presence</div>
+        <div class="sg-setting-sub">Show when you're online</div>
+      </div>
+      <button class="sg-toggle on" id="sg-presence-toggle"></button>
+    </div>
+    <div class="sg-setting-row" onclick="toggleSilent()">
+      <div>
+        <div class="sg-setting-label">Silent Mode</div>
+        <div class="sg-setting-sub">Hidden from others</div>
+      </div>
+      <button class="sg-toggle" id="sg-silent-toggle"></button>
+    </div>
+    <div class="sg-setting-row" style="cursor:default;border-bottom:none;">
+      <div style="width:100%;">
+        <div class="sg-setting-label" style="margin-bottom:8px;">Request Money Link</div>
+        <div class="sg-request-link">
+          <span id="sg-request-url" style="font-size:11px;color:var(--smoke);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+          <span onclick="copyRequestLink()" style="margin-left:8px;flex-shrink:0;">Copy</span>
+        </div>
+      </div>
+    </div>
+    <div style="padding:16px 20px 28px;">
+      <button class="sg-btn sg-btn-ghost" onclick="sgLogout()">Sign Out</button>
     </div>
   </div>
 
-  <!-- ── BOTTOM NAV (shown when logged in) ── -->
-  <div class="sg-nav" id="sg-bottom-nav" style="display:none;">
-    <button class="sg-nav-btn active" id="nav-dash" onclick="showTab('dash')">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+  <!-- MODALS -->
+  <div class="sg-modal-overlay" id="sg-deposit-modal">
+    <div class="sg-modal">
+      <div class="sg-modal-handle"></div>
+      <div class="sg-modal-title">Add Money</div>
+      <div class="sg-deposit-options">
+        <div class="sg-deposit-opt selected" onclick="selectDepositMethod('card',this)">
+          <div class="sg-deposit-opt-icon">💳</div>
+          <div class="sg-deposit-opt-label">Debit Card</div>
+          <div class="sg-deposit-opt-sub">Instant</div>
+        </div>
+        <div class="sg-deposit-opt" onclick="selectDepositMethod('bank',this)">
+          <div class="sg-deposit-opt-icon">🏦</div>
+          <div class="sg-deposit-opt-label">Bank Transfer</div>
+          <div class="sg-deposit-opt-sub">1-3 business days</div>
+        </div>
+      </div>
+      <div class="sg-field">
+        <label class="sg-label">Amount</label>
+        <input class="sg-input" id="sg-deposit-amount" type="number" placeholder="$0.00" inputmode="decimal">
+      </div>
+      <div id="sg-stripe-container" style="margin-bottom:14px;"></div>
+      <button class="sg-btn sg-btn-gold" onclick="processDeposit()">Add Money →</button>
+      <button class="sg-btn sg-btn-ghost" onclick="closeModal('sg-deposit-modal')" style="margin-top:8px;">Cancel</button>
+    </div>
+  </div>
+
+  <div class="sg-modal-overlay" id="sg-cashout-modal">
+    <div class="sg-modal">
+      <div class="sg-modal-handle"></div>
+      <div class="sg-modal-title">Cash Out</div>
+      <div class="sg-field">
+        <label class="sg-label">Amount to withdraw</label>
+        <input class="sg-input" id="sg-cashout-amount" type="number" placeholder="$0.00" inputmode="decimal">
+      </div>
+      <div style="background:var(--card);border-radius:12px;padding:12px 14px;margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--smoke);">Sending to linked bank account</div>
+        <div style="font-size:12px;font-weight:700;color:var(--white);margin-top:4px;" id="sg-cashout-bank">—</div>
+      </div>
+      <button class="sg-btn sg-btn-green" onclick="processCashOut()">Cash Out →</button>
+      <button class="sg-btn sg-btn-ghost" onclick="closeModal('sg-cashout-modal')" style="margin-top:8px;">Cancel</button>
+    </div>
+  </div>
+
+  <div class="sg-modal-overlay" id="sg-request-modal">
+    <div class="sg-modal">
+      <div class="sg-modal-handle"></div>
+      <div class="sg-modal-title">Request Money</div>
+      <div class="sg-field">
+        <label class="sg-label">Amount</label>
+        <input class="sg-input" id="sg-req-amount" type="number" placeholder="$0.00" inputmode="decimal">
+      </div>
+      <div class="sg-field">
+        <label class="sg-label">Note (optional)</label>
+        <input class="sg-input" id="sg-req-note" type="text" placeholder="For what?">
+      </div>
+      <div style="background:var(--card);border-radius:12px;padding:12px 14px;margin-bottom:14px;">
+        <div style="font-size:10px;color:var(--smoke);margin-bottom:6px;">Share this link</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="sg-req-link-preview" style="font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+          <button class="sg-btn sg-btn-sm sg-btn-red" onclick="copyRequestLink()" style="flex-shrink:0;">Copy</button>
+        </div>
+      </div>
+      <button class="sg-btn sg-btn-ghost" onclick="closeModal('sg-request-modal')">Done</button>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="sg-nav" id="sg-bottom-nav">
+    <button class="sg-nav-item active" id="nav-dash" onclick="showTab('dash')">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
       Home
     </button>
-    <button class="sg-nav-btn" id="nav-send" onclick="showTab('send')">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+    <button class="sg-nav-item" id="nav-send" onclick="showTab('send')">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
       Send
     </button>
-    <button class="sg-nav-btn" id="nav-contacts" onclick="showTab('contacts')">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-      Contacts
+    <button class="sg-nav-item" id="nav-contacts" onclick="showTab('contacts')">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Crew
     </button>
-    <button class="sg-nav-btn" id="nav-account" onclick="showTab('account')">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+    <button class="sg-nav-item" id="nav-account" onclick="showTab('account')">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       Account
     </button>
-  </div>
+  </nav>
 
-</div><!-- end #shotgun-panel -->
+</div><!-- end #sg-panel -->
 
 <script>
-// ═══════════════════════════════════════
+// ═══════════════════════════
+// CONSTANTS
+// ═══════════════════════════
+const GOTTEM_URL     = 'https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/dec70e193_gottem_bullseye_clean.png';
+const DEAD_BODY_URL  = 'https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/58f63a3ea_dead_body_payment_failed_clean.png';
+const WHO_SHOT_URL   = 'https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/460840062_who_shot_ya_clean.png';
+const SHOOT_IT_URL   = 'https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/c1eec9cba_shoot_it_clean.png';
+const BEAT_V_URL     = 'https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/1a25abbf1_beat_the_v_clean.png';
+
+// ═══════════════════════════
 // STATE
-// ═══════════════════════════════════════
-let sgUser = null;
+// ═══════════════════════════
 let sgAccount = null;
-let hashtagCheckTimer = null;
-
-// ═══════════════════════════════════════
-// PANEL TOGGLE
-// ═══════════════════════════════════════
-function toggleShotgun() {
-  const panel = document.getElementById('shotgun-panel');
-  panel.classList.toggle('open');
-  if (panel.classList.contains('open')) {
-    // Check if already logged in
-    const saved = localStorage.getItem('sg_session');
-    if (saved) {
-      try {
-        const s = JSON.parse(saved);
-        sgAccount = s;
-        populateDash(s);
-        showTab('dash');
-      } catch(e) { localStorage.removeItem('sg_session'); }
-    }
-  }
-}
-
-// ═══════════════════════════════════════
-// SCREEN NAVIGATION
-// ═══════════════════════════════════════
+let hashtagTimer = null;
+let numpadValue = '';
+let selectedDepositMethod = 'card';
 const SCREENS = ['sg-auth','sg-apply','sg-pending','sg-dash','sg-send','sg-contacts','sg-account'];
 const TABS = {dash:'sg-dash',send:'sg-send',contacts:'sg-contacts',account:'sg-account'};
 const NAV_IDS = {dash:'nav-dash',send:'nav-send',contacts:'nav-contacts',account:'nav-account'};
 
-function showScreen(id) {
-  SCREENS.forEach(s => document.getElementById(s).style.display = 'none');
-  document.getElementById(id).style.display = 'block';
-  const nav = document.getElementById('sg-bottom-nav');
-  const loggedInScreens = ['sg-dash','sg-send','sg-contacts','sg-account'];
-  nav.style.display = loggedInScreens.includes(id) ? 'flex' : 'none';
+// ═══════════════════════════
+// PANEL
+// ═══════════════════════════
+function toggleShotgun() {
+  const panel = document.getElementById('sg-panel');
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+    setTimeout(() => panel.style.display = 'none', 250);
+  } else {
+    panel.style.display = 'flex';
+    requestAnimationFrame(() => panel.classList.add('open'));
+    const saved = localStorage.getItem('sg_session');
+    if (saved) {
+      try {
+        sgAccount = JSON.parse(saved);
+        populateDash(sgAccount);
+        showTab('dash');
+      } catch(e) { localStorage.removeItem('sg_session'); showScreen('sg-auth'); }
+    } else {
+      showScreen('sg-auth');
+    }
+  }
 }
 
+// ═══════════════════════════
+// SCREENS
+// ═══════════════════════════
+function showScreen(id) {
+  SCREENS.forEach(s => { const el = document.getElementById(s); if(el) el.style.display = 'none'; });
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'block';
+  const nav = document.getElementById('sg-bottom-nav');
+  const loggedIn = ['sg-dash','sg-send','sg-contacts','sg-account'];
+  if (nav) nav.style.display = loggedIn.includes(id) ? 'flex' : 'none';
+}
 function showTab(tab) {
   showScreen(TABS[tab]);
   Object.keys(NAV_IDS).forEach(k => {
-    document.getElementById(NAV_IDS[k]).classList.toggle('active', k === tab);
+    const el = document.getElementById(NAV_IDS[k]);
+    if (el) el.classList.toggle('active', k === tab);
   });
   if (tab === 'contacts') loadContacts();
   if (tab === 'dash') loadTransactions();
+  if (tab === 'send') { numpadValue = ''; updateAmountDisplay(); }
 }
 
-// ═══════════════════════════════════════
+// ═══════════════════════════
 // TOAST
-// ═══════════════════════════════════════
-function sgToast(msg, dur=2500) {
+// ═══════════════════════════
+let toastTimer;
+function sgToast(msg, dur=2800) {
   const t = document.getElementById('sg-toast');
-  t.textContent = msg; t.style.display = 'block';
-  setTimeout(() => t.style.display = 'none', dur);
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), dur);
 }
 
-// ═══════════════════════════════════════
+// ═══════════════════════════
+// NUMPAD (Cash App style)
+// ═══════════════════════════
+function numpad(key) {
+  if (key === 'clear') { numpadValue = ''; }
+  else if (key === 'del') { numpadValue = numpadValue.slice(0,-1); }
+  else if (key === '.' && numpadValue.includes('.')) { return; }
+  else if (numpadValue.includes('.') && numpadValue.split('.')[1]?.length >= 2) { return; }
+  else { numpadValue += key; }
+  updateAmountDisplay();
+}
+function updateAmountDisplay() {
+  const display = document.getElementById('sg-amount-display');
+  const val = parseFloat(numpadValue) || 0;
+  display.textContent = numpadValue ? '$' + numpadValue : '$0';
+  display.className = 'sg-amount-display' + (val > 0 ? ' has-value' : '');
+}
+
+// ═══════════════════════════
 // HASHTAG CHECK
-// ═══════════════════════════════════════
+// ═══════════════════════════
 function checkHashtag(val) {
-  clearTimeout(hashtagCheckTimer);
+  clearTimeout(hashtagTimer);
   const el = document.getElementById('sg-tag-status');
   if (!val) { el.textContent = ''; return; }
   el.textContent = '⏳ Checking...'; el.style.color = 'var(--smoke)';
-  hashtagCheckTimer = setTimeout(async () => {
+  hashtagTimer = setTimeout(async () => {
     try {
-      const res = await fetch(`/api/shotgun/check-hashtag?tag=${encodeURIComponent(val)}`);
+      const res = await fetch('/api/shotgun/check-hashtag?tag=' + encodeURIComponent(val));
       const d = await res.json();
-      if (d.available) {
-        el.textContent = '✓ #' + val + ' is available!'; el.style.color = '#22c55e';
-      } else {
-        el.textContent = '✗ That tag is taken — choose another'; el.style.color = 'var(--blast)';
-        sgToast('⚡ #' + val + ' is already taken!');
-      }
+      if (d.available) { el.textContent = '✓ #' + val + ' is yours!'; el.style.color = 'var(--green)'; }
+      else { el.textContent = '✗ Already taken — try another'; el.style.color = 'var(--red)'; }
     } catch(e) { el.textContent = ''; }
   }, 600);
 }
 
-// ═══════════════════════════════════════
+// ═══════════════════════════
+// RECIPIENT LOOKUP
+// ═══════════════════════════
+async function lookupRecipient(val) {
+  const preview = document.getElementById('sg-recipient-preview');
+  const tag = val.trim().replace(/^#/,'');
+  if (!tag) { preview.innerHTML = ''; return; }
+  try {
+    const res = await fetch('/api/shotgun/check-hashtag?tag=' + encodeURIComponent(tag));
+    const d = await res.json();
+    if (!d.available && d.account) {
+      const acct = d.account;
+      const color = '#' + Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0');
+      preview.innerHTML = `<div style="display:flex;align-items:center;gap:10px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:10px 12px;">
+        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--red2));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;">${(acct.first_name||'?')[0]}</div>
+        <div><div style="font-size:13px;font-weight:700;color:var(--white);">${acct.first_name} ${acct.last_name||''}</div>
+        <div style="font-size:11px;color:var(--green);">✓ #${acct.hashtag} · Ready to receive</div></div>
+      </div>`;
+    } else if (tag.length > 2) {
+      preview.innerHTML = `<div style="font-size:11px;color:var(--smoke);padding:4px 2px;">No account found for #${tag}</div>`;
+    } else { preview.innerHTML = ''; }
+  } catch(e) { preview.innerHTML = ''; }
+}
+
+// ═══════════════════════════
 // APPLY
-// ═══════════════════════════════════════
+// ═══════════════════════════
 async function sgApply() {
   const data = {
     first_name: document.getElementById('sg-app-first').value.trim(),
-    last_name: document.getElementById('sg-app-last').value.trim(),
-    email: document.getElementById('sg-app-email').value.trim(),
-    phone: document.getElementById('sg-app-phone').value.trim(),
-    hashtag: document.getElementById('sg-app-tag').value.trim(),
-    pin: document.getElementById('sg-app-pin').value,
+    last_name:  document.getElementById('sg-app-last').value.trim(),
+    email:      document.getElementById('sg-app-email').value.trim(),
+    phone:      document.getElementById('sg-app-phone').value.trim(),
+    hashtag:    document.getElementById('sg-app-tag').value.trim().replace(/^#/,''),
+    pin:        document.getElementById('sg-app-pin').value,
     linked_routing: document.getElementById('sg-app-routing').value.trim(),
     linked_account: document.getElementById('sg-app-acct').value.trim(),
   };
   if (!data.first_name || !data.last_name || !data.email || !data.hashtag || !data.pin) {
-    sgToast('Please fill in all required fields'); return;
+    sgToast('Fill in all required fields'); return;
   }
   if (data.pin.length < 4) { sgToast('PIN must be at least 4 digits'); return; }
-
   try {
-    const res = await fetch('/api/shotgun/apply', {
-      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
-    });
+    const res = await fetch('/api/shotgun/apply', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
     const d = await res.json();
-    if (d.success) {
-      showScreen('sg-pending');
-    } else {
-      sgToast(d.error || 'Application failed — try again');
-    }
+    if (d.success) { showScreen('sg-pending'); }
+    else { sgToast(d.error || 'Application failed — try again'); }
   } catch(e) { sgToast('Error: ' + e.message); }
 }
 
-// ═══════════════════════════════════════
+// ═══════════════════════════
 // LOGIN
-// ═══════════════════════════════════════
+// ═══════════════════════════
 async function sgLogin() {
   const identifier = document.getElementById('sg-login-id').value.trim().replace(/^#/,'');
   const pin = document.getElementById('sg-login-pin').value;
-  if (!identifier || !pin) { sgToast('Enter your email/hashtag and PIN'); return; }
-
+  if (!identifier || !pin) { sgToast('Enter hashtag/email and PIN'); return; }
   try {
     const res = await fetch('/api/shotgun/login', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({identifier, pin})
     });
     const d = await res.json();
@@ -670,7 +1050,7 @@ async function sgLogin() {
       localStorage.setItem('sg_session', JSON.stringify(d.account));
       populateDash(d.account);
       showTab('dash');
-      sgToast('🔫 Welcome back, #' + d.account.hashtag);
+      sgToast('🔫 Locked and loaded, #' + d.account.hashtag);
     } else if (d.status === 'pending') {
       showScreen('sg-pending');
     } else {
@@ -679,47 +1059,78 @@ async function sgLogin() {
   } catch(e) { sgToast('Error: ' + e.message); }
 }
 
-// ═══════════════════════════════════════
+// ═══════════════════════════
+// LOGOUT
+// ═══════════════════════════
+function sgLogout() {
+  sgAccount = null;
+  localStorage.removeItem('sg_session');
+  showScreen('sg-auth');
+  sgToast('See ya 👋');
+}
+
+// ═══════════════════════════
 // POPULATE DASHBOARD
-// ═══════════════════════════════════════
+// ═══════════════════════════
 function populateDash(acct) {
   const bal = parseFloat(acct.balance || 0);
-  document.getElementById('sg-balance-display').textContent = '$' + bal.toFixed(2);
+  const balEl = document.getElementById('sg-balance-display');
+  balEl.textContent = '$' + bal.toFixed(2);
+  balEl.className = 'sg-bal-amount' + (bal < 0 ? ' negative' : '');
   document.getElementById('sg-hashtag-display').textContent = '#' + acct.hashtag + ' · Shotgun Member';
-  document.getElementById('sg-card-name').textContent = (acct.first_name + ' ' + acct.last_name).toUpperCase();
+
+  // Card
   if (acct.virtual_card_number) {
     const n = acct.virtual_card_number;
     document.getElementById('sg-card-number').textContent = n.match(/.{1,4}/g).join(' ');
     document.getElementById('sg-card-cvv').textContent = acct.virtual_card_cvv || '•••';
     document.getElementById('sg-card-expiry').textContent = acct.virtual_card_expiry || '••/••';
   }
-  // Beat the V — always shown, fetch monthly activity
-  fetchMonthlyActivity(acct.id);
-  // Account screen
+  document.getElementById('sg-card-name').textContent = (acct.first_name+' '+(acct.last_name||'')).toUpperCase().trim();
+
+  // Account tab
   document.getElementById('sg-acct-routing').textContent = acct.routing_number || '—';
   document.getElementById('sg-acct-number').textContent = acct.account_number || '—';
   document.getElementById('sg-acct-tag').textContent = '#' + acct.hashtag;
+
+  const lifetime = parseFloat(acct.lifetime_deposited || 0);
   document.getElementById('sg-lifetime-dep').textContent = '$' + lifetime.toFixed(2);
   const pct = Math.min((lifetime / 500) * 100, 100);
   document.getElementById('sg-milestone-bar').style.width = pct + '%';
+
+  // Cash out bank preview
+  const cashOutBank = document.getElementById('sg-cashout-bank');
+  if (cashOutBank) {
+    cashOutBank.textContent = acct.linked_account
+      ? 'Account ending in ' + String(acct.linked_account).slice(-4)
+      : 'No linked bank — add one in Account settings';
+  }
+
+  // Request link
+  const reqUrl = window.location.origin + '/pay/' + acct.hashtag;
+  const reqEl = document.getElementById('sg-request-url');
+  if (reqEl) reqEl.textContent = reqUrl;
+  const reqPrev = document.getElementById('sg-req-link-preview');
+  if (reqPrev) reqPrev.textContent = reqUrl;
+
+  // Beat the V
+  fetchMonthlyActivity(acct.id);
   // Presence
   updatePresenceUI(acct.is_silent, acct.is_online);
-  // Fee info
-  document.getElementById('sg-send-fee-info').textContent = '💡 $1.50 fee deducted from sender & recipient';
 }
 
-// ═══════════════════════════════════════
-// SEND MONEY
-// ═══════════════════════════════════════
+// ═══════════════════════════
+// SEND
+// ═══════════════════════════
 async function sgSendMoney() {
   const to = document.getElementById('sg-send-to').value.trim().replace(/^#/,'');
-  const amount = parseFloat(document.getElementById('sg-send-amount').value);
+  const amount = parseFloat(numpadValue);
   const note = document.getElementById('sg-send-note').value.trim();
-  if (!to || !amount || amount <= 0) { sgToast('Enter recipient and amount'); return; }
-
+  if (!to) { sgToast('Who are you sending to?'); return; }
+  if (!amount || amount <= 0) { sgToast('Enter an amount'); return; }
   try {
     const res = await fetch('/api/shotgun/send', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({from_account_id: sgAccount.id, to_hashtag: to, amount, note})
     });
     const d = await res.json();
@@ -727,20 +1138,23 @@ async function sgSendMoney() {
       sgAccount.balance = d.new_balance;
       localStorage.setItem('sg_session', JSON.stringify(sgAccount));
       document.getElementById('sg-balance-display').textContent = '$' + parseFloat(d.new_balance).toFixed(2);
+      numpadValue = '';
       document.getElementById('sg-send-to').value = '';
-      document.getElementById('sg-send-amount').value = '';
       document.getElementById('sg-send-note').value = '';
-      sgToast('🎯 Gottem! Sent $' + amount.toFixed(2) + ' to #' + to);
+      document.getElementById('sg-recipient-preview').innerHTML = '';
+      updateAmountDisplay();
+      sgToast('🎯 Gottem! $' + amount.toFixed(2) + ' sent to #' + to);
       showTab('dash');
+      loadTransactions();
     } else {
       sgToast('💀 Dead Body — ' + (d.error || 'Transfer failed'));
     }
   } catch(e) { sgToast('Error: ' + e.message); }
 }
 
-// ═══════════════════════════════════════
-// LOAD TRANSACTIONS
-// ═══════════════════════════════════════
+// ═══════════════════════════
+// TRANSACTIONS
+// ═══════════════════════════
 async function loadTransactions() {
   if (!sgAccount) return;
   try {
@@ -748,244 +1162,279 @@ async function loadTransactions() {
     const d = await res.json();
     const list = document.getElementById('sg-txn-list');
     if (!d.transactions || !d.transactions.length) {
-      list.innerHTML = '<div style="text-align:center;padding:20px 0;color:var(--smoke);font-size:12px;">No transactions yet</div>';
+      list.innerHTML = '<div class="sg-empty"><div class="sg-empty-icon">🎯</div>No shots fired yet</div>';
       return;
     }
     list.innerHTML = d.transactions.slice(0,10).map(t => {
-      const isSend = t.from_account_id === sgAccount.id;
-      // Shotgun brand icons:
-      // GOTTEM (bullseye) = ANY payment successful — send or receive
-      // DEAD BODY         = payment failed
-      // SHOOT IT          = in-progress send (pending)
-      // WHO SHOT YA       = in-progress receive (pending)
-      // BEAT THE V        = overdraft event
-      const isSuccess = t.status === 'completed' || t.status === 'success' || (!t.status || t.status === '');
-      const isFailed  = t.status === 'failed';
-      const isPending = t.status === 'pending';
-      let iconHtml;
+      const isSend   = t.from_account_id === sgAccount.id;
+      const isFailed = t.status === 'failed';
+      const isPending= t.status === 'pending';
+      // ICON LOGIC: Gottem=success, Dead Body=failed, Shoot It=pending send, Who Shot Ya=pending receive
+      let iconSrc, iconTitle;
       if (isFailed) {
-        // Dead Body — any failed transaction
-        iconHtml = `<img src="${DEAD_BODY_URL}" style="width:32px;height:32px;object-fit:contain;" title="Dead Body — Payment Failed">`;
+        iconSrc = DEAD_BODY_URL; iconTitle = 'Dead Body — Payment Failed';
       } else if (isPending) {
-        // Pending: show directional icon while in flight
-        iconHtml = isSend
-          ? `<img src="${SHOOT_IT_URL}" style="width:32px;height:32px;object-fit:contain;" title="Shoot It — Sending...">`
-          : `<img src="${WHO_SHOT_YA_URL}" style="width:32px;height:32px;object-fit:contain;" title="Who Shot Ya — Incoming...">`;
+        iconSrc = isSend ? SHOOT_IT_URL : WHO_SHOT_URL;
+        iconTitle = isSend ? 'Shoot It — Sending...' : 'Who Shot Ya — Incoming...';
       } else if (t.type === 'beat_v') {
-        iconHtml = '⚡';
+        iconSrc = BEAT_V_URL; iconTitle = 'Beat the V';
       } else {
-        // Gottem bullseye = payment successful (all types — send, receive, deposit, SOS, etc.)
-        iconHtml = `<img src="${GOTTEM_URL}" style="width:32px;height:32px;object-fit:contain;" title="Gottem! — Payment Successful">`;
+        iconSrc = GOTTEM_URL; iconTitle = 'Gottem! — Payment Successful';
       }
+      const iconBg = isFailed ? 'rgba(233,69,96,.12)' : isPending ? 'rgba(245,158,11,.1)' : 'rgba(34,197,94,.08)';
       const name = isSend ? (t.to_hashtag ? '#'+t.to_hashtag : 'Transfer') : (t.from_hashtag ? '#'+t.from_hashtag : 'Deposit');
-      const amtCls = isSend ? 'sg-txn-neg' : 'sg-txn-pos';
+      const amtCls = isSend ? 'neg' : 'pos';
       const amtSign = isSend ? '-' : '+';
-      const bg = isSend ? 'rgba(233,69,96,.1)' : 'rgba(34,197,94,.1)';
+      const statusLabel = isFailed ? 'failed' : isPending ? 'pending' : 'success';
+      const noteText = t.note ? `· "${t.note}"` : '';
       const date = new Date(t.created_date).toLocaleDateString('en-US',{month:'short',day:'numeric'});
       return `<div class="sg-txn">
-        <div class="sg-txn-icon" style="background:${bg};display:flex;align-items:center;justify-content:center;">${iconHtml}</div>
-        <div><div class="sg-txn-name">${name}</div><div class="sg-txn-sub">${t.note||t.type} · ${date}</div></div>
-        <div class="sg-txn-amount"><div class="${amtCls}">${amtSign}$${parseFloat(t.amount).toFixed(2)}</div>${t.fee?`<div style="font-size:10px;color:var(--smoke);">fee $${t.fee}</div>`:''}</div>
+        <div class="sg-txn-icon" style="background:${iconBg}">
+          <img src="${iconSrc}" title="${iconTitle}" style="width:28px;height:28px;object-fit:contain;">
+        </div>
+        <div class="sg-txn-body">
+          <div class="sg-txn-name">${name}</div>
+          <div class="sg-txn-sub">${date} ${noteText}</div>
+        </div>
+        <div class="sg-txn-right">
+          <div class="sg-txn-amt ${amtCls}">${amtSign}$${parseFloat(t.amount).toFixed(2)}</div>
+          ${t.fee ? `<div class="sg-txn-fee">$${t.fee} fee</div>` : ''}
+          <span class="sg-txn-status ${statusLabel}">${statusLabel}</span>
+        </div>
       </div>`;
     }).join('');
   } catch(e) {}
 }
+function showAllTransactions() { sgToast('Full history — coming with Stripe integration 🎯'); }
 
-// ═══════════════════════════════════════
-// CONTACTS
-// ═══════════════════════════════════════
-async function loadContacts() {
-  if (!sgAccount) return;
-  try {
-    const res = await fetch('/api/shotgun/contacts/' + sgAccount.id);
-    const d = await res.json();
-    const allEl = document.getElementById('sg-all-contacts');
-    const onlineEl = document.getElementById('sg-online-contacts');
-    if (!d.contacts || !d.contacts.length) {
-      allEl.innerHTML = '<div style="font-size:12px;color:var(--smoke);text-align:center;padding:10px 0;">No contacts yet</div>';
-      onlineEl.innerHTML = '<div style="font-size:12px;color:var(--smoke);text-align:center;padding:10px 0;">No contacts online</div>';
-      return;
-    }
-    const online = d.contacts.filter(c => c.is_online && !c.is_silent);
-    onlineEl.innerHTML = online.length ? online.map(c => contactRow(c, true)).join('') :
-      '<div style="font-size:12px;color:var(--smoke);text-align:center;padding:10px 0;">Nobody online right now</div>';
-    allEl.innerHTML = d.contacts.map(c => contactRow(c, false)).join('');
-  } catch(e) {}
-}
-
-function contactRow(c, showOnline) {
-  const dot = c.is_online && !c.is_silent ? 'sg-dot' : c.is_silent ? 'sg-dot silent' : 'sg-dot offline';
-  return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);">
-    <div style="width:34px;height:34px;background:rgba(233,69,96,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--blast);">
-      ${(c.contact_name||'?')[0].toUpperCase()}
-    </div>
-    <div style="flex:1;">
-      <div style="font-size:13px;font-weight:600;">${c.contact_name||'Unknown'}</div>
-      <div style="display:flex;align-items:center;gap:5px;margin-top:2px;">
-        <span class="${dot}"></span>
-        <span class="sg-tag" style="font-size:10px;padding:1px 7px;">#${c.contact_hashtag||''}</span>
-      </div>
-    </div>
-    <button onclick="quickSend('${c.contact_hashtag}')" style="background:none;border:1px solid rgba(233,69,96,.3);border-radius:8px;padding:4px 10px;color:var(--blast);font-size:11px;font-weight:600;cursor:pointer;">Send</button>
-  </div>`;
-}
-
-function quickSend(tag) {
-  document.getElementById('sg-send-to').value = tag;
-  showTab('send');
-}
-
-async function sgAddContact() {
-  const tag = document.getElementById('sg-add-contact-tag').value.trim().replace(/^#/,'');
-  if (!tag) { sgToast('Enter a hashtag'); return; }
-  try {
-    const res = await fetch('/api/shotgun/contacts/add', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({account_id: sgAccount.id, contact_hashtag: tag})
-    });
-    const d = await res.json();
-    if (d.success) {
-      sgToast('✓ Contact added: #' + tag);
-      document.getElementById('sg-add-contact-tag').value = '';
-      loadContacts();
-    } else { sgToast(d.error || 'Could not add contact'); }
-  } catch(e) { sgToast('Error: ' + e.message); }
-}
-
-async function sgInvite() {
-  const email = document.getElementById('sg-invite-email').value.trim();
-  if (!email) { sgToast('Enter an email address'); return; }
-  try {
-    const res = await fetch('/api/shotgun/invite', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({from_account_id: sgAccount.id, email})
-    });
-    const d = await res.json();
-    if (d.success) { sgToast('📧 Invite sent to ' + email); document.getElementById('sg-invite-email').value=''; }
-    else { sgToast(d.error || 'Could not send invite'); }
-  } catch(e) { sgToast('Error: ' + e.message); }
-}
-
-// ═══════════════════════════════════════
-// S.O.S.
-// ═══════════════════════════════════════
-async function sgSOS() {
-  const amount = parseFloat(prompt('How much do you need? (S.O.S. goes to all contacts)') || '0');
-  if (!amount || amount <= 0) return;
-  const msg = prompt('Short message (optional):') || '';
-  try {
-    const res = await fetch('/api/shotgun/sos', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({account_id: sgAccount.id, amount_requested: amount, message: msg})
-    });
-    const d = await res.json();
-    if (d.success) sgToast('🆘 S.O.S. sent to all contacts!');
-    else sgToast(d.error || 'SOS failed');
-  } catch(e) { sgToast('Error: ' + e.message); }
-}
-
-// ═══════════════════════════════════════
+// ═══════════════════════════
 // BEAT THE V
-// ═══════════════════════════════════════
+// ═══════════════════════════
 async function fetchMonthlyActivity(accountId) {
   try {
-    const res = await fetch('/api/shotgun/transactions/' + accountId);
+    const res = await fetch('/api/shotgun/monthly-activity/' + accountId);
     const d = await res.json();
-    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    let total = 0;
-    (d.transactions || []).forEach(t => {
-      if (t.type === 'fee' || t.type === 'beat_v') return;
-      if (new Date(t.created_date) >= monthStart) total += parseFloat(t.amount || 0);
-    });
-    const pct = Math.min((total / 500) * 100, 100);
-    const bar = document.getElementById('beatv-progress-bar');
-    const lbl = document.getElementById('beatv-progress-label');
-    const btn = document.getElementById('beatv-btn');
+    const monthly = parseFloat(d.monthly_activity || 0);
+    const pct = Math.min((monthly / 500) * 100, 100);
+    const bar = document.getElementById('sg-beatv-bar');
+    const txt = document.getElementById('sg-beatv-progress-text');
+    const status = document.getElementById('sg-beatv-status-text');
+    const btn = document.getElementById('sg-beatv-btn');
     if (bar) bar.style.width = pct + '%';
-    if (lbl) lbl.textContent = '$' + total.toFixed(2) + ' / $500 this month';
-    if (btn) {
-      if (sgAccount && sgAccount.beat_v_enabled) {
-        btn.textContent = '✓ Active'; btn.style.background = 'rgba(34,197,94,.3)'; btn.style.color = '#86efac'; btn.disabled = true;
-      } else if (total >= 500) {
-        btn.textContent = 'Request ⚡';
-      }
+    if (txt) txt.textContent = '$' + monthly.toFixed(2) + ' / $500 monthly activity';
+    if (monthly >= 500 || sgAccount?.beat_v_enabled) {
+      if (status) { status.textContent = 'Unlocked ⚡'; status.style.color = 'var(--purple)'; }
+      if (btn) { btn.textContent = sgAccount?.beat_v_used ? 'Used' : 'Activate'; btn.className = 'sg-btn sg-btn-sm sg-btn-gold'; }
+    } else {
+      if (status) status.textContent = 'Locked';
     }
   } catch(e) {}
 }
-
 async function activateBeatV() {
-  const btn = document.getElementById('beatv-btn');
-  if (btn) { btn.textContent = 'Checking...'; btn.disabled = true; }
+  if (!sgAccount) return;
   try {
-    const res = await fetch('/api/shotgun/beat-v', {
+    const res = await fetch('/api/shotgun/beat-the-v', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({account_id: sgAccount.id})
     });
     const d = await res.json();
     if (d.success) {
-      sgAccount.beat_v_enabled = true;
+      sgAccount.balance = d.new_balance;
+      sgAccount.beat_v_used = true;
       localStorage.setItem('sg_session', JSON.stringify(sgAccount));
-      if (btn) { btn.textContent = '✓ Active'; btn.style.background = 'rgba(34,197,94,.3)'; btn.style.color = '#86efac'; }
-      sgToast('⚡ Beat the V approved! $' + (d.monthly_activity||0).toFixed(2) + ' monthly activity qualified.');
+      document.getElementById('sg-balance-display').textContent = '$' + parseFloat(d.new_balance).toFixed(2);
+      sgToast('⚡ Beat the V! $100 added to your account');
+      loadTransactions();
     } else {
-      sgToast(d.error || 'Not eligible yet');
-      if (btn) { btn.textContent = 'Request'; btn.disabled = false; }
-    }
-  } catch(e) {
-    sgToast('Error: ' + e.message);
-    if (btn) { btn.textContent = 'Request'; btn.disabled = false; }
-  }
-}
-
-// ═══════════════════════════════════════
-// PRESENCE / SILENT
-// ═══════════════════════════════════════
-function updatePresenceUI(isSilent, isOnline) {
-  const dot = document.getElementById('sg-presence-dot');
-  const label = document.getElementById('sg-presence-label');
-  const btn = document.getElementById('sg-silent-btn');
-  if (isSilent) {
-    dot.className = 'sg-dot silent';
-    label.textContent = 'Silent 🔇';
-    btn.textContent = 'Go Visible 👁';
-  } else if (isOnline) {
-    dot.className = 'sg-dot';
-    label.textContent = 'Online';
-    btn.textContent = 'Go Silent 🔇';
-  } else {
-    dot.className = 'sg-dot offline';
-    label.textContent = 'Offline';
-    btn.textContent = 'Go Silent 🔇';
-  }
-}
-
-async function toggleSilent() {
-  if (!sgAccount) return;
-  const newSilent = !sgAccount.is_silent;
-  try {
-    const res = await fetch('/api/shotgun/presence', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({account_id: sgAccount.id, is_silent: newSilent, is_online: true})
-    });
-    const d = await res.json();
-    if (d.success) {
-      sgAccount.is_silent = newSilent;
-      localStorage.setItem('sg_session', JSON.stringify(sgAccount));
-      updatePresenceUI(newSilent, true);
-      sgToast(newSilent ? '🔇 You\'re now silent' : '👁 You\'re now visible');
+      sgToast(d.error || 'Not eligible yet — need $500 monthly activity');
     }
   } catch(e) {}
 }
 
-// ═══════════════════════════════════════
-// LOGOUT
-// ═══════════════════════════════════════
-function sgLogout() {
-  localStorage.removeItem('sg_session');
-  sgAccount = null;
-  showScreen('sg-auth');
-  sgToast('Signed out');
+// ═══════════════════════════
+// PRESENCE
+// ═══════════════════════════
+function updatePresenceUI(isSilent, isOnline) {
+  const badge = document.getElementById('sg-presence-badge');
+  const toggle = document.getElementById('sg-presence-toggle');
+  const silentToggle = document.getElementById('sg-silent-toggle');
+  if (badge) {
+    if (isSilent) badge.innerHTML = '<span class="sg-pill" style="background:rgba(245,158,11,.1);color:var(--gold);border:1px solid rgba(245,158,11,.2);font-size:10px;padding:3px 10px;">🔇 Silent</span>';
+    else if (isOnline) badge.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--green);font-weight:700;"><span class="sg-online-dot online"></span>Online</span>';
+    else badge.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--smoke);"><span class="sg-online-dot offline"></span>Offline</span>';
+  }
+  if (toggle) toggle.className = 'sg-toggle' + (isOnline && !isSilent ? ' on' : '');
+  if (silentToggle) silentToggle.className = 'sg-toggle' + (isSilent ? ' on' : '');
 }
+async function togglePresence() {
+  if (!sgAccount) return;
+  const newOnline = !sgAccount.is_online;
+  try {
+    await fetch('/api/shotgun/presence', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:sgAccount.id,is_online:newOnline})});
+    sgAccount.is_online = newOnline;
+    localStorage.setItem('sg_session', JSON.stringify(sgAccount));
+    updatePresenceUI(sgAccount.is_silent, newOnline);
+  } catch(e) {}
+}
+async function toggleSilent() {
+  if (!sgAccount) return;
+  const newSilent = !sgAccount.is_silent;
+  try {
+    await fetch('/api/shotgun/silent', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:sgAccount.id,is_silent:newSilent})});
+    sgAccount.is_silent = newSilent;
+    localStorage.setItem('sg_session', JSON.stringify(sgAccount));
+    updatePresenceUI(newSilent, sgAccount.is_online);
+    sgToast(newSilent ? '🔇 Silent mode on' : '👁 Now visible');
+  } catch(e) {}
+}
+
+// ═══════════════════════════
+// CONTACTS
+// ═══════════════════════════
+let allContacts = [];
+async function loadContacts() {
+  if (!sgAccount) return;
+  try {
+    const [cRes, oRes] = await Promise.all([
+      fetch('/api/shotgun/contacts/' + sgAccount.id),
+      fetch('/api/shotgun/online-users')
+    ]);
+    const cData = await cRes.json();
+    const oData = await oRes.json();
+    allContacts = cData.contacts || [];
+    renderContacts(allContacts, oData.online || []);
+  } catch(e) {}
+}
+function renderContacts(contacts, online) {
+  const onlineIds = new Set((online || []).map(u => u.id));
+  const onlineList = document.getElementById('sg-online-contacts');
+  const allList = document.getElementById('sg-all-contacts');
+  const onlineContacts = contacts.filter(c => onlineIds.has(c.contact_account_id));
+  if (onlineList) {
+    onlineList.innerHTML = onlineContacts.length
+      ? onlineContacts.map(c => contactRow(c, true)).join('')
+      : '<div style="padding:10px 20px;font-size:12px;color:var(--smoke);">No one online right now</div>';
+  }
+  if (allList) {
+    allList.innerHTML = contacts.length
+      ? contacts.map(c => contactRow(c, onlineIds.has(c.contact_account_id))).join('')
+      : '<div style="padding:10px 20px;font-size:12px;color:var(--smoke);">No contacts yet — add some above</div>';
+  }
+}
+function contactRow(c, isOnline) {
+  const colors = ['#e94560','#7c3aed','#f59e0b','#22c55e','#3b82f6','#ec4899'];
+  const color = colors[(c.contact_name||'A').charCodeAt(0) % colors.length];
+  const initial = (c.contact_name||'?')[0].toUpperCase();
+  const dotClass = isOnline ? 'online' : 'offline';
+  return `<div class="sg-contact-item" onclick="quickSend('${c.contact_hashtag}')">
+    <div class="sg-avatar" style="background:${color};">${initial}</div>
+    <div style="flex:1;">
+      <div class="sg-contact-name">${c.contact_name || c.contact_hashtag}</div>
+      <div class="sg-contact-tag">#${c.contact_hashtag}</div>
+    </div>
+    <div class="sg-online-dot ${dotClass}"></div>
+  </div>`;
+}
+function filterContacts(val) {
+  const filtered = val ? allContacts.filter(c =>
+    (c.contact_hashtag||'').toLowerCase().includes(val.toLowerCase()) ||
+    (c.contact_name||'').toLowerCase().includes(val.toLowerCase())
+  ) : allContacts;
+  renderContacts(filtered, []);
+}
+function quickSend(hashtag) {
+  document.getElementById('sg-send-to').value = hashtag;
+  showTab('send');
+}
+async function addContact() {
+  const tag = document.getElementById('sg-add-contact-tag').value.trim().replace(/^#/,'');
+  if (!tag) { sgToast('Enter a hashtag'); return; }
+  try {
+    const res = await fetch('/api/shotgun/add-contact', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:sgAccount.id,contact_hashtag:tag})});
+    const d = await res.json();
+    if (d.success) { sgToast('✓ #' + tag + ' added'); document.getElementById('sg-add-contact-tag').value=''; loadContacts(); }
+    else { sgToast(d.error || 'Could not add contact'); }
+  } catch(e) {}
+}
+async function sendInvite() {
+  const email = document.getElementById('sg-invite-email').value.trim();
+  if (!email) { sgToast('Enter an email'); return; }
+  try {
+    const res = await fetch('/api/shotgun/invite', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from_account_id:sgAccount.id,email})});
+    const d = await res.json();
+    if (d.success) { sgToast('📧 Invite sent to ' + email); document.getElementById('sg-invite-email').value=''; }
+    else { sgToast(d.error || 'Could not send invite'); }
+  } catch(e) {}
+}
+async function sendSOS() {
+  const amount = parseFloat(document.getElementById('sg-sos-amount').value) || 0;
+  const msg = document.getElementById('sg-sos-msg').value.trim();
+  if (!amount) { sgToast('Enter an amount for your SOS'); return; }
+  try {
+    const res = await fetch('/api/shotgun/sos', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:sgAccount.id,amount_requested:amount,message:msg})});
+    const d = await res.json();
+    if (d.success) { sgToast('🆘 SOS sent to all contacts!'); }
+    else { sgToast(d.error || 'SOS failed'); }
+  } catch(e) {}
+}
+
+// ═══════════════════════════
+// MODALS
+// ═══════════════════════════
+function openDepositModal() { document.getElementById('sg-deposit-modal').classList.add('open'); }
+function openCashOutModal() { document.getElementById('sg-cashout-modal').classList.add('open'); }
+function openRequestModal() {
+  document.getElementById('sg-request-modal').classList.add('open');
+  updateRequestLink();
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function selectDepositMethod(method, el) {
+  selectedDepositMethod = method;
+  document.querySelectorAll('.sg-deposit-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function updateRequestLink() {
+  if (!sgAccount) return;
+  const amt = parseFloat(document.getElementById('sg-req-amount')?.value) || '';
+  const note = document.getElementById('sg-req-note')?.value || '';
+  let url = window.location.origin + '/pay/' + sgAccount.hashtag;
+  if (amt) url += '?amount=' + amt;
+  if (note) url += '&note=' + encodeURIComponent(note);
+  const el = document.getElementById('sg-req-link-preview');
+  if (el) el.textContent = url;
+}
+function copyRequestLink() {
+  const url = window.location.origin + '/pay/' + (sgAccount?.hashtag || '');
+  navigator.clipboard.writeText(url).then(() => sgToast('🎯 Link copied!')).catch(() => sgToast('Copy: ' + url));
+}
+async function processDeposit() {
+  const amount = parseFloat(document.getElementById('sg-deposit-amount').value);
+  if (!amount || amount <= 0) { sgToast('Enter an amount'); return; }
+  sgToast('💳 Stripe deposit coming soon — stay loaded 🔫');
+  closeModal('sg-deposit-modal');
+}
+async function processCashOut() {
+  const amount = parseFloat(document.getElementById('sg-cashout-amount').value);
+  if (!amount || amount <= 0) { sgToast('Enter an amount'); return; }
+  if (amount > parseFloat(sgAccount?.balance || 0)) { sgToast('Insufficient balance'); return; }
+  sgToast('🏦 Cash out via Stripe — coming soon');
+  closeModal('sg-cashout-modal');
+}
+
+// ═══════════════════════════
+// CLOSE ON OUTSIDE CLICK
+// ═══════════════════════════
+document.addEventListener('click', function(e) {
+  const panel = document.getElementById('sg-panel');
+  const trigger = document.getElementById('sg-trigger');
+  if (panel.classList.contains('open') && !panel.contains(e.target) && !trigger.contains(e.target)) {
+    toggleShotgun();
+  }
+  // Close modals on overlay click
+  document.querySelectorAll('.sg-modal-overlay').forEach(m => {
+    if (e.target === m) m.classList.remove('open');
+  });
+});
 </script>
 </body>
 </html>
