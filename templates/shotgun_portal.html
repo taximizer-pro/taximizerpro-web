@@ -363,16 +363,16 @@
         <div class="feat-desc">Connect your bank. Load via ACH or card, cash out anytime.</div>
       </div>
 
-      <!-- Dead Body -->
+      <!-- Payment Alerts -->
       <div class="feat-card">
         <div class="feat-card-header">
-          <img class="inline-icon" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/08ae5f2d0_dead_body_NEW.png" alt="Dead Body">
-          <span class="feat-title">Dead Body 💀</span>
+          <img class="inline-icon" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/08ae5f2d0_dead_body_NEW.png" alt="Payment Failed">
+          <span class="feat-title">Payment Alerts 🔔</span>
         </div>
         <div class="feat-icon-wrap" style="background:#dcfce7;">
-          <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/08ae5f2d0_dead_body_NEW.png" alt="Payment Failed">
+          <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/08ae5f2d0_dead_body_NEW.png" alt="Payment Failed" style="width:48px;height:48px;object-fit:contain;border-radius:8px;">
         </div>
-        <div class="feat-desc">Payment failed? We'll let you know fast so you can fix it.</div>
+        <div class="feat-desc">Send declined? Deposit rejected? You get the <strong>Dead Body</strong> notification instantly so you can fix it fast.</div>
       </div>
 
     </div>
@@ -925,7 +925,7 @@ async function doSend(){
     currentUser.balance=d.new_balance;
     document.getElementById('dash-bal').textContent='$'+(+d.new_balance).toFixed(2);
     loadTxFeed();showToast('Gottem! 🎯','Sent $'+amt.toFixed(2)+' to '+to,LOGO.gottem);
-  }else{err.textContent=d.error||'Failed.';err.style.display='block';}
+  }else{err.textContent=d.error||'Payment declined.';err.style.display='block';showPaymentFailed(d.error||'Payment declined.');}
 }
 
 // ── REQUEST ──
@@ -953,7 +953,7 @@ async function doDeposit(){
     body:JSON.stringify({account_id:currentUser.id,amount:amt})});
   const d=await res.json();
   if(res.ok&&d.url){window.location.href=d.url;}
-  else{err.textContent=d.error||'Failed.';err.style.display='block';}
+  else{err.textContent=d.error||'Deposit rejected.';err.style.display='block';showPaymentFailed(d.error||'Deposit rejected.');}
 }
 
 // ── WITHDRAW ──
@@ -1002,6 +1002,19 @@ async function doCryptoConvert(){
 
 // ── BEAT THE V INFO ──
 function showBtvInfo(){ openOverlay('overlay-beatv'); }
+
+// ── PAYMENT FAILED NOTIFICATION ──
+function showPaymentFailed(msg){
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#fff;border:2px solid #dc2626;border-radius:16px;padding:14px 20px;display:flex;align-items:center;gap:14px;z-index:9999;box-shadow:0 8px 32px rgba(220,38,38,.2);animation:slide-up .22s ease;min-width:260px;max-width:92vw;';
+  t.innerHTML=`<img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/08ae5f2d0_dead_body_NEW.png" style="height:48px;width:48px;object-fit:contain;border-radius:10px;flex-shrink:0;" alt="Payment Failed">
+    <div>
+      <div style="font-size:14px;font-weight:900;color:#dc2626;">Payment Failed 💀</div>
+      <div style="font-size:12px;color:#475569;margin-top:2px;">${msg}</div>
+    </div>`;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),4500);
+}
 
 // ── TOAST ──
 function showToast(title,msg,iconUrl){
