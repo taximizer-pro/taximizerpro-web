@@ -71,7 +71,7 @@ function toast(msg) {
 }
 
 async function loadPending() {
-  const res = await fetch('/api/shotgun/admin/pending');
+  const res = await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=admin-pending');
   const d = await res.json();
   const list = document.getElementById('pending-list');
   document.getElementById('stat-pending').textContent = d.accounts?.length || 0;
@@ -118,7 +118,7 @@ async function approveAccount(id, tag) {
   const btn = event.target;
   btn.textContent = 'Approving...'; btn.disabled = true;
   try {
-    const res = await fetch(`/api/shotgun/admin/approve/${id}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    const res = await fetch(`https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=admin-approve&id=${id}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
     const d = await res.json();
     if (d.success) {
       toast(`✓ #${tag} approved! Account: ${d.account_number}`);
@@ -131,7 +131,7 @@ async function denyAccount(id, tag) {
   const reason = prompt(`Reason for denying #${tag} (optional):`);
   if (reason === null) return;
   try {
-    const res = await fetch(`/api/shotgun/admin/deny/${id}`, {
+    const res = await fetch(`https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=admin-deny&id=${id}`, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({reason: reason || 'Application not approved at this time.'})
     });
@@ -145,7 +145,7 @@ async function loadAllMembers() {
   try {
     const res = await fetch('/api/clients');
     // Actually fetch all Shotgun accounts
-    const res2 = await fetch('/api/shotgun/admin/all');
+    const res2 = await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=admin-all');
     const d = await res2.json();
     allMembers = d.accounts || [];
     document.getElementById('stat-approved').textContent = allMembers.filter(a=>a.status==='approved').length;
