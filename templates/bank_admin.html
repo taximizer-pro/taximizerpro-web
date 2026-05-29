@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}Shotgun Bank — Admin{% endblock %}
+{% block content %}
+<style>
+.sg-stat{background:#fff;border:1px solid #f1f5f9;border-radius:16px;padding:20px;text-align:center;}
+.sg-stat-val{font-size:28px;font-weight:900;margin-bottom:4px;}
+.sg-stat-lbl{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;font-weight:700;}
+.badge-pending{background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.badge-approved{background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.badge-denied{background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.member-row{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #f1f5f9;}
+.member-row:last-child{border-bottom:none;}
+.member-avatar{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#e94560,#c0392b);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;flex-shrink:0;}
+.member-info{flex:1;}
+.member-name{font-size:13px;font-weight:800;color:#0f172a;}
+.member-tag{font-size:11px;color:#e94560;font-weight:700;}
+.member-email{font-size:11px;color:#64748b;margin-top:1px;}
+.member-bal{font-size:14px;font-weight:900;text-align:right;}
+.action-row{display:flex;gap:6px;margin-top:6px;}
+.btn-approve{background:#22c55e;color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;}
+.btn-deny{background:#ef4444;color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;}
+.btn-ghost{background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;}
+.tab-bar{display:flex;gap:8px;margin-bottom:20px;border-bottom:2px solid #f1f5f9;padding-bottom:12px;}
+.tab-btn{background:none;border:none;font-size:13px;font-weight:700;color:#94a3b8;cursor:pointer;padding:6px 14px;border-radius:20px;}
+.tab-btn.active{background:#0f172a;color:#fff;}
+</style>
+
+<div style="padding:24px 28px;max-width:960px;">
+  <!-- Header -->
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
+    <div style="width:46px;height:46px;background:linear-gradient(135deg,#e94560,#c0392b);border-radius:14px;display:flex;align-items:center;justify-content:center;">
+      <img src="/static/shotgun_bank_main_logo_clean.png" width="30" onerror="this.outerHTML='🔫'">
+    </div>
+    <div>
+      <div style="font-size:22px;font-weight:900;color:#0f172a;">Shotgun Bank — Admin</div>
+      <div style="font-size:12px;color:#64748b;">Bisignano Holdings LLC · Full control panel</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:10px;">
+      <a href="/bank" target="_blank" style="background:#e94560;color:#fff;text-decoration:none;border-radius:10px;padding:8px 16px;font-size:12px;font-weight:700;">Open Client App ↗</a>
+      <a href="/bank/admin/fees" style="background:#f1f5f9;color:#0f172a;text-decoration:none;border-radius:10px;padding:8px 16px;font-size:12px;font-weight:700;">Fee Revenue</a>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;" id="sg-stats">
+    <div class="sg-stat"><div class="sg-stat-val" id="stat-pending" style="color:#f59e0b;">—</div><div class="sg-stat-lbl">Pending</div></div>
+    <div class="sg-stat"><div class="sg-stat-val" id="stat-approved" style="color:#22c55e;">—</div><div class="sg-stat-lbl">Approved</div></div>
+    <div class="sg-stat"><div class="sg-stat-val" id="stat-total" style="color:#0f172a;">—</div><div class="sg-stat-lbl">Total Members</div></div>
+    <div class="sg-stat"><div class="sg-stat-val" id="stat-balance" style="color:#e94560;">—</div><div class="sg-stat-lbl">Deposits (Platform)</div></div>
+    <div class="sg-stat"><div class="sg-stat-val" id="stat-fees" style="color:#7c3aed;">—</div><div class="sg-stat-lbl">Fee Revenue</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('pending')">⏳ Pending</button>
+    <button class="tab-btn" onclick="switchTab('all')">👥 All Members</button>
+    <button class="tab-btn" onclick="switchTab('transactions')">💸 Transactions</button>
+  </div>
+
+  <!-- Pending Tab -->
+  <div id="tab-pending">
+    <div class="card" style="padding:0;">
+      <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:14px;font-weight:800;color:#0f172a;">Pending Applications</div>
+        <button onclick="loadAll()" style="background:#f1f5f9;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;">Refresh</button>
+      </div>
+      <div id="pending-list" style="padding:16px;">
+        <div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px;">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- All Members Tab -->
+  <div id="tab-all" style="display:none;">
+    <div style="display:flex;gap:10px;margin-bottom:14px;">
+      <input id="member-search" type="text" placeholder="Search by name, email, or #hashtag…"
+        style="flex:1;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;"
+        oninput="filterMembers(this.value)">
+    </div>
+    <div class="card" style="padding:16px;" id="member-list">
+      <div style="text-align:center;padding:30px;color:#94a3b8;">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Transactions Tab -->
+  <div id="tab-transactions" style="display:none;">
+    <div class="card" style="padding:16px;" id="tx-admin-list">
+      <div style="text-align:center;padding:30px;color:#94a3b8;">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let allMembers = [];
+let currentTab = 'pending';
+
+async function loadAll() {
+  try {
+    // Load pending
+    const pr = await fetch('/api/shotgun/admin/pending');
+    const pd = await pr.json();
+    renderPending(pd.accounts || []);
+
+    // Load all members + stats
+    const mr = await fetch('/api/shotgun/admin/all');
+    const md = await mr.json();
+    allMembers = md.accounts || [];
+    renderMembers(allMembers);
+    updateStats(allMembers);
+
+    // Load transactions
+    loadAdminTx();
+  } catch(e) { console.error(e); }
+}
+
+function updateStats(members) {
+  const pending  = members.filter(m => m.status === 'pending').length;
+  const approved = members.filter(m => m.status === 'approved').length;
+  const total    = members.length;
+  const totalBal = members.reduce((s,m) => s + parseFloat(m.balance||0), 0);
+  document.getElementById('stat-pending').textContent  = pending;
+  document.getElementById('stat-approved').textContent = approved;
+  document.getElementById('stat-total').textContent    = total;
+  document.getElementById('stat-balance').textContent  = '$' + Math.abs(totalBal).toFixed(2);
+  // Fee revenue — fetch separately later
+}
+
+function renderPending(accounts) {
+  const el = document.getElementById('pending-list');
+  if (!accounts.length) { el.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px;">No pending applications 🎉</div>'; return; }
+  el.innerHTML = accounts.map(a => `
+    <div class="member-row" id="row-${a.id}">
+      <div class="member-avatar">${(a.first_name||'?')[0]}${(a.last_name||'?')[0]}</div>
+      <div class="member-info">
+        <div class="member-name">${a.first_name} ${a.last_name}</div>
+        <div class="member-tag">#${a.hashtag}</div>
+        <div class="member-email">${a.email} · ${a.phone||'no phone'}</div>
+        <div class="action-row">
+          <button class="btn-approve" onclick="approveAccount('${a.id}')">✓ Approve</button>
+          <button class="btn-deny" onclick="denyAccount('${a.id}')">✗ Deny</button>
+        </div>
+      </div>
+      <span class="badge-pending">Pending</span>
+    </div>`).join('');
+}
+
+function renderMembers(members) {
+  const el = document.getElementById('member-list');
+  if (!members.length) { el.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;">No members yet</div>'; return; }
+  el.innerHTML = members.map(a => {
+    const bal = parseFloat(a.balance||0);
+    const badgeClass = a.status === 'approved' ? 'badge-approved' : a.status === 'denied' ? 'badge-denied' : 'badge-pending';
+    return `<div class="member-row">
+      <div class="member-avatar">${(a.first_name||'?')[0]}${(a.last_name||'?')[0]}</div>
+      <div class="member-info">
+        <div class="member-name">${a.first_name} ${a.last_name}</div>
+        <div class="member-tag">#${a.hashtag}</div>
+        <div class="member-email">${a.email}</div>
+      </div>
+      <div style="text-align:right;">
+        <span class="${badgeClass}">${a.status}</span>
+        <div class="member-bal" style="color:${bal<0?'#ef4444':'#0f172a'}">${bal<0?'-':''}$${Math.abs(bal).toFixed(2)}</div>
+        ${a.status==='approved'?`<button class="btn-ghost" style="margin-top:4px;" onclick="ghostUser('${a.id}')">👻 Ghost</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadAdminTx() {
+  // Use existing ghost/all tx — fetch last 50 from all accounts
+  const el = document.getElementById('tx-admin-list');
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;">Transaction ledger — coming in next build</div>';
+}
+
+function filterMembers(q) {
+  q = q.toLowerCase();
+  const filtered = allMembers.filter(m =>
+    (m.first_name+' '+m.last_name).toLowerCase().includes(q) ||
+    (m.email||'').toLowerCase().includes(q) ||
+    (m.hashtag||'').toLowerCase().includes(q)
+  );
+  renderMembers(filtered);
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['pending','all','transactions'][i] === tab);
+  });
+  ['pending','all','transactions'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t === tab ? 'block' : 'none';
+  });
+}
+
+async function approveAccount(id) {
+  if (!confirm('Approve this account?')) return;
+  const r = await fetch('/api/shotgun/admin/approve/' + id, {method:'POST'});
+  const d = await r.json();
+  if (d.success) { document.getElementById('row-'+id)?.remove(); loadAll(); }
+  else alert('Error: ' + (d.error||'Unknown'));
+}
+async function denyAccount(id) {
+  const reason = prompt('Reason for denial (optional):') || '';
+  const r = await fetch('/api/shotgun/admin/deny/' + id, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({reason})
+  });
+  const d = await r.json();
+  if (d.success) { document.getElementById('row-'+id)?.remove(); loadAll(); }
+  else alert('Error: ' + (d.error||'Unknown'));
+}
+async function ghostUser(id) {
+  const r = await fetch('/api/shotgun/admin/ghost/' + id, {method:'POST'});
+  const d = await r.json();
+  if (d.success) window.location.href = '/shotgun/ghost/' + id;
+  else alert('Error: ' + (d.error||'Unknown'));
+}
+
+loadAll();
+</script>
+{% endblock %}
