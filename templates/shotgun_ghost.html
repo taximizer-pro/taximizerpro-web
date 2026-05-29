@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ghost Mode — #{{ acct.hashtag }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:#0a0a0f;color:#f1f5f9;min-height:100vh;}
+
+/* Ghost Banner */
+.ghost-banner{background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:1000;font-weight:700;font-size:13px;}
+.ghost-banner .left{display:flex;align-items:center;gap:8px;}
+.ghost-tag{background:rgba(0,0,0,.2);padding:3px 10px;border-radius:20px;font-family:monospace;}
+.ghost-exit-btn{background:#000;color:#f59e0b;border:none;padding:6px 16px;border-radius:8px;font-weight:800;cursor:pointer;font-size:12px;}
+
+/* Layout */
+.container{max-width:900px;margin:0 auto;padding:24px 16px;}
+.header{display:flex;align-items:center;gap:16px;margin-bottom:28px;}
+.avatar{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#e94560,#c0392b);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;}
+.name{font-size:22px;font-weight:900;}
+.hashtag{color:#94a3b8;font-size:14px;font-family:monospace;}
+
+/* Balance Card */
+.balance-card{background:linear-gradient(135deg,#1a0a1e,#0d0d1a);border:1px solid rgba(233,69,96,.3);border-radius:20px;padding:28px;margin-bottom:20px;text-align:center;}
+.balance-label{font-size:12px;color:#64748b;margin-bottom:4px;}
+.balance-amount{font-size:48px;font-weight:900;color:#f1f5f9;}
+.balance-amount.negative{color:#e94560;}
+.balance-amount.positive{color:#22c55e;}
+
+/* Admin Actions */
+.admin-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;}
+.action-card{background:#13131a;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:20px;}
+.action-card h3{font-size:13px;font-weight:700;color:#94a3b8;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;}
+.form-row{display:flex;gap:8px;}
+input[type=text],input[type=number]{background:#0d0d16;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;color:#f1f5f9;font-size:13px;width:100%;}
+input[type=text]:focus,input[type=number]:focus{outline:none;border-color:rgba(233,69,96,.5);}
+.btn-send{background:linear-gradient(135deg,#e94560,#c0392b);color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:800;cursor:pointer;font-size:13px;white-space:nowrap;}
+.btn-credit{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:800;cursor:pointer;font-size:13px;}
+.btn-debit{background:linear-gradient(135deg,#e94560,#c0392b);color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:800;cursor:pointer;font-size:13px;}
+.msg{font-size:12px;margin-top:8px;padding:6px 10px;border-radius:6px;display:none;}
+.msg.ok{background:rgba(34,197,94,.1);color:#22c55e;display:block;}
+.msg.err{background:rgba(233,69,96,.1);color:#e94560;display:block;}
+
+/* Account Info */
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;}
+.info-card{background:#13131a;border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:16px;}
+.info-label{font-size:11px;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;}
+.info-value{font-size:15px;font-weight:700;font-family:monospace;}
+
+/* Transaction History */
+.txn-section{background:#13131a;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:20px;}
+.txn-section h3{font-size:14px;font-weight:700;margin-bottom:16px;color:#94a3b8;}
+.txn-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.txn-row:last-child{border-bottom:none;}
+.txn-icon{font-size:20px;margin-right:12px;}
+.txn-info{flex:1;}
+.txn-who{font-size:13px;font-weight:700;}
+.txn-note{font-size:11px;color:#64748b;}
+.txn-amount{font-size:15px;font-weight:900;}
+.txn-amount.out{color:#e94560;}
+.txn-amount.in{color:#22c55e;}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(34,197,94,.1);color:#22c55e;margin-left:8px;}
+</style>
+</head>
+<body>
+
+<!-- Ghost Banner -->
+<div class="ghost-banner">
+  <div class="left">
+    <span>👻 GHOST MODE</span>
+    <span>Viewing as</span>
+    <span class="ghost-tag">#{{ acct.hashtag }}</span>
+    <span>·</span>
+    <span>Logged in as {{ admin.name }}</span>
+  </div>
+  <button class="ghost-exit-btn" onclick="exitGhost()">✕ Exit Ghost Mode</button>
+</div>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="avatar">{{ (acct.first_name or '?')[0] | upper }}</div>
+    <div>
+      <div class="name">{{ acct.first_name }} {{ acct.last_name }}</div>
+      <div class="hashtag">#{{ acct.hashtag }} · {{ acct.email }}</div>
+    </div>
+    <span class="status-badge" style="margin-left:auto;font-size:12px;padding:4px 12px;">{{ acct.status | upper }}</span>
+  </div>
+
+  <!-- Balance -->
+  <div class="balance-card">
+    <div class="balance-label">CURRENT BALANCE</div>
+    <div class="balance-amount {% if acct.balance < 0 %}negative{% else %}positive{% endif %}" id="live-balance">
+      ${{ "%.2f"|format(acct.balance or 0) }}
+    </div>
+    <div style="font-size:12px;color:#475569;margin-top:8px;">Lifetime deposited: ${{ "%.2f"|format(acct.lifetime_deposited or 0) }}</div>
+  </div>
+
+  <!-- Admin Actions -->
+  <div class="admin-actions">
+    <!-- Send Money AS User -->
+    <div class="action-card">
+      <h3>🔫 Send as {{ acct.first_name }}</h3>
+      <div class="form-row" style="margin-bottom:8px;">
+        <input type="text" id="send-to" placeholder="Recipient #hashtag">
+      </div>
+      <div class="form-row">
+        <input type="number" id="send-amount" placeholder="Amount $" min="0.01" step="0.01">
+        <button class="btn-send" onclick="ghostSend()">Send</button>
+      </div>
+      <input type="text" id="send-note" placeholder="Note (optional)" style="margin-top:8px;">
+      <div class="msg" id="send-msg"></div>
+    </div>
+
+    <!-- Balance Adjustment -->
+    <div class="action-card">
+      <h3>⚡ Adjust Balance</h3>
+      <div class="form-row" style="margin-bottom:8px;">
+        <input type="number" id="adj-amount" placeholder="Amount (+ credit / − debit)" step="0.01">
+      </div>
+      <input type="text" id="adj-reason" placeholder="Reason (required)" style="margin-bottom:8px;">
+      <div class="form-row">
+        <button class="btn-credit" onclick="adjustBalance(1)">+ Credit</button>
+        <button class="btn-debit" onclick="adjustBalance(-1)">− Debit</button>
+      </div>
+      <div class="msg" id="adj-msg"></div>
+    </div>
+  </div>
+
+  <!-- Account Info -->
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-label">Routing #</div>
+      <div class="info-value">{{ acct.routing_number or '—' }}</div>
+    </div>
+    <div class="info-card">
+      <div class="info-label">Account #</div>
+      <div class="info-value">{{ acct.account_number or '—' }}</div>
+    </div>
+    <div class="info-card">
+      <div class="info-label">Virtual Card</div>
+      <div class="info-value">{{ (acct.virtual_card_number or '—')[:4] }} •••• •••• ••••</div>
+    </div>
+    <div class="info-card">
+      <div class="info-label">Beat the V</div>
+      <div class="info-value" style="color:{% if acct.beat_v_enabled %}#22c55e{% else %}#64748b{% endif %}">
+        {% if acct.beat_v_enabled %}✓ Enabled{% else %}Locked{% endif %}
+      </div>
+    </div>
+    <div class="info-card">
+      <div class="info-label">Stripe Account</div>
+      <div class="info-value" style="font-size:11px;color:#94a3b8;">{{ acct.wise_account_id or 'Not linked' }}</div>
+    </div>
+    <div class="info-card">
+      <div class="info-label">Phone</div>
+      <div class="info-value">{{ acct.phone or '—' }}</div>
+    </div>
+  </div>
+
+  <!-- Transaction History -->
+  <div class="txn-section">
+    <h3>📋 Full Transaction History</h3>
+    <div id="txn-list"><div style="color:#475569;font-size:13px;">Loading...</div></div>
+  </div>
+</div>
+
+<script>
+const ACCT_ID = "{{ acct.id }}";
+const ACCT_HASHTAG = "{{ acct.hashtag }}";
+
+async function exitGhost() {
+  await fetch('/api/shotgun/admin/ghost/exit', {method:'POST'});
+  window.location.href = '/shotgun/admin';
+}
+
+async function ghostSend() {
+  const to = document.getElementById('send-to').value.trim().replace('#','');
+  const amt = parseFloat(document.getElementById('send-amount').value);
+  const note = document.getElementById('send-note').value;
+  const msg = document.getElementById('send-msg');
+  if (!to || !amt) { showMsg(msg, 'Fill in recipient and amount', true); return; }
+  const r = await fetch('/api/shotgun/admin/ghost/send', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({to_hashtag: to, amount: amt, note: note})
+  });
+  const d = await r.json();
+  if (d.success) {
+    showMsg(msg, `✓ Sent $${amt.toFixed(2)} to #${to} · New balance: $${d.new_balance.toFixed(2)}`);
+    document.getElementById('live-balance').textContent = '$' + d.new_balance.toFixed(2);
+    loadTxns();
+  } else { showMsg(msg, d.error || 'Error', true); }
+}
+
+async function adjustBalance(sign) {
+  const amt = parseFloat(document.getElementById('adj-amount').value) * sign;
+  const reason = document.getElementById('adj-reason').value.trim();
+  const msg = document.getElementById('adj-msg');
+  if (!amt || !reason) { showMsg(msg, 'Amount and reason required', true); return; }
+  const r = await fetch('/api/shotgun/admin/ghost/adjust-balance', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({account_id: ACCT_ID, amount: amt, reason: reason})
+  });
+  const d = await r.json();
+  if (d.success) {
+    showMsg(msg, `✓ Balance adjusted · New balance: $${d.new_balance.toFixed(2)}`);
+    document.getElementById('live-balance').textContent = '$' + d.new_balance.toFixed(2);
+    loadTxns();
+  } else { showMsg(msg, d.error || 'Error', true); }
+}
+
+async function loadTxns() {
+  const r = await fetch(`/api/shotgun/admin/ghost/transactions/${ACCT_ID}`);
+  const d = await r.json();
+  const el = document.getElementById('txn-list');
+  if (!d.transactions || !d.transactions.length) {
+    el.innerHTML = '<div style="color:#475569;font-size:13px;">No transactions yet.</div>'; return;
+  }
+  el.innerHTML = d.transactions.map(t => {
+    const isOut = t.from_account_id === ACCT_ID;
+    const who = isOut ? (t.to_name || '#'+t.to_hashtag) : (t.from_name || '#'+t.from_hashtag);
+    const icon = t.type === 'deposit' ? '💵' : t.type === 'credit' ? '⚡' : t.type === 'debit' ? '💸' : isOut ? '🔫' : '🎯';
+    const amtStr = (isOut ? '-' : '+') + '$' + (t.amount||0).toFixed(2);
+    const cls = isOut ? 'out' : 'in';
+    const ghost = t.note && t.note.includes('[GHOST') ? '<span style="color:#f59e0b;font-size:10px;"> 👻 ADMIN</span>' : '';
+    return `<div class="txn-row">
+      <span class="txn-icon">${icon}</span>
+      <div class="txn-info">
+        <div class="txn-who">${who || t.type}${ghost}</div>
+        <div class="txn-note">${t.note || ''} · Fee: $${(t.fee||0).toFixed(2)}</div>
+      </div>
+      <span class="txn-amount ${cls}">${amtStr}</span>
+    </div>`;
+  }).join('');
+}
+
+function showMsg(el, text, isErr=false) {
+  el.textContent = text;
+  el.className = 'msg ' + (isErr ? 'err' : 'ok');
+  setTimeout(() => el.className = 'msg', 4000);
+}
+
+loadTxns();
+</script>
+</body>
+</html>
