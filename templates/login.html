@@ -68,30 +68,8 @@
         <a href="/forgot-password" style="font-size:12px;color:rgba(245,158,11,.6);text-decoration:none;">Forgot password?</a>
       </div>
 
-      <!-- CAPTCHA -->
-      <div id="captcha-box" style="margin-top:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px 16px;">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div id="captcha-check" style="width:22px;height:22px;border:2px solid rgba(255,255,255,.2);border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="startCaptcha()">
-            <span id="captcha-tick" style="display:none;color:#22c55e;font-size:14px;font-weight:900;">✓</span>
-          </div>
-          <div style="flex:1;">
-            <div id="captcha-label" style="font-size:13px;color:rgba(255,255,255,.6);font-weight:600;">I'm not a robot</div>
-            <div id="captcha-challenge" style="display:none;margin-top:8px;">
-              <div id="captcha-question" style="font-size:13px;color:#60a5fa;font-weight:700;margin-bottom:6px;"></div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <input id="captcha-answer" type="number" placeholder="Answer" style="width:80px;padding:6px 10px;border:1.5px solid rgba(255,255,255,.15);border-radius:8px;background:rgba(255,255,255,.07);color:#f8fafc;font-size:13px;outline:none;">
-                <button type="button" onclick="verifyCaptcha()" style="background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">Check</button>
-              </div>
-              <div id="captcha-error" style="font-size:11px;color:#f87171;margin-top:4px;display:none;"></div>
-            </div>
-          </div>
-          <div style="text-align:right;font-size:9px;color:rgba(255,255,255,.2);line-height:1.4;">
-            <div style="font-size:16px;margin-bottom:2px;">🛡️</div>
-            Secure
-          </div>
-        </div>
-      </div>
-      <input type="hidden" name="captcha_token" id="captcha_token_field">
+
+      
 
     </form>
 
@@ -117,54 +95,8 @@
   </div>
 </div>
 
-<script>
-let captchaToken = null;
-
-async function startCaptcha() {
-  document.getElementById('captcha-label').textContent = 'Solve to verify';
-  document.getElementById('captcha-challenge').style.display = 'block';
-  try {
-    const res = await fetch('/api/captcha/generate');
-    const d = await res.json();
-    captchaToken = d.token;
-    document.getElementById('captcha-question').textContent = d.question;
-    document.getElementById('captcha-answer').focus();
-  } catch(e) {
-    document.getElementById('captcha-label').textContent = 'Could not load CAPTCHA';
-  }
-}
-
-async function verifyCaptcha() {
-  const answer = document.getElementById('captcha-answer').value.trim();
-  if (!answer) return;
-  try {
-    const res = await fetch('/api/captcha/verify', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({token: captchaToken, answer})
-    });
-    const d = await res.json();
-    if (d.valid) {
-      document.getElementById('captcha_token_field').value = d.pass_token;
-      document.getElementById('captcha-challenge').style.display = 'none';
-      document.getElementById('captcha-tick').style.display = 'block';
-      document.getElementById('captcha-check').style.background = 'rgba(34,197,94,.15)';
-      document.getElementById('captcha-check').style.borderColor = '#22c55e';
-      document.getElementById('captcha-label').textContent = 'Verified ✓';
-      document.getElementById('captcha-label').style.color = '#22c55e';
-    } else {
-      document.getElementById('captcha-error').textContent = 'Wrong answer — try again';
-      document.getElementById('captcha-error').style.display = 'block';
-      startCaptcha();
-    }
-  } catch(e) {}
-}
-
-// Allow Enter key in captcha answer
-document.addEventListener('DOMContentLoaded', () => {
-  const ans = document.getElementById('captcha-answer');
-  if (ans) ans.addEventListener('keydown', e => { if(e.key==='Enter'){e.preventDefault();verifyCaptcha();}});
-});
-</script>
+<script></script>
 
 </body>
 </html>
+
