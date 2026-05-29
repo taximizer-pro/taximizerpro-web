@@ -4,551 +4,715 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Shotgun Bank — Your Money Moves Fast</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:'Inter',system-ui,sans-serif;background:#0a0a0f;color:#f8fafc;min-height:100vh;overflow-x:hidden;}
+  body{font-family:'Inter',system-ui,sans-serif;background:#0a0208;color:#f8fafc;min-height:100vh;overflow-x:hidden;}
+
+  /* ── BRAND COLORS (pulled from logo — deep crimson/gunmetal) ── */
+  :root{
+    --red:#c0392b;
+    --red-bright:#e94560;
+    --gold:#f59e0b;
+    --dark:#0a0208;
+    --dark2:#12060e;
+    --dark3:#1c0d18;
+    --card:#16090f;
+    --border:rgba(192,57,43,.25);
+    --text:#f8fafc;
+    --muted:#64748b;
+  }
 
   /* ── NAV ── */
-  .sg-nav{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid rgba(255,255,255,.06);position:sticky;top:0;background:rgba(10,10,15,.9);backdrop-filter:blur(12px);z-index:100;}
-  .sg-logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:900;color:#f8fafc;text-decoration:none;}
-  .sg-logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#e94560,#c0392b);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .sg-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(10,2,8,.92);backdrop-filter:blur(14px);z-index:100;}
+  .sg-logo{display:flex;align-items:center;gap:12px;text-decoration:none;}
+  .sg-logo img{height:38px;width:auto;object-fit:contain;}
+  .sg-logo-text{font-size:17px;font-weight:900;color:#f8fafc;letter-spacing:-.3px;}
   .nav-btns{display:flex;gap:10px;}
   .btn-ghost{background:none;border:1px solid rgba(255,255,255,.15);color:#f8fafc;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;}
-  .btn-red{background:linear-gradient(135deg,#e94560,#c0392b);border:none;color:#fff;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:800;box-shadow:0 4px 14px rgba(233,69,96,.4);}
+  .btn-ghost:hover{background:rgba(255,255,255,.06);}
+  .btn-red{background:linear-gradient(135deg,var(--red-bright),var(--red));border:none;color:#fff;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:800;box-shadow:0 4px 14px rgba(192,57,43,.45);}
+  .btn-red:hover{filter:brightness(1.1);}
 
   /* ── SCREENS ── */
   .screen{display:none;} .screen.active{display:block;}
 
   /* ── HERO ── */
-  .hero{text-align:center;padding:80px 24px 60px;}
-  .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(233,69,96,.12);border:1px solid rgba(233,69,96,.3);color:#f87171;font-size:11px;font-weight:700;padding:5px 14px;border-radius:20px;margin-bottom:24px;letter-spacing:.5px;}
-  .hero h1{font-size:clamp(36px,7vw,72px);font-weight:900;line-height:1.05;margin-bottom:20px;}
-  .hero h1 span{background:linear-gradient(135deg,#e94560,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .hero{text-align:center;padding:70px 24px 50px;}
+  .hero-logo-block{display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:32px;flex-wrap:wrap;}
+  .hero-logo-block img.hero-main-logo{height:90px;width:auto;filter:drop-shadow(0 0 30px rgba(192,57,43,.5));}
+  .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);color:#fca5a5;font-size:11px;font-weight:700;padding:5px 14px;border-radius:20px;margin-bottom:20px;letter-spacing:.5px;}
+  .hero h1{font-size:clamp(34px,7vw,68px);font-weight:900;line-height:1.05;margin-bottom:18px;}
+  .hero h1 span{background:linear-gradient(135deg,var(--red-bright),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
   .hero p{font-size:16px;color:#94a3b8;max-width:480px;margin:0 auto 36px;line-height:1.6;}
   .hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
-  .hero-btn-primary{background:linear-gradient(135deg,#e94560,#c0392b);color:#fff;padding:14px 32px;border-radius:12px;font-size:15px;font-weight:800;border:none;cursor:pointer;box-shadow:0 6px 24px rgba(233,69,96,.45);transition:transform .15s;}
+  .hero-btn-primary{background:linear-gradient(135deg,var(--red-bright),var(--red));color:#fff;padding:14px 32px;border-radius:12px;font-size:15px;font-weight:800;border:none;cursor:pointer;box-shadow:0 6px 24px rgba(192,57,43,.5);transition:transform .15s;}
   .hero-btn-primary:hover{transform:translateY(-2px);}
-  .hero-btn-secondary{background:rgba(255,255,255,.06);color:#f8fafc;padding:14px 32px;border-radius:12px;font-size:15px;font-weight:700;border:1px solid rgba(255,255,255,.12);cursor:pointer;transition:background .15s;}
-  .hero-btn-secondary:hover{background:rgba(255,255,255,.1);}
+  .hero-btn-secondary{background:rgba(255,255,255,.05);color:#f8fafc;padding:14px 32px;border-radius:12px;font-size:15px;font-weight:700;border:1px solid rgba(255,255,255,.12);cursor:pointer;transition:background .15s;}
+  .hero-btn-secondary:hover{background:rgba(255,255,255,.09);}
 
   /* ── FEATURES ── */
-  .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;padding:0 24px 60px;max-width:900px;margin:0 auto;}
-  .feat-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:24px;transition:border-color .2s;}
-  .feat-card:hover{border-color:rgba(233,69,96,.3);}
-  .feat-icon{font-size:28px;margin-bottom:12px;}
+  .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;padding:0 24px 60px;max-width:960px;margin:0 auto;}
+  .feat-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;transition:border-color .2s;}
+  .feat-card:hover{border-color:rgba(192,57,43,.5);}
+  .feat-icon-img{height:42px;width:auto;margin-bottom:14px;object-fit:contain;}
+  .feat-icon-emoji{font-size:28px;margin-bottom:12px;display:block;}
   .feat-title{font-size:14px;font-weight:800;margin-bottom:6px;}
   .feat-desc{font-size:12px;color:#64748b;line-height:1.5;}
 
   /* ── MODAL OVERLAY ── */
-  .sg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:200;display:none;align-items:center;justify-content:center;padding:16px;}
+  .sg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);z-index:200;display:none;align-items:center;justify-content:center;padding:16px;}
   .sg-overlay.open{display:flex;}
-  .sg-modal{background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:24px;width:100%;max-width:400px;overflow:hidden;animation:slide-up .25s ease;}
+  .sg-modal{background:#0f0208;border:1px solid var(--border);border-radius:24px;width:100%;max-width:400px;overflow:hidden;animation:slide-up .25s ease;box-shadow:0 24px 80px rgba(192,57,43,.25);}
   @keyframes slide-up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
   .modal-header{padding:24px 24px 0;display:flex;align-items:center;justify-content:space-between;}
+  .modal-logo{height:36px;width:auto;object-fit:contain;}
   .modal-close{background:none;border:none;color:#475569;cursor:pointer;font-size:22px;padding:4px 8px;}
+  .modal-close:hover{color:#f8fafc;}
   .modal-body{padding:24px;}
   .modal-title{font-size:20px;font-weight:900;margin-bottom:4px;}
   .modal-sub{font-size:13px;color:#64748b;margin-bottom:24px;}
 
-  /* ── FORM ELEMENTS ── */
+  /* ── FORM ── */
   .sg-label{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block;}
-  .sg-input{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#f8fafc;font-size:14px;padding:12px 14px;outline:none;transition:border-color .15s;margin-bottom:14px;}
-  .sg-input:focus{border-color:rgba(233,69,96,.5);}
+  .sg-input{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:#f8fafc;font-size:14px;padding:12px 14px;outline:none;transition:border-color .15s;margin-bottom:14px;}
+  .sg-input:focus{border-color:rgba(192,57,43,.6);}
   .sg-input-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  .sg-btn-full{width:100%;padding:13px;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-top:6px;}
-  .sg-btn-red{background:linear-gradient(135deg,#e94560,#c0392b);color:#fff;box-shadow:0 4px 14px rgba(233,69,96,.4);}
-  .sg-btn-red:hover{filter:brightness(1.1);}
+  .sg-btn-full{width:100%;padding:13px;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-top:6px;transition:filter .15s;}
+  .sg-btn-red{background:linear-gradient(135deg,var(--red-bright),var(--red));color:#fff;box-shadow:0 4px 14px rgba(192,57,43,.5);}
+  .sg-btn-red:hover{filter:brightness(1.12);}
   .sg-btn-outline{background:none;border:1px solid rgba(255,255,255,.12);color:#f8fafc;margin-top:10px;}
+  .sg-btn-outline:hover{background:rgba(255,255,255,.05);}
   .sg-err{color:#f87171;font-size:12px;margin-top:8px;display:none;}
   .sg-succ{color:#4ade80;font-size:12px;margin-top:8px;display:none;}
+  .sg-link{color:var(--red-bright);font-size:12px;cursor:pointer;text-align:center;display:block;margin-top:14px;}
+  .sg-link:hover{text-decoration:underline;}
 
-  /* ── PIN DOTS ── */
+  /* ── PIN ── */
+  .pin-header{text-align:center;margin-bottom:12px;}
+  .pin-header .modal-logo{margin:0 auto 10px;display:block;}
   .pin-dots{display:flex;gap:12px;justify-content:center;margin:16px 0;}
   .pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.2);transition:all .15s;}
-  .pin-dot.filled{background:#e94560;border-color:#e94560;}
+  .pin-dot.filled{background:var(--red-bright);border-color:var(--red-bright);}
   .pin-numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:240px;margin:0 auto 16px;}
-  .pin-key{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;font-size:18px;font-weight:700;cursor:pointer;text-align:center;transition:background .1s;}
-  .pin-key:hover{background:rgba(233,69,96,.15);}
+  .pin-key{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:16px;font-size:18px;font-weight:700;cursor:pointer;text-align:center;transition:background .1s;}
+  .pin-key:hover{background:rgba(192,57,43,.18);}
+  .pin-key:active{background:rgba(192,57,43,.3);}
   .pin-key.del{color:#f87171;}
 
   /* ── DASHBOARD ── */
   .sg-dash{max-width:480px;margin:0 auto;padding:24px;}
-  .dash-balance{background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid rgba(233,69,96,.2);border-radius:20px;padding:28px;text-align:center;margin-bottom:20px;}
+  .dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .dash-header img{height:28px;}
+  .dash-logout{background:none;border:1px solid rgba(255,255,255,.1);color:#94a3b8;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;}
+  .dash-logout:hover{color:#f8fafc;border-color:rgba(255,255,255,.2);}
+  .dash-balance{background:linear-gradient(135deg,var(--dark2),var(--dark3));border:1px solid rgba(192,57,43,.3);border-radius:20px;padding:28px;text-align:center;margin-bottom:20px;position:relative;overflow:hidden;}
+  .dash-balance::before{content:'';position:absolute;top:-40px;right:-40px;width:140px;height:140px;background:rgba(192,57,43,.08);border-radius:50%;filter:blur(30px);}
   .dash-label{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
   .dash-amount{font-size:48px;font-weight:900;letter-spacing:-2px;}
   .dash-tag{font-size:13px;color:#64748b;margin-top:8px;}
   .dash-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
-  .dash-action{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 8px;text-align:center;cursor:pointer;transition:all .15s;}
-  .dash-action:hover{background:rgba(233,69,96,.1);border-color:rgba(233,69,96,.3);}
-  .dash-action-icon{font-size:22px;margin-bottom:6px;}
-  .dash-action-label{font-size:10px;font-weight:700;color:#94a3b8;}
-  .tx-list{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:16px;overflow:hidden;}
-  .tx-header{padding:14px 16px;font-size:12px;font-weight:700;color:#64748b;border-bottom:1px solid rgba(255,255,255,.05);}
-  .tx-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.04);}
-  .tx-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
-  .tx-icon.send{background:rgba(239,68,68,.12);}
-  .tx-icon.recv{background:rgba(74,222,128,.12);}
-  .tx-icon.dep{background:rgba(96,165,250,.12);}
+  .dash-action{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 8px;text-align:center;cursor:pointer;transition:border-color .15s;}
+  .dash-action:hover{border-color:rgba(192,57,43,.5);}
+  .dash-action img.action-icon{height:32px;width:auto;margin:0 auto 8px;display:block;object-fit:contain;}
+  .dash-action .action-label{font-size:11px;font-weight:700;color:#94a3b8;}
+
+  /* ── TX LIST ── */
+  .tx-list{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+  .tx-list-header{padding:16px 20px;border-bottom:1px solid var(--border);font-size:13px;font-weight:800;color:#f8fafc;}
+  .tx-row{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.03);}
+  .tx-row:last-child{border-bottom:none;}
+  .tx-icon{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;}
+  .tx-icon img{height:26px;width:auto;object-fit:contain;}
   .tx-info{flex:1;}
-  .tx-name{font-size:13px;font-weight:600;}
-  .tx-date{font-size:11px;color:#475569;}
-  .tx-amt{font-size:14px;font-weight:800;}
-  .tx-amt.neg{color:#f87171;}
-  .tx-amt.pos{color:#4ade80;}
+  .tx-name{font-size:13px;font-weight:600;color:#f8fafc;}
+  .tx-time{font-size:11px;color:#475569;margin-top:2px;}
+  .tx-amt{font-size:15px;font-weight:800;}
+  .tx-amt.pos{color:#4ade80;} .tx-amt.neg{color:#f87171;}
 
-  /* ── SEND FORM ── */
-  .send-numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:280px;margin:0 auto 16px;}
-  .send-key{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:14px;font-size:20px;font-weight:700;cursor:pointer;text-align:center;transition:background .1s;}
-  .send-key:hover{background:rgba(233,69,96,.1);}
-  .amount-display{font-size:48px;font-weight:900;text-align:center;letter-spacing:-2px;margin:20px 0;color:#f8fafc;}
-  .amount-display span{font-size:28px;color:#64748b;}
+  /* ── SEND / DEPOSIT MODALS ── */
+  .amount-display{text-align:center;padding:20px 0 10px;}
+  .amount-big{font-size:52px;font-weight:900;letter-spacing:-2px;color:#f8fafc;}
+  .amount-big span{font-size:28px;vertical-align:top;padding-top:10px;display:inline-block;color:#475569;}
 
-  /* ── PENDING BADGE ── */
-  .status-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;}
-  .status-pending{background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);}
-  .status-active{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.3);}
+  /* ── BEAT THE V BADGE ── */
+  .btv-badge{display:flex;align-items:center;gap:10px;background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.3);border-radius:12px;padding:12px 16px;margin-bottom:16px;}
+  .btv-badge img{height:28px;}
+  .btv-text{font-size:12px;color:#fca5a5;font-weight:600;}
+
+  @media(max-width:480px){.dash-actions{grid-template-columns:repeat(2,1fr);}}
 </style>
 </head>
 <body>
 
-<!-- NAV -->
+<!-- ══════════ NAV ══════════ -->
 <nav class="sg-nav">
   <a class="sg-logo" href="/bank" onclick="showScreen('home');return false;">
-    <div class="sg-logo-icon">🔫</div>
-    Shotgun Bank
+    <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/1116c3e12_shotgun_bank_main_logo_clean.png" alt="Shotgun Bank">
+    <span class="sg-logo-text">Shotgun Bank</span>
   </a>
-  <div class="nav-btns" id="nav-guest">
+  <div class="nav-btns">
     <button class="btn-ghost" onclick="openLogin()">Log In</button>
     <button class="btn-red"   onclick="openSignup()">Create Account</button>
   </div>
-  <div class="nav-btns" id="nav-user" style="display:none;">
-    <span style="font-size:13px;color:#64748b;padding:0 8px;" id="nav-hashtag"></span>
-    <button class="btn-ghost" onclick="sgLogout()">Log Out</button>
-  </div>
 </nav>
 
-<!-- ══ SCREEN: HOME / HERO ══ -->
-<div id="screen-home" class="screen active">
+<!-- ══════════ HOME SCREEN ══════════ -->
+<div class="screen active" id="screen-home">
+
+  <!-- HERO -->
   <div class="hero">
-    <div class="hero-badge">🔫 Powered by Bisignano Holdings LLC</div>
-    <h1>Your Money<br><span>Moves Fast</span></h1>
-    <p>Send, receive, and cash out instantly. Get your tax refund <strong style="color:#fbbf24;">up to 2 weeks early</strong> when you file through TaximizerPro.</p>
+    <div class="hero-logo-block">
+      <img class="hero-main-logo" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/1116c3e12_shotgun_bank_main_logo_clean.png" alt="Shotgun Bank Logo">
+    </div>
+    <div class="hero-badge">🔫 POWERED BY BISIGNANO HOLDINGS LLC</div>
+    <h1>Your Money<br><span>Moves Fast.</span></h1>
+    <p>Send, request, load, and cash out — all with your personal <strong style="color:#f8fafc;">#tag</strong>. Get your tax refund up to 2 weeks early.</p>
     <div class="hero-btns">
       <button class="hero-btn-primary" onclick="openSignup()">Create Free Account</button>
       <button class="hero-btn-secondary" onclick="openLogin()">I Already Have an Account</button>
     </div>
   </div>
 
+  <!-- FEATURE CARDS -->
   <div class="features">
     <div class="feat-card">
-      <div class="feat-icon">⚡</div>
-      <div class="feat-title">Instant Transfers</div>
-      <div class="feat-desc">Send money to anyone on Shotgun in seconds using their #hashtag.</div>
+      <img class="feat-icon-img" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/2aaab827e_shoot_it_clean.png" alt="Send">
+      <div class="feat-title">Shoot It 💸</div>
+      <div class="feat-desc">Send money instantly to any #tag in seconds. No fees on standard P2P.</div>
     </div>
     <div class="feat-card">
-      <div class="feat-icon">💸</div>
-      <div class="feat-title">Early Refund</div>
-      <div class="feat-desc">TaximizerPro clients can receive their IRS refund up to 2 weeks early.</div>
+      <img class="feat-icon-img" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/a558d7bc2_who_shot_ya_clean.png" alt="Request">
+      <div class="feat-title">Who Shot Ya? 🎯</div>
+      <div class="feat-desc">Request money from anyone. They get notified and can pay instantly.</div>
     </div>
     <div class="feat-card">
-      <div class="feat-icon">🎯</div>
-      <div class="feat-title">Beat the V</div>
-      <div class="feat-desc">After $500 in activity, unlock a $100 overdraft — never get stuck with a $0 balance.</div>
+      <img class="feat-icon-img" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/3387f693e_beat_the_v_clean.png" alt="Beat the V">
+      <div class="feat-title">Beat the V 🩸</div>
+      <div class="feat-desc">Unlock a $100 negative balance after $500 in monthly transactions. Your lifeline.</div>
     </div>
     <div class="feat-card">
-      <div class="feat-icon">🏦</div>
-      <div class="feat-title">Virtual Debit Card</div>
-      <div class="feat-desc">Your Shotgun account comes with a virtual card for online purchases instantly.</div>
+      <span class="feat-icon-emoji">₿</span>
+      <div class="feat-title">Crypto Convert</div>
+      <div class="feat-desc">Convert your balance to BTC, ETH, SOL, and more — right from your account.</div>
+    </div>
+    <div class="feat-card">
+      <span class="feat-icon-emoji">🏦</span>
+      <div class="feat-title">Linked Bank</div>
+      <div class="feat-desc">Connect your bank account. Load funds via ACH or credit card, cash out anytime.</div>
+    </div>
+    <div class="feat-card">
+      <img class="feat-icon-img" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/da3eb0759_gottem_bullseye_clean.png" alt="Gottem">
+      <div class="feat-title">Gottem! ✅</div>
+      <div class="feat-desc">Every confirmed payment celebrated. Real-time notifications so you always know.</div>
     </div>
   </div>
-</div>
 
-<!-- ══ SCREEN: DASHBOARD ══ -->
-<div id="screen-dash" class="screen">
+</div><!-- /screen-home -->
+
+<!-- ══════════ DASHBOARD SCREEN ══════════ -->
+<div class="screen" id="screen-dash">
   <div class="sg-dash">
+    <div class="dash-header">
+      <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/1116c3e12_shotgun_bank_main_logo_clean.png" alt="Shotgun">
+      <button class="dash-logout" onclick="doLogout()">Log Out</button>
+    </div>
+
+    <!-- Balance card -->
     <div class="dash-balance">
-      <div class="dash-label">Available Balance</div>
-      <div class="dash-amount" id="dash-balance-amt">$0.00</div>
-      <div class="dash-tag" id="dash-hashtag-tag"></div>
+      <div class="dash-label">Your Balance</div>
+      <div class="dash-amount" id="dash-bal">$0.00</div>
+      <div class="dash-tag" id="dash-tag">#—</div>
     </div>
 
+    <!-- Beat the V badge (shown if overdraft available) -->
+    <div class="btv-badge" id="btv-badge" style="display:none;">
+      <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/3387f693e_beat_the_v_clean.png" alt="Beat the V">
+      <div class="btv-text">Beat the V unlocked — $100 overdraft available 🩸</div>
+    </div>
+
+    <!-- Action buttons -->
     <div class="dash-actions">
-      <div class="dash-action" onclick="openSend()">
-        <div class="dash-action-icon">🔫</div>
-        <div class="dash-action-label">Shoot It</div>
+      <div class="dash-action" onclick="openOverlay('overlay-send')">
+        <img class="action-icon" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/2aaab827e_shoot_it_clean.png" alt="Send">
+        <div class="action-label">Shoot It</div>
       </div>
-      <div class="dash-action" onclick="openRequest()">
-        <div class="dash-action-icon">👋</div>
-        <div class="dash-action-label">Who Shot Ya?</div>
+      <div class="dash-action" onclick="openOverlay('overlay-request')">
+        <img class="action-icon" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/a558d7bc2_who_shot_ya_clean.png" alt="Request">
+        <div class="action-label">Who Shot Ya?</div>
       </div>
-      <div class="dash-action" onclick="openDeposit()">
-        <div class="dash-action-icon">💳</div>
-        <div class="dash-action-label">Add Funds</div>
+      <div class="dash-action" onclick="openOverlay('overlay-deposit')">
+        <span style="font-size:28px;margin-bottom:8px;display:block;">💳</span>
+        <div class="action-label">Add Funds</div>
       </div>
-      <div class="dash-action" onclick="openCashout()">
-        <div class="dash-action-icon">🏦</div>
-        <div class="dash-action-label">Cash Out</div>
+      <div class="dash-action" onclick="openOverlay('overlay-withdraw')">
+        <span style="font-size:28px;margin-bottom:8px;display:block;">🏦</span>
+        <div class="action-label">Cash Out</div>
       </div>
     </div>
 
+    <!-- Transaction feed -->
     <div class="tx-list">
-      <div class="tx-header">Recent Activity</div>
-      <div id="tx-feed"><div style="padding:24px;text-align:center;color:#475569;font-size:13px;">No transactions yet</div></div>
+      <div class="tx-list-header">Recent Activity</div>
+      <div id="tx-feed"><div style="padding:32px;text-align:center;color:#475569;font-size:13px;">No transactions yet 🔫</div></div>
     </div>
   </div>
-</div>
+</div><!-- /screen-dash -->
 
-<!-- ══ LOGIN OVERLAY ══ -->
+
+<!-- ══════════ LOGIN MODAL ══════════ -->
 <div class="sg-overlay" id="overlay-login">
   <div class="sg-modal">
     <div class="modal-header">
-      <div>
-        <div class="modal-title">Welcome back 🔫</div>
-        <div class="modal-sub">Enter your hashtag or email + PIN</div>
-      </div>
+      <img class="modal-logo" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/1116c3e12_shotgun_bank_main_logo_clean.png" alt="Shotgun">
       <button class="modal-close" onclick="closeOverlay('overlay-login')">×</button>
     </div>
     <div class="modal-body">
-      <label class="sg-label">Hashtag or Email</label>
-      <input class="sg-input" id="login-identifier" placeholder="#yourname or email@example.com" type="text">
+      <div class="modal-title">Welcome Back 🔫</div>
+      <div class="modal-sub">Enter your #tag or email and PIN to continue</div>
+      <label class="sg-label">#tag or Email</label>
+      <input class="sg-input" id="login-id" placeholder="#yourhashtag or email@address.com" autocomplete="off">
       <label class="sg-label">PIN</label>
-      <div class="pin-dots" id="login-pin-dots">
-        <div class="pin-dot" id="lpd0"></div><div class="pin-dot" id="lpd1"></div>
-        <div class="pin-dot" id="lpd2"></div><div class="pin-dot" id="lpd3"></div>
-      </div>
+      <div class="pin-dots" id="login-pin-dots"></div>
       <div class="pin-numpad" id="login-numpad"></div>
       <div class="sg-err" id="login-err"></div>
-      <button class="sg-btn-full sg-btn-red" onclick="doLogin()" id="login-submit-btn">Log In →</button>
+      <button class="sg-btn-full sg-btn-red" onclick="doLogin()" id="login-btn">Log In →</button>
       <button class="sg-btn-full sg-btn-outline" onclick="closeOverlay('overlay-login');openSignup()">New here? Create account</button>
     </div>
   </div>
 </div>
 
-<!-- ══ SIGNUP OVERLAY ══ -->
+<!-- ══════════ SIGNUP MODAL ══════════ -->
 <div class="sg-overlay" id="overlay-signup">
-  <div class="sg-modal" style="max-width:440px;">
+  <div class="sg-modal" style="max-height:92vh;overflow-y:auto;">
     <div class="modal-header">
-      <div>
-        <div class="modal-title">Create Account 🔫</div>
-        <div class="modal-sub">Get your refund early & send money fast</div>
-      </div>
+      <img class="modal-logo" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/1116c3e12_shotgun_bank_main_logo_clean.png" alt="Shotgun">
       <button class="modal-close" onclick="closeOverlay('overlay-signup')">×</button>
     </div>
     <div class="modal-body">
+      <div class="modal-title">Join Shotgun 🔫</div>
+      <div class="modal-sub">Create your free account in 60 seconds</div>
       <div class="sg-input-row">
-        <div><label class="sg-label">First Name</label><input class="sg-input" id="sg-fname" placeholder="First"></div>
-        <div><label class="sg-label">Last Name</label><input class="sg-input" id="sg-lname" placeholder="Last"></div>
+        <div>
+          <label class="sg-label">First Name</label>
+          <input class="sg-input" id="su-fname" placeholder="First">
+        </div>
+        <div>
+          <label class="sg-label">Last Name</label>
+          <input class="sg-input" id="su-lname" placeholder="Last">
+        </div>
       </div>
       <label class="sg-label">Email</label>
-      <input class="sg-input" id="sg-email" placeholder="you@example.com" type="email">
-      <label class="sg-label">Phone</label>
-      <input class="sg-input" id="sg-phone" placeholder="(555) 000-0000" type="tel">
-      <label class="sg-label">Choose Your #Hashtag</label>
-      <div style="position:relative;">
-        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#64748b;font-weight:700;">#</span>
-        <input class="sg-input" id="sg-hashtag" placeholder="yourname" style="padding-left:26px;" oninput="checkHashtag(this.value)">
-        <span id="sg-hashtag-check" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:13px;"></span>
-      </div>
-      <label class="sg-label">Set 4-Digit PIN</label>
-      <div class="pin-dots" id="signup-pin-dots">
-        <div class="pin-dot" id="spd0"></div><div class="pin-dot" id="spd1"></div>
-        <div class="pin-dot" id="spd2"></div><div class="pin-dot" id="spd3"></div>
-      </div>
+      <input class="sg-input" id="su-email" type="email" placeholder="you@email.com">
+      <label class="sg-label">Phone (optional)</label>
+      <input class="sg-input" id="su-phone" type="tel" placeholder="+1 555 000 0000">
+      <label class="sg-label">#Tag — your unique handle</label>
+      <input class="sg-input" id="su-tag" placeholder="#yourname" oninput="checkTagAvail(this.value)">
+      <div style="font-size:11px;color:#475569;margin-top:-10px;margin-bottom:14px;" id="tag-status"></div>
+      <label class="sg-label">Create a 4-digit PIN</label>
+      <div class="pin-dots" id="signup-pin-dots"></div>
       <div class="pin-numpad" id="signup-numpad"></div>
       <div class="sg-err" id="signup-err"></div>
       <div class="sg-succ" id="signup-succ"></div>
-      <button class="sg-btn-full sg-btn-red" onclick="doSignup()">Create My Account →</button>
+      <button class="sg-btn-full sg-btn-red" onclick="doSignup()" id="signup-btn">Create My Account →</button>
       <button class="sg-btn-full sg-btn-outline" onclick="closeOverlay('overlay-signup');openLogin()">Already have an account</button>
     </div>
   </div>
 </div>
 
-<!-- ══ SEND OVERLAY ══ -->
+<!-- ══════════ SEND MODAL ══════════ -->
 <div class="sg-overlay" id="overlay-send">
   <div class="sg-modal">
     <div class="modal-header">
-      <div><div class="modal-title">🔫 Shoot It</div><div class="modal-sub">Send money instantly</div></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img style="height:24px;" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/2aaab827e_shoot_it_clean.png" alt="Send">
+        <span style="font-size:16px;font-weight:800;">Shoot It</span>
+      </div>
       <button class="modal-close" onclick="closeOverlay('overlay-send')">×</button>
     </div>
     <div class="modal-body">
-      <label class="sg-label">Send To (#hashtag or email)</label>
-      <input class="sg-input" id="send-to" placeholder="#friend or email@example.com">
-      <label class="sg-label">Amount</label>
-      <div class="amount-display"><span>$</span><span id="send-amount-display">0</span></div>
-      <div class="send-numpad" id="send-numpad"></div>
-      <label class="sg-label">Note (optional)</label>
-      <input class="sg-input" id="send-note" placeholder="What's it for?">
+      <label class="sg-label">Send to #tag or email</label>
+      <input class="sg-input" id="send-to" placeholder="#friendshandle">
+      <div class="amount-display">
+        <div class="amount-big"><span>$</span><span id="send-amt-disp">0</span></div>
+      </div>
+      <div class="pin-numpad" id="send-numpad"></div>
+      <label class="sg-label" style="margin-top:8px;">Note (optional)</label>
+      <input class="sg-input" id="send-note" placeholder="For what?">
       <div class="sg-err" id="send-err"></div>
       <button class="sg-btn-full sg-btn-red" onclick="doSend()">Send Money →</button>
     </div>
   </div>
 </div>
 
-<!-- ══ DEPOSIT OVERLAY ══ -->
+<!-- ══════════ DEPOSIT MODAL ══════════ -->
 <div class="sg-overlay" id="overlay-deposit">
   <div class="sg-modal">
     <div class="modal-header">
-      <div><div class="modal-title">💳 Add Funds</div><div class="modal-sub">Load your Shotgun balance</div></div>
+      <div style="font-size:16px;font-weight:800;">💳 Add Funds</div>
       <button class="modal-close" onclick="closeOverlay('overlay-deposit')">×</button>
     </div>
     <div class="modal-body">
-      <label class="sg-label">Amount to Load</label>
-      <div class="amount-display"><span>$</span><span id="dep-amount-display">0</span></div>
-      <div class="send-numpad" id="dep-numpad"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
-        <button class="sg-btn-full sg-btn-outline" style="margin:0;padding:8px;" onclick="setDepAmt('25')">$25</button>
-        <button class="sg-btn-full sg-btn-outline" style="margin:0;padding:8px;" onclick="setDepAmt('50')">$50</button>
-        <button class="sg-btn-full sg-btn-outline" style="margin:0;padding:8px;" onclick="setDepAmt('100')">$100</button>
+      <p style="font-size:12px;color:#64748b;margin-bottom:18px;">Credit card deposits have a 4% fee. ACH is free.</p>
+      <div class="amount-display">
+        <div class="amount-big"><span>$</span><span id="dep-amt-disp">0</span></div>
       </div>
+      <div class="pin-numpad" id="dep-numpad"></div>
       <div class="sg-err" id="dep-err"></div>
       <button class="sg-btn-full sg-btn-red" onclick="doDeposit()">Load Funds via Stripe →</button>
     </div>
   </div>
 </div>
 
+<!-- ══════════ REQUEST MODAL ══════════ -->
+<div class="sg-overlay" id="overlay-request">
+  <div class="sg-modal">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img style="height:24px;" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/a558d7bc2_who_shot_ya_clean.png" alt="Request">
+        <span style="font-size:16px;font-weight:800;">Who Shot Ya?</span>
+      </div>
+      <button class="modal-close" onclick="closeOverlay('overlay-request')">×</button>
+    </div>
+    <div class="modal-body">
+      <label class="sg-label">Request from #tag or email</label>
+      <input class="sg-input" id="req-to" placeholder="#theirhandle">
+      <div class="amount-display">
+        <div class="amount-big"><span>$</span><span id="req-amt-disp">0</span></div>
+      </div>
+      <div class="pin-numpad" id="req-numpad"></div>
+      <label class="sg-label" style="margin-top:8px;">Note (optional)</label>
+      <input class="sg-input" id="req-note" placeholder="For what?">
+      <div class="sg-err" id="req-err"></div>
+      <button class="sg-btn-full sg-btn-red" onclick="doRequest()">Request Money →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ WITHDRAW MODAL ══════════ -->
+<div class="sg-overlay" id="overlay-withdraw">
+  <div class="sg-modal">
+    <div class="modal-header">
+      <div style="font-size:16px;font-weight:800;">🏦 Cash Out</div>
+      <button class="modal-close" onclick="closeOverlay('overlay-withdraw')">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;">
+        <div onclick="selectWithdraw('instant')" id="wd-instant" style="background:rgba(192,57,43,.15);border:2px solid var(--red-bright);border-radius:12px;padding:14px;cursor:pointer;text-align:center;">
+          <div style="font-size:20px;margin-bottom:6px;">⚡</div>
+          <div style="font-size:12px;font-weight:800;color:#f8fafc;">Instant</div>
+          <div style="font-size:10px;color:#94a3b8;">5.75% fee</div>
+        </div>
+        <div onclick="selectWithdraw('ach')" id="wd-ach" style="background:var(--card);border:2px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;text-align:center;">
+          <div style="font-size:20px;margin-bottom:6px;">🏦</div>
+          <div style="font-size:12px;font-weight:800;color:#f8fafc;">Standard ACH</div>
+          <div style="font-size:10px;color:#94a3b8;">1.5% fee · 1-3 days</div>
+        </div>
+      </div>
+      <div class="amount-display">
+        <div class="amount-big"><span>$</span><span id="wd-amt-disp">0</span></div>
+      </div>
+      <div class="pin-numpad" id="wd-numpad"></div>
+      <div class="sg-err" id="wd-err"></div>
+      <button class="sg-btn-full sg-btn-red" onclick="doWithdraw()">Cash Out →</button>
+    </div>
+  </div>
+</div>
+
+
 <script>
+// ── LOGO URLS ──
+const LOGO = {
+  main:   "https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/1116c3e12_shotgun_bank_main_logo_clean.png",
+  beatv:  "https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/3387f693e_beat_the_v_clean.png",
+  gottem: "https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/da3eb0759_gottem_bullseye_clean.png",
+  dead:   "https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/4e0b1262e_dead_body_payment_failed_clean.png",
+  shoot:  "https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/2aaab827e_shoot_it_clean.png",
+  who:    "https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/a558d7bc2_who_shot_ya_clean.png",
+};
+
 // ── STATE ──
-let sgUser = null;
-let loginPin = '', signupPin = '', sendAmtStr = '0', depAmtStr = '0';
+let currentUser = null;
+let loginPin='', signupPin='', sendAmtStr='0', depAmtStr='0', reqAmtStr='0', wdAmtStr='0';
+let withdrawMode = 'instant';
 
 // ── SCREENS ──
-function showScreen(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const el = document.getElementById('screen-' + name);
-  if (el) el.classList.add('active');
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  window.scrollTo(0,0);
 }
 
 // ── OVERLAYS ──
-function openLogin()  { buildNumpad('login'); closeOverlay('overlay-signup'); document.getElementById('overlay-login').classList.add('open'); }
-function openSignup() { buildNumpad('signup'); closeOverlay('overlay-login'); document.getElementById('overlay-signup').classList.add('open'); }
-function openSend()   { buildSendNumpad('send'); document.getElementById('overlay-send').classList.add('open'); }
-function openDeposit(){ buildSendNumpad('dep'); document.getElementById('overlay-deposit').classList.add('open'); }
-function openRequest(){ alert('Copy your hashtag: ' + (sgUser?.hashtag || '')); }
-function openCashout(){ alert('Cash Out via Stripe — coming soon. Email taximizerpro@gmail.com for manual payout.'); }
-function closeOverlay(id){ document.getElementById(id)?.classList.remove('open'); }
+function openOverlay(id){ document.getElementById(id).classList.add('open'); }
+function closeOverlay(id){ document.getElementById(id).classList.remove('open'); }
+function openLogin() { buildNumpad('login'); closeOverlay('overlay-signup'); openOverlay('overlay-login'); }
+function openSignup(){ buildNumpad('signup'); closeOverlay('overlay-login'); openOverlay('overlay-signup'); }
 
 // ── NUMPAD BUILDER ──
-function buildNumpad(prefix) {
-  const el = document.getElementById(prefix + '-numpad');
-  if (!el) return;
-  el.innerHTML = '';
-  const keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
-  keys.forEach(k => {
-    const b = document.createElement('button');
-    b.className = 'pin-key' + (k === '⌫' ? ' del' : '');
-    b.textContent = k;
-    b.style.visibility = k === '' ? 'hidden' : 'visible';
-    b.onclick = () => pinKey(prefix, k);
-    el.appendChild(b);
+function buildNumpad(prefix){
+  const wrap = document.getElementById(prefix+'-numpad');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  [1,2,3,4,5,6,7,8,9,'',0,'⌫'].forEach(k=>{
+    const btn = document.createElement('button');
+    btn.className = 'pin-key' + (k==='⌫'?' del':'');
+    btn.textContent = k;
+    if(k==='') btn.style.visibility='hidden';
+    btn.addEventListener('click', ()=>handlePin(prefix, String(k)));
+    wrap.appendChild(btn);
+  });
+  renderPinDots(prefix,'');
+}
+
+function buildAmtNumpad(prefix, dispId, strVar){
+  const wrap = document.getElementById(prefix+'-numpad');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  [1,2,3,4,5,6,7,8,9,'.',0,'⌫'].forEach(k=>{
+    const btn = document.createElement('button');
+    btn.className = 'pin-key' + (k==='⌫'?' del':'');
+    btn.textContent = k;
+    btn.addEventListener('click',()=>handleAmt(prefix,dispId,String(k)));
+    wrap.appendChild(btn);
   });
 }
 
-function pinKey(prefix, k) {
-  let pin = prefix === 'login' ? loginPin : signupPin;
-  if (k === '⌫') { pin = pin.slice(0, -1); }
-  else if (pin.length < 4) { pin += k; }
-  if (prefix === 'login') loginPin = pin;
-  else signupPin = pin;
-  // Update dots
-  for (let i = 0; i < 4; i++) {
-    const dot = document.getElementById(prefix[0] + 'pd' + i);
-    if (dot) dot.classList.toggle('filled', i < pin.length);
+// ── AMOUNT HANDLER ──
+function getAmt(p){return p==='send'?sendAmtStr:p==='dep'?depAmtStr:p==='req'?reqAmtStr:wdAmtStr;}
+function setAmt(p,v){if(p==='send')sendAmtStr=v;else if(p==='dep')depAmtStr=v;else if(p==='req')reqAmtStr=v;else wdAmtStr=v;}
+function handleAmt(prefix, dispId, key){
+  let v = getAmt(prefix);
+  if(key==='⌫') v = v.length>1?v.slice(0,-1):'0';
+  else if(key==='.' && v.includes('.')) return;
+  else if(v==='0' && key!=='.') v=key;
+  else v+=key;
+  setAmt(prefix,v);
+  document.getElementById(dispId).textContent = v;
+}
+
+// ── PIN HANDLER ──
+function handlePin(prefix, key){
+  let pin = prefix==='login'?loginPin:signupPin;
+  if(key==='⌫') pin=pin.slice(0,-1);
+  else if(pin.length<4) pin+=key;
+  if(prefix==='login') loginPin=pin; else signupPin=pin;
+  renderPinDots(prefix, pin);
+}
+function renderPinDots(prefix,pin){
+  const dots = document.getElementById(prefix+'-pin-dots');
+  if(!dots) return;
+  dots.innerHTML='';
+  for(let i=0;i<4;i++){
+    const d=document.createElement('div');
+    d.className='pin-dot'+(i<pin.length?' filled':'');
+    dots.appendChild(d);
   }
 }
 
-// ── SEND NUMPAD ──
-function buildSendNumpad(prefix) {
-  const el = document.getElementById(prefix + '-numpad');
-  if (!el) return;
-  if (prefix === 'send') sendAmtStr = '0';
-  else depAmtStr = '0';
-  el.innerHTML = '';
-  const keys = ['1','2','3','4','5','6','7','8','9','.','0','⌫'];
-  keys.forEach(k => {
-    const b = document.createElement('button');
-    b.className = 'send-key' + (k === '⌫' ? ' del' : '');
-    b.textContent = k;
-    b.onclick = () => sendKey(prefix, k);
-    el.appendChild(b);
-  });
-}
-
-function sendKey(prefix, k) {
-  let s = prefix === 'send' ? sendAmtStr : depAmtStr;
-  if (k === '⌫') { s = s.length > 1 ? s.slice(0,-1) : '0'; }
-  else if (k === '.' && s.includes('.')) { return; }
-  else if (s === '0' && k !== '.') { s = k; }
-  else { s += k; }
-  if (prefix === 'send') sendAmtStr = s;
-  else depAmtStr = s;
-  const disp = document.getElementById(prefix + '-amount-display');
-  if (disp) disp.textContent = s;
-}
-
-function setDepAmt(v) { depAmtStr = v; document.getElementById('dep-amount-display').textContent = v; }
-
-// ── HASHTAG CHECK ──
-let htTimer;
-function checkHashtag(val) {
-  clearTimeout(htTimer);
-  const check = document.getElementById('sg-hashtag-check');
-  if (!val || val.length < 2) { check.textContent = ''; return; }
-  check.textContent = '⏳';
-  htTimer = setTimeout(() => {
-    fetch('/api/shotgun/check-hashtag?tag=' + encodeURIComponent(val))
-      .then(r => r.json())
-      .then(d => { check.textContent = d.available ? '✅' : '❌'; })
-      .catch(() => { check.textContent = ''; });
-  }, 500);
-}
-
-// ── LOGIN ──
-function doLogin() {
-  const btn = document.getElementById('login-submit-btn');
-  const err = document.getElementById('login-err');
-  const id  = document.getElementById('login-identifier').value.trim();
-  err.style.display = 'none';
-  if (!id || loginPin.length < 4) { err.textContent = 'Enter your hashtag/email and full 4-digit PIN.'; err.style.display = 'block'; return; }
-  btn.textContent = 'Logging in…'; btn.disabled = true;
-  fetch('/api/shotgun/login', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ identifier: id, pin: loginPin })
-  })
-  .then(r => r.json())
-  .then(d => {
-    btn.textContent = 'Log In →'; btn.disabled = false;
-    if (d.success) {
-      sgUser = d.account;
-      closeOverlay('overlay-login');
-      afterLogin();
-    } else if (d.status === 'pending') {
-      err.textContent = '⏳ Your account is pending approval. We'll notify you by email.';
-      err.style.display = 'block';
-    } else {
-      err.textContent = d.error || 'Login failed.';
-      err.style.display = 'block';
-    }
-  })
-  .catch(() => { btn.textContent = 'Log In →'; btn.disabled = false; err.textContent = 'Network error — try again.'; err.style.display = 'block'; });
+// ── HASHTAG AVAILABILITY ──
+let tagTimer;
+function checkTagAvail(val){
+  clearTimeout(tagTimer);
+  const el=document.getElementById('tag-status');
+  if(!val||val.length<2){el.textContent='';return;}
+  const tag = val.startsWith('#')?val.slice(1):val;
+  el.textContent='Checking...'; el.style.color='#94a3b8';
+  tagTimer=setTimeout(()=>{
+    fetch('/api/check-tag?tag='+encodeURIComponent(tag))
+      .then(r=>r.json())
+      .then(d=>{
+        if(d.available){el.textContent='✓ '+tag+' is available!';el.style.color='#4ade80';}
+        else{el.textContent='✗ #'+tag+' is taken';el.style.color='#f87171';}
+      }).catch(()=>{el.textContent='';});
+  },500);
 }
 
 // ── SIGNUP ──
-function doSignup() {
-  const err  = document.getElementById('signup-err');
-  const succ = document.getElementById('signup-succ');
-  err.style.display = succ.style.display = 'none';
-  const fname = document.getElementById('sg-fname').value.trim();
-  const lname = document.getElementById('sg-lname').value.trim();
-  const email = document.getElementById('sg-email').value.trim();
-  const phone = document.getElementById('sg-phone').value.trim();
-  const tag   = document.getElementById('sg-hashtag').value.trim().replace(/^#/,'');
-  if (!fname || !lname || !email || !tag || signupPin.length < 4) {
-    err.textContent = 'Fill in all fields and set your 4-digit PIN.'; err.style.display = 'block'; return;
+async function doSignup(){
+  const fname=document.getElementById('su-fname').value.trim();
+  const lname=document.getElementById('su-lname').value.trim();
+  const email=document.getElementById('su-email').value.trim();
+  const phone=document.getElementById('su-phone').value.trim();
+  let   tag  =document.getElementById('su-tag').value.trim();
+  const err  =document.getElementById('signup-err');
+  const succ =document.getElementById('signup-succ');
+  const btn  =document.getElementById('signup-btn');
+  err.style.display='none'; succ.style.display='none';
+  if(!fname||!lname||!email||!tag||signupPin.length<4){
+    err.textContent='Please fill all fields and set a 4-digit PIN.';err.style.display='block';return;
   }
-  fetch('/api/shotgun/apply', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ first_name:fname, last_name:lname, email, phone, hashtag:tag, pin:signupPin })
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (d.success || d.message) {
-      succ.textContent = '🎯 Account submitted! Check your email — approval takes ~1 hour.';
-      succ.style.display = 'block';
+  if(tag.startsWith('#'))tag=tag.slice(1);
+  btn.textContent='Creating...'; btn.disabled=true;
+  try{
+    const res=await fetch('/api/shotgun/signup',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({first_name:fname,last_name:lname,email,phone,hashtag:tag,pin:signupPin})});
+    const d=await res.json();
+    if(res.ok && d.success){
+      succ.textContent='Account created! Welcome to Shotgun 🔫';succ.style.display='block';
+      setTimeout(()=>{ closeOverlay('overlay-signup'); loginUser(d.account); },1200);
     } else {
-      err.textContent = d.error || 'Signup failed.'; err.style.display = 'block';
+      err.textContent=d.error||'Something went wrong. Try again.';err.style.display='block';
     }
-  })
-  .catch(() => { err.textContent = 'Network error.'; err.style.display = 'block'; });
+  } catch(e){err.textContent='Connection error. Try again.';err.style.display='block';}
+  btn.textContent='Create My Account →'; btn.disabled=false;
 }
 
-// ── SEND ──
-function doSend() {
-  const err = document.getElementById('send-err');
-  err.style.display = 'none';
-  const to  = document.getElementById('send-to').value.trim();
-  const amt = parseFloat(sendAmtStr);
-  const note= document.getElementById('send-note').value.trim();
-  if (!to || amt <= 0) { err.textContent = 'Enter recipient and amount.'; err.style.display = 'block'; return; }
-  fetch('/api/shotgun/send', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ from_account_id: sgUser.id, to_identifier: to, amount: amt, note })
-  })
-  .then(r=>r.json())
-  .then(d=>{
-    if (d.success) { closeOverlay('overlay-send'); loadDashboard(); }
-    else { err.textContent = d.error || 'Transfer failed.'; err.style.display = 'block'; }
-  })
-  .catch(() => { err.textContent = 'Network error.'; err.style.display = 'block'; });
+// ── LOGIN ──
+async function doLogin(){
+  const id  =document.getElementById('login-id').value.trim();
+  const err =document.getElementById('login-err');
+  const btn =document.getElementById('login-btn');
+  err.style.display='none';
+  if(!id||loginPin.length<4){err.textContent='Enter your #tag or email and PIN.';err.style.display='block';return;}
+  btn.textContent='Logging in...'; btn.disabled=true;
+  try{
+    const res=await fetch('/api/shotgun/login',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({identifier:id,pin:loginPin})});
+    const d=await res.json();
+    if(res.ok && d.success){ closeOverlay('overlay-login'); loginUser(d.account); }
+    else{ err.textContent=d.error||'Invalid credentials.'; err.style.display='block'; }
+  } catch(e){err.textContent='Connection error.'; err.style.display='block';}
+  btn.textContent='Log In →'; btn.disabled=false;
+  loginPin=''; renderPinDots('login','');
 }
 
-// ── DEPOSIT ──
-function doDeposit() {
-  const err = document.getElementById('dep-err');
-  err.style.display = 'none';
-  const amt = parseFloat(depAmtStr);
-  if (amt < 5) { err.textContent = 'Minimum deposit is $5.'; err.style.display = 'block'; return; }
-  fetch('/api/stripe/create-deposit-session', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ account_id: sgUser.id, amount: amt })
-  })
-  .then(r=>r.json())
-  .then(d=>{
-    if (d.url) { window.location.href = d.url; }
-    else { err.textContent = d.error || 'Could not start deposit.'; err.style.display = 'block'; }
-  })
-  .catch(() => { err.textContent = 'Network error.'; err.style.display = 'block'; });
-}
-
-// ── AFTER LOGIN ──
-function afterLogin() {
-  document.getElementById('nav-guest').style.display = 'none';
-  document.getElementById('nav-user').style.display  = 'flex';
-  document.getElementById('nav-hashtag').textContent = '#' + sgUser.hashtag;
-  loadDashboard();
+// ── LOGGED IN STATE ──
+function loginUser(acct){
+  currentUser=acct;
+  document.getElementById('dash-bal').textContent='$'+(acct.balance||0).toFixed(2);
+  document.getElementById('dash-tag').textContent='#'+(acct.hashtag||'—');
+  if(acct.beat_v_enabled) document.getElementById('btv-badge').style.display='flex';
+  buildAmtNumpad('send','send-amt-disp','sendAmtStr');
+  buildAmtNumpad('dep','dep-amt-disp','depAmtStr');
+  buildAmtNumpad('req','req-amt-disp','reqAmtStr');
+  buildAmtNumpad('wd','wd-amt-disp','wdAmtStr');
+  loadTxFeed();
   showScreen('dash');
 }
 
-function loadDashboard() {
-  if (!sgUser) return;
-  const bal = parseFloat(sgUser.balance || 0);
-  document.getElementById('dash-balance-amt').textContent = '$' + bal.toFixed(2);
-  document.getElementById('dash-balance-amt').style.color = bal < 0 ? '#f87171' : '#f8fafc';
-  document.getElementById('dash-hashtag-tag').textContent = '#' + sgUser.hashtag + ' · Shotgun Bank';
-  // Fetch transactions
-  fetch('/api/shotgun/transactions/' + sgUser.id)
-    .then(r=>r.json())
-    .then(txs=>{
-      const feed = document.getElementById('tx-feed');
-      if (!txs.length) { feed.innerHTML='<div style="padding:24px;text-align:center;color:#475569;font-size:13px;">No transactions yet</div>'; return; }
-      feed.innerHTML = txs.slice(0,20).map(tx => {
-        const isOut  = tx.from_account_id === sgUser.id;
-        const icon   = isOut ? '🔫' : '🎯';
-        const cls    = isOut ? 'send' : 'recv';
-        const amt    = isOut ? '-$'+parseFloat(tx.amount).toFixed(2) : '+$'+parseFloat(tx.amount).toFixed(2);
-        const amtCls = isOut ? 'neg' : 'pos';
-        const who    = isOut ? (tx.to_hashtag ? '#'+tx.to_hashtag : tx.to_name||'Someone') : (tx.from_hashtag ? '#'+tx.from_hashtag : tx.from_name||'Someone');
-        const date   = tx.created_date ? new Date(tx.created_date).toLocaleDateString() : '';
-        return `<div class="tx-item">
-          <div class="tx-icon ${cls}">${icon}</div>
-          <div class="tx-info"><div class="tx-name">${who}</div><div class="tx-date">${tx.note||''} ${date}</div></div>
-          <div class="tx-amt ${amtCls}">${amt}</div>
+// ── LOGOUT ──
+function doLogout(){ currentUser=null; signupPin=''; loginPin=''; showScreen('home'); }
+
+// ── TX FEED ──
+function loadTxFeed(){
+  if(!currentUser) return;
+  fetch('/api/shotgun/transactions?account_id='+currentUser.id)
+    .then(r=>r.json()).then(txs=>{
+      const feed=document.getElementById('tx-feed');
+      if(!txs||!txs.length){feed.innerHTML='<div style="padding:32px;text-align:center;color:#475569;font-size:13px;">No transactions yet 🔫</div>';return;}
+      feed.innerHTML=txs.slice(0,20).map(tx=>{
+        const isSend = tx.from_account_id===currentUser.id;
+        const icon = tx.status==='completed'?(isSend?LOGO.shoot:LOGO.who)
+                   : tx.status==='failed'?LOGO.dead
+                   : isSend?LOGO.shoot:LOGO.who;
+        const amt  = tx.status==='failed'?`-$5.00`:isSend?`-$${tx.amount.toFixed(2)}`:`+$${tx.net_amount.toFixed(2)}`;
+        const cls  = tx.status==='failed'||isSend?'neg':'pos';
+        return `<div class="tx-row">
+          <div class="tx-icon"><img src="${icon}" alt="tx"></div>
+          <div class="tx-info">
+            <div class="tx-name">${isSend?('#'+(tx.to_hashtag||tx.to_name)):('#'+(tx.from_hashtag||tx.from_name))}</div>
+            <div class="tx-time">${tx.note||tx.type||''} · ${new Date(tx.created_date||Date.now()).toLocaleDateString()}</div>
+          </div>
+          <div class="tx-amt ${cls}">${amt}</div>
         </div>`;
       }).join('');
     }).catch(()=>{});
 }
 
-function sgLogout() {
-  sgUser = null;
-  loginPin = ''; signupPin = '';
-  document.getElementById('nav-guest').style.display = 'flex';
-  document.getElementById('nav-user').style.display  = 'none';
-  showScreen('home');
+// ── SEND ──
+async function doSend(){
+  const to=document.getElementById('send-to').value.trim();
+  const note=document.getElementById('send-note').value.trim();
+  const amt=parseFloat(sendAmtStr)||0;
+  const err=document.getElementById('send-err');
+  err.style.display='none';
+  if(!to||amt<=0){err.textContent='Enter a recipient and amount.';err.style.display='block';return;}
+  const res=await fetch('/api/shotgun/send',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({from_account_id:currentUser.id,to_identifier:to,amount:amt,note})});
+  const d=await res.json();
+  if(res.ok&&d.success){
+    closeOverlay('overlay-send'); sendAmtStr='0';
+    currentUser.balance=d.new_balance;
+    document.getElementById('dash-bal').textContent='$'+d.new_balance.toFixed(2);
+    loadTxFeed(); showToast('💥 Gottem!','Sent $'+amt.toFixed(2)+' to '+to,LOGO.gottem);
+  } else { err.textContent=d.error||'Failed.'; err.style.display='block'; }
 }
 
-// ── DEEP LINK ──
-const hash = window.location.hash;
-if (hash === '#signup') openSignup();
-if (hash === '#login')  openLogin();
+// ── DEPOSIT ──
+async function doDeposit(){
+  const amt=parseFloat(depAmtStr)||0;
+  const err=document.getElementById('dep-err');
+  err.style.display='none';
+  if(amt<1){err.textContent='Minimum deposit is $1.';err.style.display='block';return;}
+  const res=await fetch('/api/shotgun/deposit',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({account_id:currentUser.id,amount:amt})});
+  const d=await res.json();
+  if(res.ok&&d.url){ window.location.href=d.url; }
+  else{ err.textContent=d.error||'Failed.'; err.style.display='block'; }
+}
+
+// ── REQUEST ──
+async function doRequest(){
+  const to=document.getElementById('req-to').value.trim();
+  const note=document.getElementById('req-note').value.trim();
+  const amt=parseFloat(reqAmtStr)||0;
+  const err=document.getElementById('req-err');
+  err.style.display='none';
+  if(!to||amt<=0){err.textContent='Enter a recipient and amount.';err.style.display='block';return;}
+  const res=await fetch('/api/shotgun/request',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({from_account_id:currentUser.id,to_identifier:to,amount:amt,note})});
+  const d=await res.json();
+  if(res.ok&&d.success){ closeOverlay('overlay-request'); reqAmtStr='0'; showToast('🎯 Request Sent','Waiting on '+to,LOGO.who); }
+  else{ err.textContent=d.error||'Failed.'; err.style.display='block'; }
+}
+
+// ── WITHDRAW ──
+function selectWithdraw(mode){
+  withdrawMode=mode;
+  document.getElementById('wd-instant').style.borderColor = mode==='instant'?'var(--red-bright)':'var(--border)';
+  document.getElementById('wd-instant').style.background  = mode==='instant'?'rgba(192,57,43,.15)':'var(--card)';
+  document.getElementById('wd-ach').style.borderColor     = mode==='ach'?'var(--red-bright)':'var(--border)';
+  document.getElementById('wd-ach').style.background      = mode==='ach'?'rgba(192,57,43,.15)':'var(--card)';
+}
+async function doWithdraw(){
+  const amt=parseFloat(wdAmtStr)||0;
+  const err=document.getElementById('wd-err');
+  err.style.display='none';
+  if(amt<1){err.textContent='Minimum withdrawal is $1.';err.style.display='block';return;}
+  const res=await fetch('/api/shotgun/withdraw',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({account_id:currentUser.id,amount:amt,method:withdrawMode})});
+  const d=await res.json();
+  if(res.ok&&d.success){
+    closeOverlay('overlay-withdraw'); wdAmtStr='0';
+    currentUser.balance=d.new_balance;
+    document.getElementById('dash-bal').textContent='$'+d.new_balance.toFixed(2);
+    loadTxFeed(); showToast('🏦 Cashed Out','$'+amt.toFixed(2)+' on its way',null);
+  } else{ err.textContent=d.error||'Failed.'; err.style.display='block'; }
+}
+
+// ── TOAST ──
+function showToast(title, msg, iconUrl){
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#0f0208;border:1px solid rgba(192,57,43,.4);border-radius:16px;padding:14px 20px;display:flex;align-items:center;gap:12px;z-index:999;box-shadow:0 8px 32px rgba(0,0,0,.5);animation:slide-up .25s ease;min-width:240px;max-width:92vw;';
+  t.innerHTML=`${iconUrl?`<img src="${iconUrl}" style="height:32px;width:auto;" alt="">`:''}
+    <div><div style="font-size:14px;font-weight:800;color:#f8fafc;">${title}</div>
+    <div style="font-size:12px;color:#94a3b8;">${msg}</div></div>`;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded',()=>{
+  buildNumpad('login'); buildNumpad('signup');
+  buildAmtNumpad('send','send-amt-disp');
+  buildAmtNumpad('dep','dep-amt-disp');
+  buildAmtNumpad('req','req-amt-disp');
+  buildAmtNumpad('wd','wd-amt-disp');
+  const hash=window.location.hash;
+  if(hash==='#signup') setTimeout(openSignup,200);
+  if(hash==='#login')  setTimeout(openLogin,200);
+});
 </script>
 </body>
 </html>
