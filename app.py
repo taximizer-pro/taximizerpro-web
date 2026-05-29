@@ -728,14 +728,37 @@ def api_prospects():
     except Exception as e:
         return jsonify([])
 
+
+@app.route("/api/shotgun/widget-data")
+def api_shotgun_widget_data():
+    """Returns the current admin's Shotgun account data for the floating widget."""
+    if not logged_in(): return jsonify({"has_account": False})
+    user_email = session["user"].get("email","")
+    try:
+        import urllib.parse as _uparse
+        records = sg_get(f"{SG_B44}?email={_uparse.quote(user_email)}&limit=1")
+        if not records:
+            return jsonify({"has_account": False})
+        acct = records[0] if isinstance(records, list) else records.get("records",[{}])[0]
+        if not acct or acct.get("status","") not in ("active","approved"):
+            return jsonify({"has_account": False})
+        return jsonify({
+            "has_account": True,
+            "hashtag":  acct.get("hashtag",""),
+            "balance":  acct.get("balance", 0),
+            "status":   acct.get("status",""),
+        })
+    except Exception as e:
+        return jsonify({"has_account": False})
+
 @app.route("/chatbot")
-@require_login
 def chatbot():
+    if not logged_in(): return redirect(url_for("login"))
     return render_template("chatbot.html", user=session["user"])
 
 @app.route("/api/chatbot", methods=["POST"])
-@require_login
 def api_chatbot():
+    if not logged_in(): return jsonify({"error":"unauthorized"}), 401
     data = request.json or {}
     msg  = data.get("message","").strip()
     if not msg:
