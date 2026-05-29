@@ -1756,6 +1756,28 @@ def sg_ghost_view(account_id):
     except Exception as e:
         return f"Error: {e}", 500
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SHOTGUN BANK — STANDALONE CLIENT APP  (/bank)
+# No TaximizerPro login needed. Clients sign up, log in, deposit, send, cash out.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/bank")
+def bank_app():
+    """Standalone Shotgun Bank client app — public facing."""
+    return render_template("bank.html")
+
+@app.route("/bank/admin")
+def bank_admin():
+    """Shotgun admin panel — requires TaximizerPro superadmin or admin session."""
+    if not logged_in():
+        return redirect(url_for("login") + "?next=/bank/admin")
+    role = session["user"].get("role","")
+    if role not in ("superadmin","admin"):
+        return "Not authorized", 403
+    return render_template("bank_admin.html", user=session["user"])
+
+
 @app.route("/bisignano")
 def bisignano_holdings():
     if not logged_in(): return redirect(url_for("login"))
@@ -1961,6 +1983,7 @@ def deny_access(token):
         return "<h2>Link expired or already handled.</h2>", 400
     audit("access_denied", f"Access denied for {record.get('name')} <{record.get('email')}>")
     return f"<div style='font-family:Inter,sans-serif;padding:40px;max-width:400px;'><h2>❌ Access denied for {record.get('name')}</h2><a href='/dashboard'>Go to Dashboard</a></div>"
+
 
 
 
