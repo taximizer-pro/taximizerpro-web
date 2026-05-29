@@ -652,6 +652,13 @@ def edit_prospect(prospect_id):
     if not logged_in(): return redirect(url_for("login"))
     return render_template("edit_prospect.html", user=session["user"], prospect_id=prospect_id)
 
+@app.route("/api/debug/auth")
+def api_debug_auth():
+    """Debug: show what key/url is being used."""
+    import os
+    key = os.environ.get("BASE44_API_KEY","MISSING")
+    return jsonify({"key_len": len(key), "key_prefix": key[:20] if key else "NONE", "b44_base": B44_BASE})
+
 @app.route("/api/prospect/save", methods=["POST"])
 def api_prospect_save():
     """Save a new prospect (partial data, no tax generation)."""
