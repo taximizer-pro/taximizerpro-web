@@ -549,7 +549,11 @@ def staff():
 # ── API ───────────────────────────────────────────────────────────────────────
 def b44_headers():
     key = os.environ.get("BASE44_API_KEY", "")
-    return {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    return {
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+        "User-Agent": "TaximizerPro/2.0 (compatible)"
+    }
 
 BASE44_HEADERS = b44_headers()  # static fallback — routes use b44_headers()
 B44_BASE = f"https://app.base44.com/api/apps/{APP_ID}/entities/TaxClient"
