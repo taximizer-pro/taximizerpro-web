@@ -965,7 +965,7 @@ function checkTag(val) {
   const tag = val.startsWith('#') ? val.slice(1) : val;
   el.textContent='Checking...'; el.style.color='var(--grey2)';
   tagTimer = setTimeout(()=>{
-    fetch('/api/check-tag?tag='+encodeURIComponent(tag))
+    fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=check-tag&tag='+encodeURIComponent(tag))
       .then(r=>r.json()).then(d=>{
         if(d.available){el.textContent='✓ #'+tag+' is available';el.style.color='var(--green)';}
         else{el.textContent='✗ #'+tag+' is taken';el.style.color='var(--red)';}
@@ -990,7 +990,7 @@ async function doSignup() {
   if(tag.startsWith('#')) tag=tag.slice(1);
   btn.textContent='Creating...'; btn.disabled=true;
   try{
-    const res=await fetch('/api/shotgun/signup',{method:'POST',headers:{'Content-Type':'application/json'},
+    const res=await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=signup',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({first_name:fname,last_name:lname,email,phone,hashtag:tag,pin:signupPin})});
     const d=await res.json();
     if(res.ok&&d.success){
@@ -1010,7 +1010,7 @@ async function doLogin() {
   if(!id||loginPin.length<4){err.textContent='Enter your #tag or email and PIN.'; err.style.display='block'; return;}
   btn.textContent='Logging in...'; btn.disabled=true;
   try{
-    const res=await fetch('/api/shotgun/login',{method:'POST',headers:{'Content-Type':'application/json'},
+    const res=await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=login',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({identifier:id,pin:loginPin})});
     const d=await res.json();
     if(res.ok&&d.success){ closeSheet('sheet-login'); loginUser(d.account); }
@@ -1050,7 +1050,7 @@ function doLogout(){ ME=null; loginPin=''; signupPin=''; document.getElementById
 // ─── TX FEED ───
 function loadTxFeed(){
   if(!ME) return;
-  fetch('/api/shotgun/transactions?account_id='+ME.id)
+  fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=transactions&account_id='+ME.id)
     .then(r=>r.json()).then(txs=>{
       const el=document.getElementById('tx-list');
       const cnt=document.getElementById('tx-count-lbl');
@@ -1088,7 +1088,7 @@ async function doSend(){
   if(!to||amt<=0){err.textContent='Enter a recipient and amount.'; err.style.display='block'; return;}
   btn.textContent='Sending...'; btn.disabled=true;
   try{
-    const res=await fetch('/api/shotgun/send',{method:'POST',headers:{'Content-Type':'application/json'},
+    const res=await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=send',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({from_account_id:ME.id,to_identifier:to,amount:amt,note})});
     const d=await res.json();
     if(res.ok&&d.success){
@@ -1114,7 +1114,7 @@ async function doRequest(){
   const err=document.getElementById('req-err');
   err.style.display='none';
   if(!to||amt<=0){err.textContent='Enter a recipient and amount.'; err.style.display='block'; return;}
-  const res=await fetch('/api/shotgun/request',{method:'POST',headers:{'Content-Type':'application/json'},
+  const res=await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=request',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({from_account_id:ME.id,to_identifier:to,amount:amt,note})});
   const d=await res.json();
   if(res.ok&&d.success){ closeSheet('sheet-request'); AMT.req='0'; showToast('Request Sent 🎯','Waiting on '+to,A.who,false); }
@@ -1127,7 +1127,7 @@ async function doDeposit(){
   const err=document.getElementById('dep-err');
   err.style.display='none';
   if(amt<1){err.textContent='Minimum $1.'; err.style.display='block'; return;}
-  const res=await fetch('/api/shotgun/deposit',{method:'POST',headers:{'Content-Type':'application/json'},
+  const res=await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=deposit',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({account_id:ME.id,amount:amt})});
   const d=await res.json();
   if(res.ok&&d.url){ window.location.href=d.url; }
@@ -1143,7 +1143,7 @@ async function doWithdraw(){
   const err=document.getElementById('wd-err');
   err.style.display='none';
   if(amt<1){err.textContent='Minimum $1.'; err.style.display='block'; return;}
-  const res=await fetch('/api/shotgun/withdraw',{method:'POST',headers:{'Content-Type':'application/json'},
+  const res=await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=withdraw',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({account_id:ME.id,amount:amt,method:wdMode})});
   const d=await res.json();
   if(res.ok&&d.success){
@@ -1165,7 +1165,7 @@ async function doCryptoConvert(){
   const err=document.getElementById('crypto-err');
   err.style.display='none';
   if(amt<1){err.textContent='Minimum $1.'; err.style.display='block'; return;}
-  const res=await fetch('/api/shotgun/crypto-convert',{method:'POST',headers:{'Content-Type':'application/json'},
+  const res=await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=crypto-convert',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({account_id:ME.id,amount:amt,coin:cryptoCoin})});
   const d=await res.json();
   if(res.ok&&d.success){
@@ -1184,7 +1184,7 @@ async function doLinkBank(){
   const succ=document.getElementById('lb-succ');
   err.style.display='none'; succ.style.display='none';
   if(routing.length!==9){err.textContent='Routing number must be 9 digits.'; err.style.display='block'; return;}
-  const res=await fetch('/api/shotgun/link-bank',{method:'POST',headers:{'Content-Type':'application/json'},
+  const res=await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=link-bank',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({account_id:ME.id,routing,account_number:account})});
   const d=await res.json();
   if(res.ok&&d.success){succ.textContent='Bank linked successfully!'; succ.style.display='block';}
