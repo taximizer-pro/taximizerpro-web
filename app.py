@@ -2,6 +2,10 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, abort
 from werkzeug.security import generate_password_hash, check_password_hash
 import os, json, urllib.request, urllib.parse, fitz, base64, io, tempfile, secrets, hashlib, time
+try:
+    import stripe
+except ImportError:
+    stripe = None
 from datetime import date, datetime, timedelta
 # Pure-Python rate limiter — no external dependency
 import collections
@@ -96,6 +100,18 @@ MASTER_IDS = {
     '2025': '1Q2CIM4rnIjQ4TVAlhpoZc5iUFdamAClM',
 }
 ROOT_FOLDER = "TaximizerPro V 2.0 Clients"
+
+# ── STRIPE CONFIG ─────────────────────────────────────────────────────────────
+STRIPE_SECRET_KEY      = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
+STRIPE_WEBHOOK_SECRET  = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+
+def _stripe_init():
+    """Initialize Stripe with secret key."""
+    if stripe and STRIPE_SECRET_KEY:
+        stripe.api_key = STRIPE_SECRET_KEY
+        return True
+    return False
 APP_ID = "6a13ae4b43ea85cec629af77"
 
 # ── STRICT APT FILTER — nothing blank/null/placeholder goes through ──────────
@@ -772,6 +788,316 @@ def sg_apply():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# STRIPE CONNECT — Account creation, onboarding, deposit, payout
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/stripe/create-connect-account", methods=["POST"])
+def stripe_create_connect():
+    """
+    Called during Shotgun signup — creates a Stripe Express account
+    and stores the account ID in the ShotgunAccount record.
+    Then returns an onboarding link.
+    """
+    if not _stripe_init():
+        return jsonify({"error": "Stripe not configured — add STRIPE_SECRET_KEY"}), 503
+    data = request.json or {}
+    sg_id   = data.get("sg_account_id", "")
+    email   = data.get("email", "")
+    fname   = data.get("first_name", "")
+    lname   = data.get("last_name", "")
+    if not sg_id or not email:
+        return jsonify({"error": "Missing account ID or email"}), 400
+    try:
+        # Create Stripe Express connected account
+        acct = stripe.Account.create(
+            type="express",
+            email=email,
+            capabilities={
+                "card_payments": {"requested": True},
+                "transfers":     {"requested": True},
+            },
+            business_type="individual",
+            individual={
+                "email": email,
+                "first_name": fname,
+                "last_name": lname,
+            },
+            metadata={
+                "shotgun_account_id": sg_id,
+                "platform": "shotgun_bank",
+            },
+            settings={
+                "payouts": {"schedule": {"interval": "manual"}},
+            },
+        )
+        stripe_acct_id = acct["id"]
+        # Persist Stripe account ID to Base44 ShotgunAccount record
+        sg_put(f"{SG_B44}/{sg_id}", {"wise_account_id": stripe_acct_id})
+        # Create onboarding link (Express dashboard)
+        base_url = request.host_url.rstrip("/")
+        link = stripe.AccountLink.create(
+            account=stripe_acct_id,
+            refresh_url=f"{base_url}/shotgun/stripe/reauth?sg_id={sg_id}",
+            return_url=f"{base_url}/shotgun/stripe/complete?sg_id={sg_id}",
+            type="account_onboarding",
+        )
+        return jsonify({"success": True, "stripe_account_id": stripe_acct_id, "onboarding_url": link["url"]})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/stripe/create-deposit-session", methods=["POST"])
+def stripe_deposit_session():
+    """
+    Creates a Stripe Checkout Session to deposit funds into a Shotgun account.
+    Uses payment_intent_data to route funds to Bisignano Holdings platform account,
+    then credits user balance after webhook confirms payment.
+    """
+    if not _stripe_init():
+        return jsonify({"error": "Stripe not configured"}), 503
+    data    = request.json or {}
+    sg_id   = data.get("sg_account_id", "")
+    amount  = data.get("amount", 0)  # in dollars
+    if not sg_id or not amount or float(amount) <= 0:
+        return jsonify({"error": "Missing account ID or amount"}), 400
+    amount_cents = int(float(amount) * 100)
+    base_url = request.host_url.rstrip("/")
+    try:
+        session_obj = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {"name": "Shotgun Bank Deposit"},
+                    "unit_amount": amount_cents,
+                },
+                "quantity": 1,
+            }],
+            mode="payment",
+            success_url=f"{base_url}/shotgun/deposit/success?session_id={{CHECKOUT_SESSION_ID}}&sg_id={sg_id}",
+            cancel_url=f"{base_url}/shotgun/deposit/cancel?sg_id={sg_id}",
+            metadata={"sg_account_id": sg_id, "type": "deposit"},
+        )
+        return jsonify({"success": True, "checkout_url": session_obj["url"], "session_id": session_obj["id"]})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/stripe/create-payout", methods=["POST"])
+def stripe_payout():
+    """
+    Initiates a Stripe payout (cash out) from Shotgun balance to user's bank.
+    Requires the user to have a Stripe connected account (wise_account_id).
+    """
+    if not _stripe_init():
+        return jsonify({"error": "Stripe not configured"}), 503
+    data   = request.json or {}
+    sg_id  = data.get("sg_account_id", "")
+    amount = float(data.get("amount", 0))
+    if not sg_id or amount <= 0:
+        return jsonify({"error": "Missing account ID or amount"}), 400
+    try:
+        # Get the Shotgun account
+        records = sg_get(f"{SG_B44}/{sg_id}")
+        acct = records if isinstance(records, dict) else (records[0] if records else None)
+        if not acct:
+            return jsonify({"error": "Account not found"}), 404
+        stripe_acct_id = acct.get("wise_account_id", "")
+        if not stripe_acct_id:
+            return jsonify({"error": "No Stripe account linked — complete onboarding first"}), 400
+        bal = float(acct.get("balance", 0))
+        if amount > bal:
+            return jsonify({"error": f"Insufficient balance (have ${bal:.2f})"}), 400
+        amount_cents = int(amount * 100)
+        # Transfer from platform to connected account, then trigger payout
+        transfer = stripe.Transfer.create(
+            amount=amount_cents,
+            currency="usd",
+            destination=stripe_acct_id,
+            metadata={"sg_account_id": sg_id, "type": "cashout"},
+        )
+        payout = stripe.Payout.create(
+            amount=amount_cents,
+            currency="usd",
+            stripe_account=stripe_acct_id,
+        )
+        # Debit Shotgun balance
+        new_bal = bal - amount
+        sg_put(f"{SG_B44}/{sg_id}", {"balance": round(new_bal, 2)})
+        return jsonify({"success": True, "new_balance": round(new_bal, 2), "payout_id": payout["id"]})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/stripe/create-p2p-transfer", methods=["POST"])
+def stripe_p2p_transfer():
+    """
+    Moves money between two Shotgun users via Stripe transfers.
+    $1.50 fee deducted from sender AND recipient.
+    Fee revenue flows to Bisignano Holdings platform account.
+    """
+    if not _stripe_init():
+        return jsonify({"error": "Stripe not configured"}), 503
+    data        = request.json or {}
+    from_id     = data.get("from_account_id", "")
+    to_hashtag  = data.get("to_hashtag", "")
+    amount      = float(data.get("amount", 0))
+    note        = data.get("note", "")
+    FEE         = 1.50
+    if not from_id or not to_hashtag or amount <= 0:
+        return jsonify({"error": "Missing fields"}), 400
+    try:
+        sender   = sg_get(f"{SG_B44}/{from_id}")
+        sender   = sender if isinstance(sender, dict) else (sender[0] if sender else None)
+        if not sender:
+            return jsonify({"error": "Sender not found"}), 404
+        recipients = sg_get(f"{SG_B44}?hashtag={_uparse.quote(to_hashtag)}&limit=1")
+        if not recipients:
+            return jsonify({"error": "Recipient not found"}), 404
+        recipient = recipients[0]
+        sender_bal    = float(sender.get("balance", 0))
+        recipient_bal = float(recipient.get("balance", 0))
+        beat_v_limit  = -100.0
+        # Allow negative only if Beat the V enabled
+        if sender_bal - amount - FEE < 0 and not (sender.get("beat_v_enabled") and sender_bal - amount - FEE >= beat_v_limit):
+            return jsonify({"error": f"Insufficient funds (balance: ${sender_bal:.2f})"}), 400
+        new_sender_bal    = round(sender_bal    - amount - FEE, 2)
+        new_recipient_bal = round(recipient_bal + amount - FEE, 2)
+        # Update balances
+        sg_put(f"{SG_B44}/{from_id}", {"balance": new_sender_bal})
+        sg_put(f"{SG_B44}/{recipient['id']}", {"balance": new_recipient_bal})
+        # Log transaction
+        txn_payload = {
+            "from_account_id": from_id,
+            "to_account_id": recipient["id"],
+            "from_hashtag": sender.get("hashtag", ""),
+            "to_hashtag": to_hashtag,
+            "from_name": f"{sender.get('first_name','')} {sender.get('last_name','')}".strip(),
+            "to_name": f"{recipient.get('first_name','')} {recipient.get('last_name','')}".strip(),
+            "amount": amount,
+            "fee": FEE,
+            "net_amount": round(amount - FEE, 2),
+            "type": "transfer",
+            "status": "completed",
+            "note": note,
+        }
+        sg_create(SG_TXN_B44, txn_payload)
+        return jsonify({
+            "success": True,
+            "new_balance": new_sender_bal,
+            "fee": FEE,
+            "note": f"${amount:.2f} sent · $1.50 fee applied both sides",
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/stripe/webhook", methods=["POST"])
+def stripe_webhook():
+    """
+    Handles Stripe webhook events — confirms deposits, tracks payouts.
+    Set STRIPE_WEBHOOK_SECRET in Render env vars.
+    Webhook URL: https://taximizerpro.onrender.com/api/stripe/webhook
+    """
+    if not _stripe_init():
+        return jsonify({"error": "Stripe not configured"}), 503
+    payload = request.get_data()
+    sig     = request.headers.get("Stripe-Signature", "")
+    try:
+        event = stripe.Webhook.construct_event(payload, sig, STRIPE_WEBHOOK_SECRET)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    if event["type"] == "checkout.session.completed":
+        sess    = event["data"]["object"]
+        sg_id   = sess.get("metadata", {}).get("sg_account_id", "")
+        amount  = sess.get("amount_total", 0) / 100.0
+        if sg_id and amount > 0:
+            try:
+                records = sg_get(f"{SG_B44}/{sg_id}")
+                acct = records if isinstance(records, dict) else (records[0] if records else None)
+                if acct:
+                    new_bal = round(float(acct.get("balance", 0)) + amount, 2)
+                    new_life = round(float(acct.get("lifetime_deposited", 0)) + amount, 2)
+                    sg_put(f"{SG_B44}/{sg_id}", {"balance": new_bal, "lifetime_deposited": new_life})
+                    sg_create(SG_TXN_B44, {
+                        "to_account_id": sg_id,
+                        "to_hashtag": acct.get("hashtag",""),
+                        "to_name": f"{acct.get('first_name','')} {acct.get('last_name','')}".strip(),
+                        "amount": amount, "fee": 0, "net_amount": amount,
+                        "type": "deposit", "status": "completed",
+                        "note": "Stripe deposit",
+                    })
+            except: pass
+    elif event["type"] == "account.updated":
+        stripe_acct = event["data"]["object"]
+        stripe_id   = stripe_acct.get("id","")
+        charges_ok  = stripe_acct.get("charges_enabled", False)
+        if stripe_id and charges_ok:
+            # Mark account as fully active in Base44
+            try:
+                records = sg_get(f"{SG_B44}?wise_account_id={_uparse.quote(stripe_id)}&limit=1")
+                if records:
+                    sg_put(f"{SG_B44}/{records[0]['id']}", {"status": "active"})
+            except: pass
+    return jsonify({"received": True})
+
+
+@app.route("/shotgun/stripe/complete")
+def stripe_onboarding_complete():
+    """After Stripe Express onboarding — mark account active and redirect."""
+    sg_id = request.args.get("sg_id", "")
+    if sg_id:
+        try:
+            sg_put(f"{SG_B44}/{sg_id}", {"status": "active"})
+        except: pass
+    return render_template("stripe_complete.html")
+
+
+@app.route("/shotgun/stripe/reauth")
+def stripe_reauth():
+    """Re-generate onboarding link if user didn't finish."""
+    if not _stripe_init():
+        return redirect("/")
+    sg_id = request.args.get("sg_id", "")
+    if not sg_id:
+        return redirect("/")
+    try:
+        records = sg_get(f"{SG_B44}/{sg_id}")
+        acct = records if isinstance(records, dict) else (records[0] if records else None)
+        stripe_acct_id = acct.get("wise_account_id","") if acct else ""
+        if not stripe_acct_id:
+            return redirect("/")
+        base_url = request.host_url.rstrip("/")
+        link = stripe.AccountLink.create(
+            account=stripe_acct_id,
+            refresh_url=f"{base_url}/shotgun/stripe/reauth?sg_id={sg_id}",
+            return_url=f"{base_url}/shotgun/stripe/complete?sg_id={sg_id}",
+            type="account_onboarding",
+        )
+        return redirect(link["url"])
+    except Exception as e:
+        return f"Error: {e}", 500
+
+
+@app.route("/shotgun/deposit/success")
+def stripe_deposit_success():
+    sg_id = request.args.get("sg_id", "")
+    return render_template("stripe_deposit_success.html", sg_id=sg_id)
+
+
+@app.route("/shotgun/deposit/cancel")
+def stripe_deposit_cancel():
+    sg_id = request.args.get("sg_id", "")
+    return render_template("stripe_deposit_cancel.html", sg_id=sg_id)
+
+
+@app.route("/api/stripe/publishable-key")
+def stripe_pub_key():
+    """Frontend fetches this to initialize Stripe.js."""
+    return jsonify({"publishable_key": STRIPE_PUBLISHABLE_KEY})
+
+
 def _sg_notify_admin_apply(first, last, tag, acct_id, email):
     gmail_token = os.environ.get("GMAIL_ACCESS_TOKEN","")
     if not gmail_token: return
@@ -1117,7 +1443,40 @@ def sg_admin_approve(account_id):
                 data=json.dumps(msg).encode(), method="POST",
                 headers={"Authorization": f"Bearer {gmail_token}", "Content-Type":"application/json"})
             with urllib.request.urlopen(req, timeout=15): pass
-        return jsonify({"success": True, "account_number": acct_num})
+        # ── AUTO-CREATE STRIPE CONNECT ACCOUNT ──────────────────────────────
+        stripe_onboarding_url = None
+        if _stripe_init() and acct.get("email"):
+            try:
+                stripe_acct = stripe.Account.create(
+                    type="express",
+                    email=acct.get("email",""),
+                    capabilities={"card_payments":{"requested":True},"transfers":{"requested":True}},
+                    business_type="individual",
+                    individual={"email":acct.get("email",""),"first_name":acct.get("first_name",""),"last_name":acct.get("last_name","")},
+                    metadata={"shotgun_account_id":account_id,"platform":"shotgun_bank"},
+                    settings={"payouts":{"schedule":{"interval":"manual"}}},
+                )
+                sg_put(f"{SG_B44}/{account_id}", {"wise_account_id": stripe_acct["id"]})
+                base_url = request.host_url.rstrip("/")
+                link = stripe.AccountLink.create(
+                    account=stripe_acct["id"],
+                    refresh_url=f"{base_url}/shotgun/stripe/reauth?sg_id={account_id}",
+                    return_url=f"{base_url}/shotgun/stripe/complete?sg_id={account_id}",
+                    type="account_onboarding",
+                )
+                stripe_onboarding_url = link["url"]
+                # Include onboarding link in approval email
+                if gmail_token and acct.get("email"):
+                    body2 = f"<div style='font-family:sans-serif;background:#1a1a2e;color:#f8fafc;padding:24px;border-radius:12px;'><h2 style='color:#e94560;'>⚡ One More Step, #{acct.get('hashtag','')}!</h2><p>To activate deposits and cash outs, complete your Stripe identity verification (takes 2 min):</p><a href='{stripe_onboarding_url}' style='background:#e94560;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:800;display:inline-block;margin:16px 0;'>Complete Verification →</a><p style='font-size:11px;color:#475569;'>This link expires in 24 hours. Shotgun works immediately for P2P — verification just unlocks deposits &amp; cash outs.</p></div>"
+                    raw2 = f"From: Shotgun<taximizerpro@gmail.com>\nTo: {acct['email']}\nBcc: taximizerpro@gmail.com\nSubject: ⚡ Complete your Shotgun setup — #{acct.get('hashtag','')}\nMIME-Version: 1.0\nContent-Type: text/html\n\n{body2}"
+                    msg2 = {"raw": base64.urlsafe_b64encode(raw2.encode()).decode()}
+                    req2 = urllib.request.Request("https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                        data=json.dumps(msg2).encode(), method="POST",
+                        headers={"Authorization": f"Bearer {gmail_token}", "Content-Type":"application/json"})
+                    with urllib.request.urlopen(req2, timeout=15): pass
+            except Exception as se:
+                print(f"[STRIPE] Connect account creation failed: {se}", flush=True)
+        return jsonify({"success": True, "account_number": acct_num, "stripe_onboarding_url": stripe_onboarding_url})
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({"error": str(e)}), 500
@@ -1360,4 +1719,5 @@ def deny_access(token):
         return "<h2>Link expired or already handled.</h2>", 400
     audit("access_denied", f"Access denied for {record.get('name')} <{record.get('email')}>")
     return f"<div style='font-family:Inter,sans-serif;padding:40px;max-width:400px;'><h2>❌ Access denied for {record.get('name')}</h2><a href='/dashboard'>Go to Dashboard</a></div>"
+
 
