@@ -339,14 +339,12 @@ def login():
                 _send_otp_email(email, otp, ADMINS[match]["name"])
                 audit("2fa_otp_sent", f"OTP sent to {email}", email)
             except Exception as e:
-                # Fallback: auto-approve if email fails (dev mode)
-                if os.environ.get("FLASK_ENV") != "production":
-                    session["user"] = {"email":match,"name":ADMINS[match]["name"],"role":ADMINS[match]["role"]}
-                    session.permanent = True
-                    audit("login_success_noemail", f"Auto-approved (email unavailable)", email)
-                    return redirect(url_for("dashboard"))
-                error = f"Could not send verification code: {e}"
-                return render_template("login.html", error=error)
+                # Email failed — log the OTP to console so admin can still get in
+                print(f"[2FA EMAIL FAILED] OTP for {email}: {otp} | Error: {e}", flush=True)
+                # Still proceed to 2FA page — admin can check Render logs for OTP
+                session["pending_2fa"] = email
+                session["otp_fallback"] = True
+                return redirect(url_for("verify_2fa"))
             session["pending_2fa"] = email
             return redirect(url_for("verify_2fa"))
         else:
@@ -358,6 +356,7 @@ def login():
 def verify_2fa():
     email = session.get("pending_2fa","")
     if not email: return redirect(url_for("login"))
+    fallback_mode = session.get("otp_fallback", False)
     error = None
     if request.method == "POST":
         ip = request.remote_addr or "unknown"
@@ -374,7 +373,7 @@ def verify_2fa():
         if not record or record.get("expires",0) < time.time():
             error = "Code expired — please log in again."
             session.pop("pending_2fa", None)
-            return render_template("verify_2fa.html", error=error, email=email)
+            return render_template("verify_2fa.html", error=error, email=email, fallback_mode=fallback_mode)
         if entered == record.get("otp",""):
             session.pop("pending_2fa", None)
             _otp_store.pop(email, None)
@@ -385,7 +384,7 @@ def verify_2fa():
         else:
             audit("2fa_wrong_code", f"Wrong OTP for {email} (attempt {record['attempts']})", email)
             error = f"Incorrect code. {5 - record['attempts']} attempts remaining."
-    return render_template("verify_2fa.html", error=error, email=email)
+    return render_template("verify_2fa.html", error=error, email=email, fallback_mode=fallback_mode)
 
 @app.route("/api/captcha/generate")
 def captcha_generate():
@@ -1361,3 +1360,4 @@ def deny_access(token):
         return "<h2>Link expired or already handled.</h2>", 400
     audit("access_denied", f"Access denied for {record.get('name')} <{record.get('email')}>")
     return f"<div style='font-family:Inter,sans-serif;padding:40px;max-width:400px;'><h2>❌ Access denied for {record.get('name')}</h2><a href='/dashboard'>Go to Dashboard</a></div>"
+
