@@ -34,65 +34,47 @@
   <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;backdrop-filter:blur(20px);">
     
 
-<!-- SHOTGUN PROMO BANNER — taximizerpro.onrender.com/login -->
+<!-- SHOTGUN PROMO BANNER -->
 <div id="shotgun-promo-banner" style="
-  background: linear-gradient(135deg, #0f172a 0%, #1a1a2e 40%, #16213e 100%);
-  border: 1px solid rgba(233,69,96,.4);
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 2px solid #16a34a;
   border-radius: 16px;
-  padding: 20px 24px;
+  padding: 18px 20px;
   margin: 0 0 24px 0;
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 16px;
   position: relative;
-  overflow: hidden;
   cursor: pointer;
-  box-shadow: 0 0 30px rgba(233,69,96,.15);
-" onclick="window.open('/shotgun','_blank')">
-  <!-- animated glow pulse -->
-  <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:rgba(233,69,96,.12);border-radius:50%;filter:blur(20px);animation:pulse-glow 2.5s ease-in-out infinite;"></div>
-  <!-- Logo area -->
-  <div style="flex-shrink:0;width:60px;height:60px;display:flex;align-items:center;justify-content:center;">
-    <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/1116c3e12_shotgun_bank_main_logo_clean.png" alt="Shotgun" style="height:56px;width:auto;object-fit:contain;filter:drop-shadow(0 0 10px rgba(192,57,43,.5));">
-  </div>
-  <!-- Text -->
+  box-shadow: 0 4px 16px rgba(22,163,74,.15);
+" onclick="window.open('/bank','_blank')">
+  <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/b37b8a096_shotgun_logo_NEW.png" style="height:52px;width:auto;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(22,163,74,.3));" alt="Shotgun Bank">
   <div style="flex:1;min-width:0;">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-      <span style="font-size:15px;font-weight:900;color:#f8fafc;letter-spacing:-.3px;">Shotgun Payments</span>
-      <span style="background:rgba(233,69,96,.2);color:#f87171;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid rgba(233,69,96,.3);">NEW</span>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+      <span style="font-size:15px;font-weight:900;color:#15803d;">Shotgun Bank</span>
+      <span style="background:#16a34a;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">NEW</span>
     </div>
-    <p style="margin:0;font-size:12.5px;color:#94a3b8;line-height:1.45;">
-      Get your tax refund <strong style="color:#fbbf24;">up to 2 weeks early</strong> — built right into TaximizerPro.
+    <p style="margin:0;font-size:12px;color:#166534;line-height:1.45;">
+      Get your tax refund <strong>up to 2 weeks early</strong> — powered by Bisignano Holdings.
     </p>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/2aaab827e_shoot_it_clean.png" style="height:18px;width:auto;opacity:.8;" alt="">
+      <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/a558d7bc2_who_shot_ya_clean.png"   style="height:18px;width:auto;opacity:.8;" alt="">
+      <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/3387f693e_beat_the_v_clean.png" style="height:18px;width:auto;opacity:.8;" alt="">
+      <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/da3eb0759_gottem_bullseye_clean.png"style="height:18px;width:auto;opacity:.8;" alt="">
+    </div>
   </div>
-  <!-- CTA -->
-  <a href="/shotgun" onclick="event.stopPropagation()" style="
+  <a href="/bank" onclick="event.stopPropagation()" style="
     flex-shrink:0;
-    background: linear-gradient(135deg, #e94560, #c0392b);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 800;
-    padding: 10px 18px;
-    border-radius: 10px;
-    text-decoration: none;
-    white-space: nowrap;
-    box-shadow: 0 4px 15px rgba(233,69,96,.4);
-    transition: transform .15s, box-shadow .15s;
-  " onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(233,69,96,.6)'"
-     onmouseout="this.style.transform='';this.style.boxShadow='0 4px 15px rgba(233,69,96,.4)'">
-    Create Account →
+    background:linear-gradient(135deg,#16a34a,#15803d);
+    color:#fff;font-size:12px;font-weight:800;padding:10px 16px;
+    border-radius:10px;text-decoration:none;white-space:nowrap;
+    box-shadow:0 4px 12px rgba(22,163,74,.35);">
+    Open Bank →
   </a>
-  <!-- Close btn -->
   <button onclick="event.stopPropagation();document.getElementById('shotgun-promo-banner').style.display='none'" style="
-    position:absolute;top:8px;right:10px;background:none;border:none;color:#475569;cursor:pointer;font-size:16px;line-height:1;padding:2px 6px;
-  ">×</button>
+    position:absolute;top:8px;right:10px;background:none;border:none;color:#94a3b8;cursor:pointer;font-size:16px;padding:2px 6px;">×</button>
 </div>
-<style>
-@keyframes pulse-glow {
-  0%,100%{opacity:.6;transform:scale(1)}
-  50%{opacity:1;transform:scale(1.15)}
-}
-</style>
 
 <form method="POST">
       <div style="margin-bottom:18px;">
