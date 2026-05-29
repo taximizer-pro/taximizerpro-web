@@ -742,7 +742,11 @@ def api_chatbot():
         return jsonify({"reply": "What can I help you with?"})
     msg_lower = msg.lower()
     try:
-        records = _get_all_clients()
+        url = f"{B44_BASE}?limit=500"
+        req = urllib.request.Request(url, headers=BASE44_HEADERS)
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read())
+        records  = data if isinstance(data, list) else data.get("records", [])
         total    = len(records)
         filed    = sum(1 for x in records if x.get("filing_status")=="filed")
         pending  = sum(1 for x in records if x.get("filing_status")=="pending")
