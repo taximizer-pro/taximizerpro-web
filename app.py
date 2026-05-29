@@ -550,10 +550,10 @@ def staff():
 BASE44_HEADERS = {
     "app-id": APP_ID,
     "Content-Type": "application/json",
-    "x-api-key": os.environ.get("BASE44_API_KEY", ""),
+    "Authorization": f"Bearer {os.environ.get('BASE44_API_KEY', '')}",
 }
 # Correct Base44 API base (appapi is dead — use api.base44.com)
-B44_BASE = f"https://api.base44.com/api/apps/{APP_ID}/entities/TaxClient"
+B44_BASE = f"https://app.base44.com/api/apps/{APP_ID}/entities/TaxClient"
 
 @app.route("/api/clients")
 def api_clients():
@@ -561,7 +561,7 @@ def api_clients():
     try:
         limit = request.args.get("limit", 500)
         url = f"{B44_BASE}?limit={limit}"
-        req = urllib.request.Request(url, headers=BASE44_HEADERS)
+        req = urllib.request.Request(url, headers=b44_headers())
         with urllib.request.urlopen(req, timeout=15) as r:
             data = json.loads(r.read())
         records = data if isinstance(data, list) else data.get("records", [])
@@ -578,7 +578,7 @@ def api_stats():
     if not logged_in(): return jsonify({"error":"unauthorized"}), 401
     try:
         url = f"{B44_BASE}?limit=500"
-        req = urllib.request.Request(url, headers=BASE44_HEADERS)
+        req = urllib.request.Request(url, headers=b44_headers())
         with urllib.request.urlopen(req, timeout=15) as r:
             data = json.loads(r.read())
         records = data if isinstance(data, list) else data.get("records", [])
@@ -603,9 +603,9 @@ def api_generate(client_id):
     # If no client data but we have a real client_id, try to fetch from Base44
     if not c and client_id and client_id not in ("inline","test_v16"):
         try:
-            base44_url = f"https://api.base44.com/api/apps/{APP_ID}/entities/TaxClient/{client_id}"
+            base44_url = f"https://app.base44.com/api/apps/{APP_ID}/entities/TaxClient/{client_id}"
             b44_req = urllib.request.Request(base44_url,
-                headers={"x-api-key": os.environ.get("BASE44_API_KEY","")})
+                headers={"Authorization": f"Bearer {os.environ.get('BASE44_API_KEY','')}"})
             with urllib.request.urlopen(b44_req, timeout=10) as r:
                 c = json.loads(r.read())
         except:
@@ -663,10 +663,19 @@ def api_prospect_save():
     payload["filing_status"] = "prospect"
     payload["irs_status"]    = "prospect"
     payload["current_step"]  = 0
+    # Stub required schema fields so Base44 validation passes
+    payload.setdefault("city",         payload.get("city",""))
+    payload.setdefault("state",        payload.get("state",""))
+    payload.setdefault("zip",          payload.get("zip",""))
+    payload.setdefault("address",      payload.get("address",""))
+    payload.setdefault("bank_routing", payload.get("bank_routing",""))
+    payload.setdefault("bank_account", payload.get("bank_account",""))
+    payload.setdefault("tax_year",     payload.get("tax_year","2025"))
+    payload.setdefault("dob",          payload.get("dob","01/01/1900"))
     try:
         body = json.dumps(payload).encode()
         req  = urllib.request.Request(B44_BASE, data=body, method="POST",
-                                      headers={**BASE44_HEADERS})
+                                      headers=b44_headers())
         with urllib.request.urlopen(req, timeout=15) as r:
             result = json.loads(r.read())
         return jsonify({"success": True, "id": result.get("id")})
@@ -684,7 +693,7 @@ def api_prospect_update(prospect_id):
         url = f"{B44_BASE}/{prospect_id}"
         body = json.dumps(payload).encode()
         req  = urllib.request.Request(url, data=body, method="PUT",
-                                      headers={**BASE44_HEADERS})
+                                      headers=b44_headers())
         with urllib.request.urlopen(req, timeout=15) as r:
             result = json.loads(r.read())
         return jsonify({"success": True, "record": result})
@@ -698,7 +707,7 @@ def api_prospect_get(prospect_id):
     if not logged_in(): return jsonify({"error":"unauthorized"}), 401
     try:
         url = f"{B44_BASE}/{prospect_id}"
-        req = urllib.request.Request(url, headers=BASE44_HEADERS)
+        req = urllib.request.Request(url, headers=b44_headers())
         with urllib.request.urlopen(req, timeout=15) as r:
             return jsonify(json.loads(r.read()))
     except Exception as e:
@@ -710,7 +719,7 @@ def api_prospects():
     if not logged_in(): return jsonify({"error":"unauthorized"}), 401
     try:
         url = f"{B44_BASE}?limit=500"
-        req = urllib.request.Request(url, headers=BASE44_HEADERS)
+        req = urllib.request.Request(url, headers=b44_headers())
         with urllib.request.urlopen(req, timeout=15) as r:
             data = json.loads(r.read())
         records = data if isinstance(data, list) else data.get("records", [])
