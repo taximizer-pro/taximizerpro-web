@@ -27,16 +27,16 @@
 /* ── TRIGGER ── */
 #sg-trigger{
   position:fixed;bottom:28px;right:28px;z-index:9999;
-  width:60px;height:60px;border-radius:50%;
-  background:linear-gradient(135deg,var(--green-brand),var(--green-dark));
-  border:none;cursor:pointer;
+  width:66px;height:66px;border-radius:50%;
+  background:linear-gradient(135deg,#0a2218,#071a12);
+  border:2px solid rgba(34,197,94,.4);cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 0 0 0 rgba(34,197,94,.4);
+  box-shadow:0 0 0 0 rgba(34,197,94,.4),0 8px 24px rgba(0,0,0,.5);
   animation:trigger-pulse 2.5s infinite;
   transition:transform .2s;
 }
 #sg-trigger:hover{transform:scale(1.08);}
-#sg-trigger img{width:34px;height:34px;object-fit:contain;}
+#sg-trigger img{width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(34,197,94,.6));}
 @keyframes trigger-pulse{
   0%{box-shadow:0 0 0 0 rgba(34,197,94,.4);}
   70%{box-shadow:0 0 0 14px rgba(34,197,94,0);}
@@ -427,7 +427,7 @@ body.dark{background:var(--bg);}
 
 <!-- TRIGGER -->
 <button id="sg-trigger" onclick="toggleShotgun()" title="Shotgun Bank">
-  <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/b37b8a096_shotgun_logo_NEW.png" style="width:38px;height:38px;object-fit:contain;border-radius:6px;">
+  <img src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/clean/shotgun_bank_main_logo_clean.png" style="width:38px;height:38px;object-fit:contain;border-radius:6px;">
 </button>
 
 <!-- PANEL -->
@@ -436,7 +436,7 @@ body.dark{background:var(--bg);}
   <!-- Header -->
   <div class="sg-header">
     <div class="sg-brand">
-      <img class="sg-brand-logo" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/b37b8a096_shotgun_logo_NEW.png" alt="Shotgun">
+      <img class="sg-brand-logo" src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/clean/shotgun_bank_main_logo_clean.png" alt="Shotgun">
       <div>
         <div class="sg-brand-name">SHOTGUN</div>
         <div class="sg-brand-tag">Your Money, Reloaded</div>
@@ -471,7 +471,7 @@ body.dark{background:var(--bg);}
           maxlength="8" inputmode="numeric" pattern="[0-9]*">
       </div>
       <button class="sg-btn sg-btn-red" onclick="sgLogin()" style="margin-top:8px;">
-        🔫 Lock and Load
+        Lock and Load
       </button>
       <button class="sg-btn sg-btn-ghost" onclick="showScreen('sg-apply')" style="margin-top:10px;">
         New? Open an Account →
@@ -1050,7 +1050,7 @@ async function sgLogin() {
       localStorage.setItem('sg_session', JSON.stringify(d.account));
       populateDash(d.account);
       showTab('dash');
-      sgToast('🔫 Locked and loaded, #' + d.account.hashtag);
+      sgToast('Locked and loaded, #' + d.account.hashtag);
     } else if (d.status === 'pending') {
       showScreen('sg-pending');
     } else {
