@@ -974,7 +974,7 @@ function checkHashtag(val) {
   el.textContent = '⏳ Checking...'; el.style.color = 'var(--smoke)';
   hashtagTimer = setTimeout(async () => {
     try {
-      const res = await fetch('/api/shotgun/check-hashtag?tag=' + encodeURIComponent(val));
+      const res = await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=check-tag?tag=' + encodeURIComponent(val));
       const d = await res.json();
       if (d.available) { el.textContent = '✓ #' + val + ' is yours!'; el.style.color = 'var(--green)'; }
       else { el.textContent = '✗ Already taken — try another'; el.style.color = 'var(--green-brand)'; }
@@ -990,7 +990,7 @@ async function lookupRecipient(val) {
   const tag = val.trim().replace(/^#/,'');
   if (!tag) { preview.innerHTML = ''; return; }
   try {
-    const res = await fetch('/api/shotgun/check-hashtag?tag=' + encodeURIComponent(tag));
+    const res = await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=check-tag?tag=' + encodeURIComponent(tag));
     const d = await res.json();
     if (!d.available && d.account) {
       const acct = d.account;
@@ -1025,7 +1025,7 @@ async function sgApply() {
   }
   if (data.pin.length < 4) { sgToast('PIN must be at least 4 digits'); return; }
   try {
-    const res = await fetch('/api/shotgun/apply', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    const res = await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=signup', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
     const d = await res.json();
     if (d.success) { showScreen('sg-pending'); }
     else { sgToast(d.error || 'Application failed — try again'); }
@@ -1040,7 +1040,7 @@ async function sgLogin() {
   const pin = document.getElementById('sg-login-pin').value;
   if (!identifier || !pin) { sgToast('Enter hashtag/email and PIN'); return; }
   try {
-    const res = await fetch('/api/shotgun/login', {
+    const res = await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=login', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({identifier, pin})
     });
@@ -1129,7 +1129,7 @@ async function sgSendMoney() {
   if (!to) { sgToast('Who are you sending to?'); return; }
   if (!amount || amount <= 0) { sgToast('Enter an amount'); return; }
   try {
-    const res = await fetch('/api/shotgun/send', {
+    const res = await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=send', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({from_account_id: sgAccount.id, to_hashtag: to, amount, note})
     });
@@ -1158,7 +1158,7 @@ async function sgSendMoney() {
 async function loadTransactions() {
   if (!sgAccount) return;
   try {
-    const res = await fetch('/api/shotgun/transactions/' + sgAccount.id);
+    const res = await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=transactions/' + sgAccount.id);
     const d = await res.json();
     const list = document.getElementById('sg-txn-list');
     if (!d.transactions || !d.transactions.length) {
@@ -1212,7 +1212,7 @@ function showAllTransactions() { sgToast('Full history — coming with Stripe in
 // ═══════════════════════════
 async function fetchMonthlyActivity(accountId) {
   try {
-    const res = await fetch('/api/shotgun/monthly-activity/' + accountId);
+    const res = await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=monthly-activity/' + accountId);
     const d = await res.json();
     const monthly = parseFloat(d.monthly_activity || 0);
     const pct = Math.min((monthly / 500) * 100, 100);
@@ -1233,7 +1233,7 @@ async function fetchMonthlyActivity(accountId) {
 async function activateBeatV() {
   if (!sgAccount) return;
   try {
-    const res = await fetch('/api/shotgun/beat-the-v', {
+    const res = await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=beat-the-v', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({account_id: sgAccount.id})
     });
@@ -1270,7 +1270,7 @@ async function togglePresence() {
   if (!sgAccount) return;
   const newOnline = !sgAccount.is_online;
   try {
-    await fetch('/api/shotgun/presence', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:sgAccount.id,is_online:newOnline})});
+    await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=presence', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:sgAccount.id,is_online:newOnline})});
     sgAccount.is_online = newOnline;
     localStorage.setItem('sg_session', JSON.stringify(sgAccount));
     updatePresenceUI(sgAccount.is_silent, newOnline);
@@ -1280,7 +1280,7 @@ async function toggleSilent() {
   if (!sgAccount) return;
   const newSilent = !sgAccount.is_silent;
   try {
-    await fetch('/api/shotgun/silent', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:sgAccount.id,is_silent:newSilent})});
+    await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=silent', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:sgAccount.id,is_silent:newSilent})});
     sgAccount.is_silent = newSilent;
     localStorage.setItem('sg_session', JSON.stringify(sgAccount));
     updatePresenceUI(newSilent, sgAccount.is_online);
@@ -1296,8 +1296,8 @@ async function loadContacts() {
   if (!sgAccount) return;
   try {
     const [cRes, oRes] = await Promise.all([
-      fetch('/api/shotgun/contacts/' + sgAccount.id),
-      fetch('/api/shotgun/online-users')
+      fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=contacts/' + sgAccount.id),
+      fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=online-users')
     ]);
     const cData = await cRes.json();
     const oData = await oRes.json();
@@ -1350,7 +1350,7 @@ async function addContact() {
   const tag = document.getElementById('sg-add-contact-tag').value.trim().replace(/^#/,'');
   if (!tag) { sgToast('Enter a hashtag'); return; }
   try {
-    const res = await fetch('/api/shotgun/add-contact', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:sgAccount.id,contact_hashtag:tag})});
+    const res = await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=add-contact', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:sgAccount.id,contact_hashtag:tag})});
     const d = await res.json();
     if (d.success) { sgToast('✓ #' + tag + ' added'); document.getElementById('sg-add-contact-tag').value=''; loadContacts(); }
     else { sgToast(d.error || 'Could not add contact'); }
@@ -1360,7 +1360,7 @@ async function sendInvite() {
   const email = document.getElementById('sg-invite-email').value.trim();
   if (!email) { sgToast('Enter an email'); return; }
   try {
-    const res = await fetch('/api/shotgun/invite', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from_account_id:sgAccount.id,email})});
+    const res = await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=invite', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from_account_id:sgAccount.id,email})});
     const d = await res.json();
     if (d.success) { sgToast('📧 Invite sent to ' + email); document.getElementById('sg-invite-email').value=''; }
     else { sgToast(d.error || 'Could not send invite'); }
@@ -1371,7 +1371,7 @@ async function sendSOS() {
   const msg = document.getElementById('sg-sos-msg').value.trim();
   if (!amount) { sgToast('Enter an amount for your SOS'); return; }
   try {
-    const res = await fetch('/api/shotgun/sos', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:sgAccount.id,amount_requested:amount,message:msg})});
+    const res = await fetch('https://superagent-0baff5aa.base44.app/functions/shotgunApi?action=sos', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:sgAccount.id,amount_requested:amount,message:msg})});
     const d = await res.json();
     if (d.success) { sgToast('🆘 SOS sent to all contacts!'); }
     else { sgToast(d.error || 'SOS failed'); }
