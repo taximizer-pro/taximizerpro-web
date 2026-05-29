@@ -3,144 +3,255 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Shotgun Bank — Your Money Moves Fast</title>
+<title>Shotgun Bank — Your Money, Reloaded</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:'Inter',system-ui,sans-serif;background:#0a0208;color:#f8fafc;min-height:100vh;overflow-x:hidden;}
+  body{font-family:'Inter',system-ui,sans-serif;background:#f8fafc;color:#0f172a;min-height:100vh;overflow-x:hidden;}
 
-  /* ── BRAND COLORS (pulled from logo — deep crimson/gunmetal) ── */
+  /* ── BRAND PALETTE (from actual logo) ── */
   :root{
-    --red:#c0392b;
-    --red-bright:#e94560;
-    --gold:#f59e0b;
-    --dark:#0a0208;
-    --dark2:#12060e;
-    --dark3:#1c0d18;
-    --card:#16090f;
-    --border:rgba(192,57,43,.25);
-    --text:#f8fafc;
-    --muted:#64748b;
+    --green:       #16a34a;
+    --green-dark:  #15803d;
+    --green-deep:  #166534;
+    --green-light: #dcfce7;
+    --gold:        #eab308;
+    --gold-dark:   #ca8a04;
+    --white:       #ffffff;
+    --grey-50:     #f8fafc;
+    --grey-100:    #f1f5f9;
+    --grey-200:    #e2e8f0;
+    --grey-400:    #94a3b8;
+    --grey-600:    #475569;
+    --grey-800:    #1e293b;
+    --black:       #0f172a;
+    --shadow:      0 4px 16px rgba(22,163,74,.15);
+    --shadow-lg:   0 8px 32px rgba(22,163,74,.2);
   }
 
   /* ── NAV ── */
-  .sg-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(10,2,8,.92);backdrop-filter:blur(14px);z-index:100;}
+  .sg-nav{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 28px;
+    background:#fff;
+    border-bottom:2px solid var(--green-light);
+    position:sticky;top:0;z-index:100;
+    box-shadow:0 2px 12px rgba(22,163,74,.08);
+  }
   .sg-logo{display:flex;align-items:center;gap:12px;text-decoration:none;}
-  .sg-logo img{height:38px;width:auto;object-fit:contain;}
-  .sg-logo-text{font-size:17px;font-weight:900;color:#f8fafc;letter-spacing:-.3px;}
+  .sg-logo img{height:44px;width:auto;object-fit:contain;}
+  .sg-logo-text{font-size:20px;font-weight:900;color:var(--green-dark);letter-spacing:-.5px;}
+  .sg-logo-tag{font-size:10px;font-weight:700;color:var(--gold-dark);letter-spacing:1.5px;text-transform:uppercase;display:block;margin-top:-2px;}
   .nav-btns{display:flex;gap:10px;}
-  .btn-ghost{background:none;border:1px solid rgba(255,255,255,.15);color:#f8fafc;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;}
-  .btn-ghost:hover{background:rgba(255,255,255,.06);}
-  .btn-red{background:linear-gradient(135deg,var(--red-bright),var(--red));border:none;color:#fff;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:800;box-shadow:0 4px 14px rgba(192,57,43,.45);}
-  .btn-red:hover{filter:brightness(1.1);}
+  .btn-ghost{background:#fff;border:2px solid var(--green);color:var(--green-dark);padding:9px 18px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;transition:all .15s;}
+  .btn-ghost:hover{background:var(--green-light);}
+  .btn-green{background:linear-gradient(135deg,var(--green),var(--green-dark));border:none;color:#fff;padding:9px 20px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:800;box-shadow:var(--shadow);transition:all .15s;}
+  .btn-green:hover{filter:brightness(1.08);transform:translateY(-1px);}
 
   /* ── SCREENS ── */
   .screen{display:none;} .screen.active{display:block;}
 
   /* ── HERO ── */
-  .hero{text-align:center;padding:70px 24px 50px;}
-  .hero-logo-block{display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:32px;flex-wrap:wrap;}
-  .hero-logo-block img.hero-main-logo{height:90px;width:auto;filter:drop-shadow(0 0 30px rgba(192,57,43,.5));}
-  .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);color:#fca5a5;font-size:11px;font-weight:700;padding:5px 14px;border-radius:20px;margin-bottom:20px;letter-spacing:.5px;}
-  .hero h1{font-size:clamp(34px,7vw,68px);font-weight:900;line-height:1.05;margin-bottom:18px;}
-  .hero h1 span{background:linear-gradient(135deg,var(--red-bright),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-  .hero p{font-size:16px;color:#94a3b8;max-width:480px;margin:0 auto 36px;line-height:1.6;}
+  .hero{
+    text-align:center;
+    padding:70px 24px 50px;
+    background:linear-gradient(180deg,#fff 0%,var(--grey-50) 100%);
+  }
+  .hero-logo{height:140px;width:auto;margin:0 auto 28px;display:block;filter:drop-shadow(0 8px 24px rgba(22,163,74,.25));}
+  .hero-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--green-light);border:1.5px solid var(--green);
+    color:var(--green-deep);font-size:11px;font-weight:700;
+    padding:5px 14px;border-radius:20px;margin-bottom:20px;letter-spacing:.5px;
+  }
+  .hero h1{font-size:clamp(32px,6vw,62px);font-weight:900;line-height:1.05;margin-bottom:16px;color:var(--black);}
+  .hero h1 span.green{color:var(--green-dark);}
+  .hero h1 span.gold{color:var(--gold-dark);}
+  .hero p{font-size:16px;color:var(--grey-600);max-width:480px;margin:0 auto 36px;line-height:1.6;}
   .hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
-  .hero-btn-primary{background:linear-gradient(135deg,var(--red-bright),var(--red));color:#fff;padding:14px 32px;border-radius:12px;font-size:15px;font-weight:800;border:none;cursor:pointer;box-shadow:0 6px 24px rgba(192,57,43,.5);transition:transform .15s;}
-  .hero-btn-primary:hover{transform:translateY(-2px);}
-  .hero-btn-secondary{background:rgba(255,255,255,.05);color:#f8fafc;padding:14px 32px;border-radius:12px;font-size:15px;font-weight:700;border:1px solid rgba(255,255,255,.12);cursor:pointer;transition:background .15s;}
-  .hero-btn-secondary:hover{background:rgba(255,255,255,.09);}
+  .hero-btn-primary{
+    background:linear-gradient(135deg,var(--green),var(--green-dark));
+    color:#fff;padding:14px 36px;border-radius:12px;font-size:15px;font-weight:800;
+    border:none;cursor:pointer;box-shadow:var(--shadow-lg);transition:all .15s;
+  }
+  .hero-btn-primary:hover{transform:translateY(-2px);filter:brightness(1.06);}
+  .hero-btn-secondary{
+    background:#fff;color:var(--green-dark);padding:14px 36px;border-radius:12px;
+    font-size:15px;font-weight:700;border:2px solid var(--green);cursor:pointer;transition:all .15s;
+  }
+  .hero-btn-secondary:hover{background:var(--green-light);}
 
   /* ── FEATURES ── */
-  .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;padding:0 24px 60px;max-width:960px;margin:0 auto;}
-  .feat-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;transition:border-color .2s;}
-  .feat-card:hover{border-color:rgba(192,57,43,.5);}
-  .feat-icon-img{height:42px;width:auto;margin-bottom:14px;object-fit:contain;}
-  .feat-icon-emoji{font-size:28px;margin-bottom:12px;display:block;}
-  .feat-title{font-size:14px;font-weight:800;margin-bottom:6px;}
-  .feat-desc{font-size:12px;color:#64748b;line-height:1.5;}
+  .features-section{background:var(--grey-50);padding:0 24px 70px;}
+  .features-title{text-align:center;font-size:22px;font-weight:900;color:var(--black);padding:40px 0 28px;}
+  .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;max-width:1000px;margin:0 auto;}
+  .feat-card{
+    background:#fff;border:2px solid var(--grey-200);border-radius:18px;
+    padding:24px;transition:all .2s;cursor:default;
+  }
+  .feat-card:hover{border-color:var(--green);box-shadow:var(--shadow);}
+  .feat-icon-wrap{
+    width:64px;height:64px;border-radius:16px;
+    background:var(--green-light);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:16px;overflow:hidden;
+  }
+  .feat-icon-wrap img{width:48px;height:48px;object-fit:contain;}
+  .feat-card-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .feat-card-header img.inline-icon{width:28px;height:28px;object-fit:contain;flex-shrink:0;}
+  .feat-title{font-size:15px;font-weight:800;color:var(--black);}
+  .feat-desc{font-size:13px;color:var(--grey-600);line-height:1.55;}
 
   /* ── MODAL OVERLAY ── */
-  .sg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);z-index:200;display:none;align-items:center;justify-content:center;padding:16px;}
+  .sg-overlay{
+    position:fixed;inset:0;
+    background:rgba(15,23,42,.5);
+    backdrop-filter:blur(6px);
+    z-index:200;display:none;
+    align-items:center;justify-content:center;padding:16px;
+  }
   .sg-overlay.open{display:flex;}
-  .sg-modal{background:#0f0208;border:1px solid var(--border);border-radius:24px;width:100%;max-width:400px;overflow:hidden;animation:slide-up .25s ease;box-shadow:0 24px 80px rgba(192,57,43,.25);}
+  .sg-modal{
+    background:#fff;border:2px solid var(--grey-200);border-radius:24px;
+    width:100%;max-width:400px;overflow:hidden;
+    animation:slide-up .22s ease;
+    box-shadow:0 24px 64px rgba(0,0,0,.15);
+  }
   @keyframes slide-up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-  .modal-header{padding:24px 24px 0;display:flex;align-items:center;justify-content:space-between;}
+  .modal-header{
+    padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--grey-100);padding-bottom:16px;
+  }
   .modal-logo{height:36px;width:auto;object-fit:contain;}
-  .modal-close{background:none;border:none;color:#475569;cursor:pointer;font-size:22px;padding:4px 8px;}
-  .modal-close:hover{color:#f8fafc;}
+  .modal-close{
+    background:var(--grey-100);border:none;color:var(--grey-600);
+    cursor:pointer;font-size:18px;width:32px;height:32px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;transition:background .15s;
+  }
+  .modal-close:hover{background:var(--grey-200);}
   .modal-body{padding:24px;}
-  .modal-title{font-size:20px;font-weight:900;margin-bottom:4px;}
-  .modal-sub{font-size:13px;color:#64748b;margin-bottom:24px;}
+  .modal-title{font-size:20px;font-weight:900;color:var(--black);margin-bottom:4px;}
+  .modal-sub{font-size:13px;color:var(--grey-400);margin-bottom:22px;}
 
   /* ── FORM ── */
-  .sg-label{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block;}
-  .sg-input{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:#f8fafc;font-size:14px;padding:12px 14px;outline:none;transition:border-color .15s;margin-bottom:14px;}
-  .sg-input:focus{border-color:rgba(192,57,43,.6);}
+  .sg-label{font-size:11px;font-weight:700;color:var(--grey-600);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block;}
+  .sg-input{
+    width:100%;background:var(--grey-50);border:1.5px solid var(--grey-200);
+    border-radius:10px;color:var(--black);font-size:14px;
+    padding:12px 14px;outline:none;transition:border-color .15s;margin-bottom:14px;
+  }
+  .sg-input:focus{border-color:var(--green);background:#fff;}
   .sg-input-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  .sg-btn-full{width:100%;padding:13px;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-top:6px;transition:filter .15s;}
-  .sg-btn-red{background:linear-gradient(135deg,var(--red-bright),var(--red));color:#fff;box-shadow:0 4px 14px rgba(192,57,43,.5);}
-  .sg-btn-red:hover{filter:brightness(1.12);}
-  .sg-btn-outline{background:none;border:1px solid rgba(255,255,255,.12);color:#f8fafc;margin-top:10px;}
-  .sg-btn-outline:hover{background:rgba(255,255,255,.05);}
-  .sg-err{color:#f87171;font-size:12px;margin-top:8px;display:none;}
-  .sg-succ{color:#4ade80;font-size:12px;margin-top:8px;display:none;}
-  .sg-link{color:var(--red-bright);font-size:12px;cursor:pointer;text-align:center;display:block;margin-top:14px;}
-  .sg-link:hover{text-decoration:underline;}
+  .sg-btn-full{width:100%;padding:13px;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-top:6px;transition:all .15s;}
+  .sg-btn-green{background:linear-gradient(135deg,var(--green),var(--green-dark));color:#fff;box-shadow:var(--shadow);}
+  .sg-btn-green:hover{filter:brightness(1.08);transform:translateY(-1px);}
+  .sg-btn-outline{background:#fff;border:2px solid var(--grey-200);color:var(--grey-800);margin-top:10px;}
+  .sg-btn-outline:hover{border-color:var(--green);color:var(--green-dark);}
+  .sg-err{color:#dc2626;font-size:12px;margin-top:8px;display:none;background:#fef2f2;padding:8px 12px;border-radius:8px;}
+  .sg-succ{color:var(--green-dark);font-size:12px;margin-top:8px;display:none;background:var(--green-light);padding:8px 12px;border-radius:8px;}
 
   /* ── PIN ── */
-  .pin-header{text-align:center;margin-bottom:12px;}
-  .pin-header .modal-logo{margin:0 auto 10px;display:block;}
   .pin-dots{display:flex;gap:12px;justify-content:center;margin:16px 0;}
-  .pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.2);transition:all .15s;}
-  .pin-dot.filled{background:var(--red-bright);border-color:var(--red-bright);}
+  .pin-dot{width:16px;height:16px;border-radius:50%;border:2.5px solid var(--grey-200);transition:all .15s;}
+  .pin-dot.filled{background:var(--green);border-color:var(--green);}
   .pin-numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:240px;margin:0 auto 16px;}
-  .pin-key{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:16px;font-size:18px;font-weight:700;cursor:pointer;text-align:center;transition:background .1s;}
-  .pin-key:hover{background:rgba(192,57,43,.18);}
-  .pin-key:active{background:rgba(192,57,43,.3);}
-  .pin-key.del{color:#f87171;}
+  .pin-key{
+    background:var(--grey-50);border:1.5px solid var(--grey-200);
+    border-radius:12px;padding:16px;font-size:18px;font-weight:700;
+    cursor:pointer;text-align:center;color:var(--black);transition:all .1s;
+  }
+  .pin-key:hover{background:var(--green-light);border-color:var(--green);}
+  .pin-key:active{background:var(--green);color:#fff;}
+  .pin-key.del{color:#dc2626;}
 
   /* ── DASHBOARD ── */
-  .sg-dash{max-width:480px;margin:0 auto;padding:24px;}
+  .sg-dash{max-width:500px;margin:0 auto;padding:24px 20px;}
   .dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
-  .dash-header img{height:28px;}
-  .dash-logout{background:none;border:1px solid rgba(255,255,255,.1);color:#94a3b8;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;}
-  .dash-logout:hover{color:#f8fafc;border-color:rgba(255,255,255,.2);}
-  .dash-balance{background:linear-gradient(135deg,var(--dark2),var(--dark3));border:1px solid rgba(192,57,43,.3);border-radius:20px;padding:28px;text-align:center;margin-bottom:20px;position:relative;overflow:hidden;}
-  .dash-balance::before{content:'';position:absolute;top:-40px;right:-40px;width:140px;height:140px;background:rgba(192,57,43,.08);border-radius:50%;filter:blur(30px);}
-  .dash-label{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
-  .dash-amount{font-size:48px;font-weight:900;letter-spacing:-2px;}
-  .dash-tag{font-size:13px;color:#64748b;margin-top:8px;}
-  .dash-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
-  .dash-action{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 8px;text-align:center;cursor:pointer;transition:border-color .15s;}
-  .dash-action:hover{border-color:rgba(192,57,43,.5);}
-  .dash-action img.action-icon{height:32px;width:auto;margin:0 auto 8px;display:block;object-fit:contain;}
-  .dash-action .action-label{font-size:11px;font-weight:700;color:#94a3b8;}
+  .dash-header img{height:36px;}
+  .dash-greeting{font-size:14px;font-weight:700;color:var(--grey-600);}
+  .dash-logout{background:var(--grey-100);border:none;color:var(--grey-600);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;}
+  .dash-logout:hover{background:var(--grey-200);}
+
+  .dash-balance{
+    background:linear-gradient(135deg,var(--green),var(--green-deep));
+    border-radius:22px;padding:30px 28px;text-align:center;
+    margin-bottom:20px;position:relative;overflow:hidden;
+    box-shadow:var(--shadow-lg);
+  }
+  .dash-balance::before{
+    content:'';position:absolute;top:-40px;right:-40px;
+    width:160px;height:160px;background:rgba(255,255,255,.08);border-radius:50%;
+  }
+  .dash-balance::after{
+    content:'';position:absolute;bottom:-30px;left:-30px;
+    width:120px;height:120px;background:rgba(255,255,255,.05);border-radius:50%;
+  }
+  .dash-bal-label{font-size:11px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;}
+  .dash-amount{font-size:52px;font-weight:900;color:#fff;letter-spacing:-2px;line-height:1;}
+  .dash-tag{font-size:14px;color:rgba(255,255,255,.7);margin-top:10px;font-weight:600;}
+  .dash-bal-btv{
+    display:inline-flex;align-items:center;gap:8px;margin-top:14px;
+    background:rgba(234,179,8,.2);border:1px solid rgba(234,179,8,.4);
+    border-radius:20px;padding:6px 14px;
+  }
+  .dash-bal-btv img{height:20px;}
+  .dash-bal-btv span{font-size:12px;color:var(--gold);font-weight:700;}
+
+  /* ── ACTIONS ── */
+  .dash-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+  .dash-action{
+    background:#fff;border:2px solid var(--grey-200);border-radius:16px;
+    padding:16px 8px;text-align:center;cursor:pointer;transition:all .15s;
+  }
+  .dash-action:hover{border-color:var(--green);box-shadow:var(--shadow);transform:translateY(-2px);}
+  .dash-action img.action-icon{height:36px;width:auto;margin:0 auto 8px;display:block;object-fit:contain;}
+  .dash-action .action-label{font-size:11px;font-weight:700;color:var(--grey-600);}
+  .dash-actions-row2{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
 
   /* ── TX LIST ── */
-  .tx-list{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
-  .tx-list-header{padding:16px 20px;border-bottom:1px solid var(--border);font-size:13px;font-weight:800;color:#f8fafc;}
-  .tx-row{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.03);}
+  .tx-list{background:#fff;border:2px solid var(--grey-200);border-radius:18px;overflow:hidden;}
+  .tx-list-header{
+    padding:16px 20px;border-bottom:1px solid var(--grey-100);
+    font-size:14px;font-weight:800;color:var(--black);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .tx-row{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--grey-100);}
   .tx-row:last-child{border-bottom:none;}
-  .tx-icon{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;}
-  .tx-icon img{height:26px;width:auto;object-fit:contain;}
+  .tx-icon{
+    width:42px;height:42px;border-radius:12px;
+    background:var(--green-light);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;
+  }
+  .tx-icon img{height:30px;width:auto;object-fit:contain;}
   .tx-info{flex:1;}
-  .tx-name{font-size:13px;font-weight:600;color:#f8fafc;}
-  .tx-time{font-size:11px;color:#475569;margin-top:2px;}
+  .tx-name{font-size:13px;font-weight:700;color:var(--black);}
+  .tx-time{font-size:11px;color:var(--grey-400);margin-top:2px;}
   .tx-amt{font-size:15px;font-weight:800;}
-  .tx-amt.pos{color:#4ade80;} .tx-amt.neg{color:#f87171;}
+  .tx-amt.pos{color:var(--green-dark);}
+  .tx-amt.neg{color:#dc2626;}
 
-  /* ── SEND / DEPOSIT MODALS ── */
-  .amount-display{text-align:center;padding:20px 0 10px;}
-  .amount-big{font-size:52px;font-weight:900;letter-spacing:-2px;color:#f8fafc;}
-  .amount-big span{font-size:28px;vertical-align:top;padding-top:10px;display:inline-block;color:#475569;}
+  /* ── AMOUNT PAD ── */
+  .amount-display{text-align:center;padding:20px 0 10px;background:var(--grey-50);border-radius:14px;margin-bottom:16px;}
+  .amount-big{font-size:52px;font-weight:900;letter-spacing:-2px;color:var(--black);}
+  .amount-big span.dollar{font-size:28px;vertical-align:top;padding-top:10px;display:inline-block;color:var(--grey-400);}
 
-  /* ── BEAT THE V BADGE ── */
-  .btv-badge{display:flex;align-items:center;gap:10px;background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.3);border-radius:12px;padding:12px 16px;margin-bottom:16px;}
-  .btv-badge img{height:28px;}
-  .btv-text{font-size:12px;color:#fca5a5;font-weight:600;}
+  /* ── WITHDRAW OPTIONS ── */
+  .wd-option{
+    background:var(--grey-50);border:2px solid var(--grey-200);
+    border-radius:12px;padding:14px;cursor:pointer;text-align:center;transition:all .15s;
+  }
+  .wd-option.selected{background:var(--green-light);border-color:var(--green);}
+  .wd-option-icon{font-size:22px;margin-bottom:6px;}
+  .wd-option-label{font-size:12px;font-weight:800;color:var(--black);}
+  .wd-option-fee{font-size:10px;color:var(--grey-400);}
 
-  @media(max-width:480px){.dash-actions{grid-template-columns:repeat(2,1fr);}}
+  /* ── TAG STATUS ── */
+  #tag-status{font-size:11px;margin-top:-10px;margin-bottom:14px;}
+
+  @media(max-width:480px){
+    .dash-actions,.dash-actions-row2{grid-template-columns:repeat(3,1fr);}
+    .hero-logo{height:110px;}
+  }
 </style>
 </head>
 <body>
@@ -148,12 +259,15 @@
 <!-- ══════════ NAV ══════════ -->
 <nav class="sg-nav">
   <a class="sg-logo" href="/bank" onclick="showScreen('home');return false;">
-    <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/1116c3e12_shotgun_bank_main_logo_clean.png" alt="Shotgun Bank">
-    <span class="sg-logo-text">Shotgun Bank</span>
+    <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/b37b8a096_shotgun_logo_NEW.png" alt="Shotgun Bank">
+    <div>
+      <span class="sg-logo-text">Shotgun Bank</span>
+      <span class="sg-logo-tag">Your Money, Reloaded</span>
+    </div>
   </a>
   <div class="nav-btns">
-    <button class="btn-ghost" onclick="openLogin()">Log In</button>
-    <button class="btn-red"   onclick="openSignup()">Create Account</button>
+    <button class="btn-ghost"  onclick="openLogin()">Log In</button>
+    <button class="btn-green"  onclick="openSignup()">Create Account</button>
   </div>
 </nav>
 
@@ -162,76 +276,136 @@
 
   <!-- HERO -->
   <div class="hero">
-    <div class="hero-logo-block">
-      <img class="hero-main-logo" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/1116c3e12_shotgun_bank_main_logo_clean.png" alt="Shotgun Bank Logo">
-    </div>
-    <div class="hero-badge">🔫 POWERED BY BISIGNANO HOLDINGS LLC</div>
-    <h1>Your Money<br><span>Moves Fast.</span></h1>
-    <p>Send, request, load, and cash out — all with your personal <strong style="color:#f8fafc;">#tag</strong>. Get your tax refund up to 2 weeks early.</p>
+    <img class="hero-logo" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/b37b8a096_shotgun_logo_NEW.png" alt="Shotgun Bank">
+    <div class="hero-badge">🔫 BISIGNANO HOLDINGS LLC &nbsp;·&nbsp; EST. 2026</div>
+    <h1>Your Money,<br><span class="green">Reloaded.</span></h1>
+    <p>Send, receive, and grow your money with your personal <strong>#tag</strong>. Get your tax refund up to <strong>2 weeks early.</strong></p>
     <div class="hero-btns">
-      <button class="hero-btn-primary" onclick="openSignup()">Create Free Account</button>
+      <button class="hero-btn-primary"   onclick="openSignup()">Create Free Account</button>
       <button class="hero-btn-secondary" onclick="openLogin()">I Already Have an Account</button>
     </div>
   </div>
 
-  <!-- FEATURE CARDS -->
-  <div class="features">
-    <div class="feat-card">
-      <img class="feat-icon-img" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/2aaab827e_shoot_it_clean.png" alt="Send">
-      <div class="feat-title">Shoot It 💸</div>
-      <div class="feat-desc">Send money instantly to any #tag in seconds. No fees on standard P2P.</div>
-    </div>
-    <div class="feat-card">
-      <img class="feat-icon-img" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/a558d7bc2_who_shot_ya_clean.png" alt="Request">
-      <div class="feat-title">Who Shot Ya? 🎯</div>
-      <div class="feat-desc">Request money from anyone. They get notified and can pay instantly.</div>
-    </div>
-    <div class="feat-card">
-      <img class="feat-icon-img" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/3387f693e_beat_the_v_clean.png" alt="Beat the V">
-      <div class="feat-title">Beat the V 🩸</div>
-      <div class="feat-desc">Unlock a $100 negative balance after $500 in monthly transactions. Your lifeline.</div>
-    </div>
-    <div class="feat-card">
-      <img class="feat-icon-img" src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/99aae24b8_generated_image.png" alt="Crypto" style="height:42px;width:auto;margin-bottom:14px;object-fit:contain;filter:drop-shadow(0 0 8px rgba(245,158,11,.5));">
-      <div class="feat-title">Crypto Convert</div>
-      <div class="feat-desc">Convert your balance to BTC, ETH, SOL, and more — right from your account.</div>
-    </div>
-    <div class="feat-card">
-      <img class="feat-icon-img" src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/374d21a9f_generated_image.png" alt="Linked Bank" style="height:42px;width:auto;margin-bottom:14px;object-fit:contain;filter:drop-shadow(0 0 8px rgba(192,57,43,.4));">
-      <div class="feat-title">Linked Bank</div>
-      <div class="feat-desc">Connect your bank account. Load funds via ACH or credit card, cash out anytime.</div>
-    </div>
-    <div class="feat-card">
-      <img class="feat-icon-img" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/da3eb0759_gottem_bullseye_clean.png" alt="Gottem">
-      <div class="feat-title">Gottem! ✅</div>
-      <div class="feat-desc">Every confirmed payment celebrated. Real-time notifications so you always know.</div>
+  <!-- FEATURES -->
+  <div class="features-section">
+    <div class="features-title">Everything Your Money Needs</div>
+    <div class="features">
+
+      <!-- Shoot It -->
+      <div class="feat-card">
+        <div class="feat-card-header">
+          <img class="inline-icon" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/2aaab827e_shoot_it_clean.png" alt="Shoot It">
+          <span class="feat-title">Shoot It 💸</span>
+        </div>
+        <div class="feat-icon-wrap">
+          <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/2aaab827e_shoot_it_clean.png" alt="Send">
+        </div>
+        <div class="feat-desc">Send money instantly to any #tag. Real-time delivery, no waiting.</div>
+      </div>
+
+      <!-- Who Shot Ya -->
+      <div class="feat-card">
+        <div class="feat-card-header">
+          <img class="inline-icon" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/a558d7bc2_who_shot_ya_clean.png" alt="Who Shot Ya">
+          <span class="feat-title">Who Shot Ya? 🎯</span>
+        </div>
+        <div class="feat-icon-wrap">
+          <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/a558d7bc2_who_shot_ya_clean.png" alt="Request">
+        </div>
+        <div class="feat-desc">Request money from anyone. They get notified, you get paid.</div>
+      </div>
+
+      <!-- Beat the V -->
+      <div class="feat-card">
+        <div class="feat-card-header">
+          <img class="inline-icon" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/3387f693e_beat_the_v_clean.png" alt="Beat the V">
+          <span class="feat-title">Beat the V 🩸</span>
+        </div>
+        <div class="feat-icon-wrap">
+          <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/3387f693e_beat_the_v_clean.png" alt="Beat the V">
+        </div>
+        <div class="feat-desc">Unlock $100 overdraft after $500 in monthly transactions. Your safety net.</div>
+      </div>
+
+      <!-- Gottem -->
+      <div class="feat-card">
+        <div class="feat-card-header">
+          <img class="inline-icon" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/da3eb0759_gottem_bullseye_clean.png" alt="Gottem">
+          <span class="feat-title">Gottem! ✅</span>
+        </div>
+        <div class="feat-icon-wrap">
+          <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/da3eb0759_gottem_bullseye_clean.png" alt="Gottem">
+        </div>
+        <div class="feat-desc">Instant payment confirmed. Real-time notifications so you always know.</div>
+      </div>
+
+      <!-- Crypto Convert -->
+      <div class="feat-card">
+        <div class="feat-card-header">
+          <img class="inline-icon" src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/38cf9e736_generated_image.png" alt="Crypto">
+          <span class="feat-title">Crypto Convert ₿</span>
+        </div>
+        <div class="feat-icon-wrap">
+          <img src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/38cf9e736_generated_image.png" alt="Crypto Convert">
+        </div>
+        <div class="feat-desc">Convert your balance to BTC, ETH, SOL and more — right from your account.</div>
+      </div>
+
+      <!-- Linked Bank -->
+      <div class="feat-card">
+        <div class="feat-card-header">
+          <img class="inline-icon" src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/932379bbd_generated_image.png" alt="Linked Bank">
+          <span class="feat-title">Linked Bank 🏦</span>
+        </div>
+        <div class="feat-icon-wrap">
+          <img src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/932379bbd_generated_image.png" alt="Linked Bank">
+        </div>
+        <div class="feat-desc">Connect your bank. Load via ACH or card, cash out anytime.</div>
+      </div>
+
+      <!-- Dead Body -->
+      <div class="feat-card">
+        <div class="feat-card-header">
+          <img class="inline-icon" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/08ae5f2d0_dead_body_NEW.png" alt="Dead Body">
+          <span class="feat-title">Dead Body 💀</span>
+        </div>
+        <div class="feat-icon-wrap" style="background:#dcfce7;">
+          <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/08ae5f2d0_dead_body_NEW.png" alt="Payment Failed">
+        </div>
+        <div class="feat-desc">Payment failed? We'll let you know fast so you can fix it.</div>
+      </div>
+
     </div>
   </div>
 
 </div><!-- /screen-home -->
 
+
 <!-- ══════════ DASHBOARD SCREEN ══════════ -->
 <div class="screen" id="screen-dash">
   <div class="sg-dash">
+
+    <!-- Header -->
     <div class="dash-header">
-      <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/1116c3e12_shotgun_bank_main_logo_clean.png" alt="Shotgun">
+      <div>
+        <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/b37b8a096_shotgun_logo_NEW.png" alt="Shotgun">
+        <div class="dash-greeting" id="dash-greeting">Welcome back 🔫</div>
+      </div>
       <button class="dash-logout" onclick="doLogout()">Log Out</button>
     </div>
 
-    <!-- Balance card -->
+    <!-- Balance -->
     <div class="dash-balance">
-      <div class="dash-label">Your Balance</div>
+      <div class="dash-bal-label">Your Balance</div>
       <div class="dash-amount" id="dash-bal">$0.00</div>
       <div class="dash-tag" id="dash-tag">#—</div>
+      <div class="dash-bal-btv" id="btv-badge" style="display:none;">
+        <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/3387f693e_beat_the_v_clean.png" alt="Beat the V">
+        <span>Beat the V unlocked — $100 available</span>
+      </div>
     </div>
 
-    <!-- Beat the V badge (shown if overdraft available) -->
-    <div class="btv-badge" id="btv-badge" style="display:none;">
-      <img src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/3387f693e_beat_the_v_clean.png" alt="Beat the V">
-      <div class="btv-text">Beat the V unlocked — $100 overdraft available 🩸</div>
-    </div>
-
-    <!-- Action buttons -->
+    <!-- Action Row 1 -->
     <div class="dash-actions">
       <div class="dash-action" onclick="openOverlay('overlay-send')">
         <img class="action-icon" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/2aaab827e_shoot_it_clean.png" alt="Send">
@@ -242,20 +416,45 @@
         <div class="action-label">Who Shot Ya?</div>
       </div>
       <div class="dash-action" onclick="openOverlay('overlay-deposit')">
-        <img class="action-icon" src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/99aae24b8_generated_image.png" alt="Add Funds" style="height:32px;width:auto;margin:0 auto 8px;display:block;object-fit:contain;filter:drop-shadow(0 0 6px rgba(245,158,11,.4));">
+        <img class="action-icon" src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/932379bbd_generated_image.png" alt="Add Funds">
         <div class="action-label">Add Funds</div>
-      </div>
-      <div class="dash-action" onclick="openOverlay('overlay-withdraw')">
-        <img class="action-icon" src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/374d21a9f_generated_image.png" alt="Cash Out" style="height:32px;width:auto;margin:0 auto 8px;display:block;object-fit:contain;filter:drop-shadow(0 0 6px rgba(192,57,43,.35));">
-        <div class="action-label">Cash Out</div>
       </div>
     </div>
 
-    <!-- Transaction feed -->
-    <div class="tx-list">
-      <div class="tx-list-header">Recent Activity</div>
-      <div id="tx-feed"><div style="padding:32px;text-align:center;color:#475569;font-size:13px;">No transactions yet 🔫</div></div>
+    <!-- Action Row 2 -->
+    <div class="dash-actions-row2">
+      <div class="dash-action" onclick="openOverlay('overlay-withdraw')">
+        <img class="action-icon" src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/932379bbd_generated_image.png" alt="Cash Out">
+        <div class="action-label">Cash Out</div>
+      </div>
+      <div class="dash-action" onclick="openOverlay('overlay-crypto')">
+        <img class="action-icon" src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/38cf9e736_generated_image.png" alt="Crypto">
+        <div class="action-label">Crypto Convert</div>
+      </div>
+      <div class="dash-action" onclick="openOverlay('overlay-beatv')" id="btv-action" style="display:none;">
+        <img class="action-icon" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/3387f693e_beat_the_v_clean.png" alt="Beat the V">
+        <div class="action-label">Beat the V</div>
+      </div>
+      <div class="dash-action" id="btv-locked" onclick="showBtvInfo()">
+        <span style="font-size:28px;margin-bottom:8px;display:block;">🔒</span>
+        <div class="action-label" style="color:#94a3b8;">Beat the V</div>
+      </div>
     </div>
+
+    <!-- TX Feed -->
+    <div class="tx-list">
+      <div class="tx-list-header">
+        <span>Recent Activity</span>
+        <span style="font-size:11px;color:var(--grey-400);font-weight:500;" id="tx-count"></span>
+      </div>
+      <div id="tx-feed">
+        <div style="padding:40px;text-align:center;color:var(--grey-400);font-size:13px;">
+          <div style="font-size:32px;margin-bottom:12px;">🔫</div>
+          No transactions yet — load up and start shooting!
+        </div>
+      </div>
+    </div>
+
   </div>
 </div><!-- /screen-dash -->
 
@@ -264,43 +463,37 @@
 <div class="sg-overlay" id="overlay-login">
   <div class="sg-modal">
     <div class="modal-header">
-      <img class="modal-logo" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/1116c3e12_shotgun_bank_main_logo_clean.png" alt="Shotgun">
+      <img class="modal-logo" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/b37b8a096_shotgun_logo_NEW.png" alt="Shotgun">
       <button class="modal-close" onclick="closeOverlay('overlay-login')">×</button>
     </div>
     <div class="modal-body">
       <div class="modal-title">Welcome Back 🔫</div>
-      <div class="modal-sub">Enter your #tag or email and PIN to continue</div>
-      <label class="sg-label">#tag or Email</label>
-      <input class="sg-input" id="login-id" placeholder="#yourhashtag or email@address.com" autocomplete="off">
+      <div class="modal-sub">Enter your #tag or email and PIN</div>
+      <label class="sg-label">#Tag or Email</label>
+      <input class="sg-input" id="login-id" placeholder="#yourhandle or email@..." autocomplete="off">
       <label class="sg-label">PIN</label>
       <div class="pin-dots" id="login-pin-dots"></div>
       <div class="pin-numpad" id="login-numpad"></div>
       <div class="sg-err" id="login-err"></div>
-      <button class="sg-btn-full sg-btn-red" onclick="doLogin()" id="login-btn">Log In →</button>
-      <button class="sg-btn-full sg-btn-outline" onclick="closeOverlay('overlay-login');openSignup()">New here? Create account</button>
+      <button class="sg-btn-full sg-btn-green" onclick="doLogin()" id="login-btn">Log In →</button>
+      <button class="sg-btn-full sg-btn-outline" onclick="closeOverlay('overlay-login');openSignup()">New? Create account</button>
     </div>
   </div>
 </div>
 
 <!-- ══════════ SIGNUP MODAL ══════════ -->
 <div class="sg-overlay" id="overlay-signup">
-  <div class="sg-modal" style="max-height:92vh;overflow-y:auto;">
+  <div class="sg-modal" style="max-height:94vh;overflow-y:auto;">
     <div class="modal-header">
-      <img class="modal-logo" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/1116c3e12_shotgun_bank_main_logo_clean.png" alt="Shotgun">
+      <img class="modal-logo" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/b37b8a096_shotgun_logo_NEW.png" alt="Shotgun">
       <button class="modal-close" onclick="closeOverlay('overlay-signup')">×</button>
     </div>
     <div class="modal-body">
       <div class="modal-title">Join Shotgun 🔫</div>
       <div class="modal-sub">Create your free account in 60 seconds</div>
       <div class="sg-input-row">
-        <div>
-          <label class="sg-label">First Name</label>
-          <input class="sg-input" id="su-fname" placeholder="First">
-        </div>
-        <div>
-          <label class="sg-label">Last Name</label>
-          <input class="sg-input" id="su-lname" placeholder="Last">
-        </div>
+        <div><label class="sg-label">First Name</label><input class="sg-input" id="su-fname" placeholder="First"></div>
+        <div><label class="sg-label">Last Name</label><input class="sg-input" id="su-lname" placeholder="Last"></div>
       </div>
       <label class="sg-label">Email</label>
       <input class="sg-input" id="su-email" type="email" placeholder="you@email.com">
@@ -308,13 +501,13 @@
       <input class="sg-input" id="su-phone" type="tel" placeholder="+1 555 000 0000">
       <label class="sg-label">#Tag — your unique handle</label>
       <input class="sg-input" id="su-tag" placeholder="#yourname" oninput="checkTagAvail(this.value)">
-      <div style="font-size:11px;color:#475569;margin-top:-10px;margin-bottom:14px;" id="tag-status"></div>
+      <div id="tag-status"></div>
       <label class="sg-label">Create a 4-digit PIN</label>
       <div class="pin-dots" id="signup-pin-dots"></div>
       <div class="pin-numpad" id="signup-numpad"></div>
-      <div class="sg-err" id="signup-err"></div>
+      <div class="sg-err"  id="signup-err"></div>
       <div class="sg-succ" id="signup-succ"></div>
-      <button class="sg-btn-full sg-btn-red" onclick="doSignup()" id="signup-btn">Create My Account →</button>
+      <button class="sg-btn-full sg-btn-green" onclick="doSignup()" id="signup-btn">Create My Account →</button>
       <button class="sg-btn-full sg-btn-outline" onclick="closeOverlay('overlay-signup');openLogin()">Already have an account</button>
     </div>
   </div>
@@ -325,8 +518,8 @@
   <div class="sg-modal">
     <div class="modal-header">
       <div style="display:flex;align-items:center;gap:10px;">
-        <img style="height:24px;" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/2aaab827e_shoot_it_clean.png" alt="Send">
-        <span style="font-size:16px;font-weight:800;">Shoot It</span>
+        <img style="height:26px;" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/2aaab827e_shoot_it_clean.png" alt="Send">
+        <span style="font-size:16px;font-weight:800;color:var(--black);">Shoot It</span>
       </div>
       <button class="modal-close" onclick="closeOverlay('overlay-send')">×</button>
     </div>
@@ -334,32 +527,13 @@
       <label class="sg-label">Send to #tag or email</label>
       <input class="sg-input" id="send-to" placeholder="#friendshandle">
       <div class="amount-display">
-        <div class="amount-big"><span>$</span><span id="send-amt-disp">0</span></div>
+        <div class="amount-big"><span class="dollar">$</span><span id="send-amt-disp">0</span></div>
       </div>
       <div class="pin-numpad" id="send-numpad"></div>
-      <label class="sg-label" style="margin-top:8px;">Note (optional)</label>
+      <label class="sg-label">Note (optional)</label>
       <input class="sg-input" id="send-note" placeholder="For what?">
       <div class="sg-err" id="send-err"></div>
-      <button class="sg-btn-full sg-btn-red" onclick="doSend()">Send Money →</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════ DEPOSIT MODAL ══════════ -->
-<div class="sg-overlay" id="overlay-deposit">
-  <div class="sg-modal">
-    <div class="modal-header">
-      <div style="font-size:16px;font-weight:800;">💳 Add Funds</div>
-      <button class="modal-close" onclick="closeOverlay('overlay-deposit')">×</button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:12px;color:#64748b;margin-bottom:18px;">Credit card deposits have a 4% fee. ACH is free.</p>
-      <div class="amount-display">
-        <div class="amount-big"><span>$</span><span id="dep-amt-disp">0</span></div>
-      </div>
-      <div class="pin-numpad" id="dep-numpad"></div>
-      <div class="sg-err" id="dep-err"></div>
-      <button class="sg-btn-full sg-btn-red" onclick="doDeposit()">Load Funds via Stripe →</button>
+      <button class="sg-btn-full sg-btn-green" onclick="doSend()">Send Money →</button>
     </div>
   </div>
 </div>
@@ -369,8 +543,8 @@
   <div class="sg-modal">
     <div class="modal-header">
       <div style="display:flex;align-items:center;gap:10px;">
-        <img style="height:24px;" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/a558d7bc2_who_shot_ya_clean.png" alt="Request">
-        <span style="font-size:16px;font-weight:800;">Who Shot Ya?</span>
+        <img style="height:26px;" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/a558d7bc2_who_shot_ya_clean.png" alt="Request">
+        <span style="font-size:16px;font-weight:800;color:var(--black);">Who Shot Ya?</span>
       </div>
       <button class="modal-close" onclick="closeOverlay('overlay-request')">×</button>
     </div>
@@ -378,13 +552,34 @@
       <label class="sg-label">Request from #tag or email</label>
       <input class="sg-input" id="req-to" placeholder="#theirhandle">
       <div class="amount-display">
-        <div class="amount-big"><span>$</span><span id="req-amt-disp">0</span></div>
+        <div class="amount-big"><span class="dollar">$</span><span id="req-amt-disp">0</span></div>
       </div>
       <div class="pin-numpad" id="req-numpad"></div>
       <label class="sg-label" style="margin-top:8px;">Note (optional)</label>
       <input class="sg-input" id="req-note" placeholder="For what?">
       <div class="sg-err" id="req-err"></div>
-      <button class="sg-btn-full sg-btn-red" onclick="doRequest()">Request Money →</button>
+      <button class="sg-btn-full sg-btn-green" onclick="doRequest()">Request Money →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ DEPOSIT MODAL ══════════ -->
+<div class="sg-overlay" id="overlay-deposit">
+  <div class="sg-modal">
+    <div class="modal-header">
+      <div style="font-size:16px;font-weight:800;color:var(--black);">💳 Add Funds</div>
+      <button class="modal-close" onclick="closeOverlay('overlay-deposit')">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--green-light);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--green-deep);margin-bottom:16px;font-weight:600;">
+        💡 Credit card: 4% fee &nbsp;·&nbsp; ACH bank transfer: free
+      </div>
+      <div class="amount-display">
+        <div class="amount-big"><span class="dollar">$</span><span id="dep-amt-disp">0</span></div>
+      </div>
+      <div class="pin-numpad" id="dep-numpad"></div>
+      <div class="sg-err" id="dep-err"></div>
+      <button class="sg-btn-full sg-btn-green" onclick="doDeposit()">Load Funds via Stripe →</button>
     </div>
   </div>
 </div>
@@ -393,48 +588,131 @@
 <div class="sg-overlay" id="overlay-withdraw">
   <div class="sg-modal">
     <div class="modal-header">
-      <div style="font-size:16px;font-weight:800;">🏦 Cash Out</div>
+      <div style="font-size:16px;font-weight:800;color:var(--black);">🏦 Cash Out</div>
       <button class="modal-close" onclick="closeOverlay('overlay-withdraw')">×</button>
     </div>
     <div class="modal-body">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;">
-        <div onclick="selectWithdraw('instant')" id="wd-instant" style="background:rgba(192,57,43,.15);border:2px solid var(--red-bright);border-radius:12px;padding:14px;cursor:pointer;text-align:center;">
-          <div style="font-size:20px;margin-bottom:6px;">⚡</div>
-          <div style="font-size:12px;font-weight:800;color:#f8fafc;">Instant</div>
-          <div style="font-size:10px;color:#94a3b8;">5.75% fee</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div class="wd-option selected" id="wd-instant" onclick="selectWithdraw('instant')">
+          <div class="wd-option-icon">⚡</div>
+          <div class="wd-option-label">Instant</div>
+          <div class="wd-option-fee">5.75% fee</div>
         </div>
-        <div onclick="selectWithdraw('ach')" id="wd-ach" style="background:var(--card);border:2px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;text-align:center;">
-          <div style="font-size:20px;margin-bottom:6px;">🏦</div>
-          <div style="font-size:12px;font-weight:800;color:#f8fafc;">Standard ACH</div>
-          <div style="font-size:10px;color:#94a3b8;">1.5% fee · 1-3 days</div>
+        <div class="wd-option" id="wd-ach" onclick="selectWithdraw('ach')">
+          <div class="wd-option-icon">🏦</div>
+          <div class="wd-option-label">Standard ACH</div>
+          <div class="wd-option-fee">1.5% · 1-3 days</div>
         </div>
       </div>
       <div class="amount-display">
-        <div class="amount-big"><span>$</span><span id="wd-amt-disp">0</span></div>
+        <div class="amount-big"><span class="dollar">$</span><span id="wd-amt-disp">0</span></div>
       </div>
       <div class="pin-numpad" id="wd-numpad"></div>
       <div class="sg-err" id="wd-err"></div>
-      <button class="sg-btn-full sg-btn-red" onclick="doWithdraw()">Cash Out →</button>
+      <button class="sg-btn-full sg-btn-green" onclick="doWithdraw()">Cash Out →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ CRYPTO CONVERT MODAL ══════════ -->
+<div class="sg-overlay" id="overlay-crypto">
+  <div class="sg-modal">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img style="height:26px;" src="https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/38cf9e736_generated_image.png" alt="Crypto">
+        <span style="font-size:16px;font-weight:800;color:var(--black);">Crypto Convert</span>
+      </div>
+      <button class="modal-close" onclick="closeOverlay('overlay-crypto')">×</button>
+    </div>
+    <div class="modal-body">
+      <label class="sg-label">Select Coin</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;" id="coin-grid">
+        <div class="wd-option selected" onclick="selectCoin('BTC',this)" data-coin="BTC">
+          <div class="wd-option-icon">₿</div>
+          <div class="wd-option-label">Bitcoin</div>
+          <div class="wd-option-fee">BTC</div>
+        </div>
+        <div class="wd-option" onclick="selectCoin('ETH',this)" data-coin="ETH">
+          <div class="wd-option-icon">Ξ</div>
+          <div class="wd-option-label">Ethereum</div>
+          <div class="wd-option-fee">ETH</div>
+        </div>
+        <div class="wd-option" onclick="selectCoin('SOL',this)" data-coin="SOL">
+          <div class="wd-option-icon">◎</div>
+          <div class="wd-option-label">Solana</div>
+          <div class="wd-option-fee">SOL</div>
+        </div>
+        <div class="wd-option" onclick="selectCoin('USDC',this)" data-coin="USDC">
+          <div class="wd-option-icon">💲</div>
+          <div class="wd-option-label">USD Coin</div>
+          <div class="wd-option-fee">USDC</div>
+        </div>
+        <div class="wd-option" onclick="selectCoin('DOGE',this)" data-coin="DOGE">
+          <div class="wd-option-icon">🐕</div>
+          <div class="wd-option-label">Dogecoin</div>
+          <div class="wd-option-fee">DOGE</div>
+        </div>
+        <div class="wd-option" onclick="selectCoin('XRP',this)" data-coin="XRP">
+          <div class="wd-option-icon">✕</div>
+          <div class="wd-option-label">Ripple</div>
+          <div class="wd-option-fee">XRP</div>
+        </div>
+      </div>
+      <label class="sg-label">Amount to Convert</label>
+      <div class="amount-display">
+        <div class="amount-big"><span class="dollar">$</span><span id="crypto-amt-disp">0</span></div>
+      </div>
+      <div class="pin-numpad" id="crypto-numpad"></div>
+      <div style="font-size:11px;color:var(--grey-400);text-align:center;margin-bottom:12px;">1% conversion fee applies</div>
+      <div class="sg-err"  id="crypto-err"></div>
+      <button class="sg-btn-full sg-btn-green" onclick="doCryptoConvert()">Convert Now →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ BEAT THE V MODAL ══════════ -->
+<div class="sg-overlay" id="overlay-beatv">
+  <div class="sg-modal">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img style="height:28px;" src="https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/3387f693e_beat_the_v_clean.png" alt="Beat the V">
+        <span style="font-size:16px;font-weight:800;color:var(--black);">Beat the V</span>
+      </div>
+      <button class="modal-close" onclick="closeOverlay('overlay-beatv')">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--green-light);border-radius:12px;padding:14px;margin-bottom:16px;text-align:center;">
+        <div style="font-size:28px;margin-bottom:6px;">🩸</div>
+        <div style="font-size:14px;font-weight:800;color:var(--green-deep);">Overdraft Available</div>
+        <div style="font-size:12px;color:var(--green-dark);margin-top:4px;">Up to $100.00 below $0.00</div>
+      </div>
+      <p style="font-size:13px;color:var(--grey-600);margin-bottom:16px;line-height:1.6;">You've unlocked Beat the V. Your account can go negative by up to <strong>$100</strong> and we won't lock you out.</p>
+      <div class="sg-err"  id="btv-err"></div>
+      <button class="sg-btn-full sg-btn-green" onclick="closeOverlay('overlay-beatv')">Got It 🔫</button>
     </div>
   </div>
 </div>
 
 
 <script>
-// ── LOGO URLS ──
+// ── ASSET URLS ──
 const LOGO = {
-  main:   "https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/1116c3e12_shotgun_bank_main_logo_clean.png",
+  main:   "https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/b37b8a096_shotgun_logo_NEW.png",
   beatv:  "https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/3387f693e_beat_the_v_clean.png",
   gottem: "https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/da3eb0759_gottem_bullseye_clean.png",
-  dead:   "https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/4e0b1262e_dead_body_payment_failed_clean.png",
+  dead:   "https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/08ae5f2d0_dead_body_NEW.png",
   shoot:  "https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/2aaab827e_shoot_it_clean.png",
   who:    "https://base44.app/api/apps/6a14ef767988d1ef0baff5aa/files/mp/public/6a14ef767988d1ef0baff5aa/a558d7bc2_who_shot_ya_clean.png",
+  crypto: "https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/38cf9e736_generated_image.png",
+  bank:   "https://media.base44.com/images/public/6a14ef767988d1ef0baff5aa/932379bbd_generated_image.png",
 };
 
 // ── STATE ──
 let currentUser = null;
-let loginPin='', signupPin='', sendAmtStr='0', depAmtStr='0', reqAmtStr='0', wdAmtStr='0';
+let loginPin='', signupPin='';
+let amtState = {send:'0', dep:'0', req:'0', wd:'0', crypto:'0'};
 let withdrawMode = 'instant';
+let selectedCoin = 'BTC';
 
 // ── SCREENS ──
 function showScreen(id){
@@ -446,60 +724,47 @@ function showScreen(id){
 // ── OVERLAYS ──
 function openOverlay(id){ document.getElementById(id).classList.add('open'); }
 function closeOverlay(id){ document.getElementById(id).classList.remove('open'); }
-function openLogin() { buildNumpad('login'); closeOverlay('overlay-signup'); openOverlay('overlay-login'); }
-function openSignup(){ buildNumpad('signup'); closeOverlay('overlay-login'); openOverlay('overlay-signup'); }
+function openLogin() { buildPinPad('login'); closeOverlay('overlay-signup'); openOverlay('overlay-login'); }
+function openSignup(){ buildPinPad('signup'); closeOverlay('overlay-login'); openOverlay('overlay-signup'); }
 
-// ── NUMPAD BUILDER ──
-function buildNumpad(prefix){
+// ── PIN PAD ──
+function buildPinPad(prefix){
   const wrap = document.getElementById(prefix+'-numpad');
   if(!wrap) return;
-  wrap.innerHTML = '';
+  wrap.innerHTML='';
   [1,2,3,4,5,6,7,8,9,'',0,'⌫'].forEach(k=>{
     const btn = document.createElement('button');
-    btn.className = 'pin-key' + (k==='⌫'?' del':'');
+    btn.className = 'pin-key'+(k==='⌫'?' del':'');
     btn.textContent = k;
     if(k==='') btn.style.visibility='hidden';
-    btn.addEventListener('click', ()=>handlePin(prefix, String(k)));
+    btn.addEventListener('click',()=>handlePin(prefix,String(k)));
     wrap.appendChild(btn);
   });
-  renderPinDots(prefix,'');
+  renderDots(prefix,'');
 }
 
-function buildAmtNumpad(prefix, dispId, strVar){
+function buildAmtPad(prefix, dispId){
   const wrap = document.getElementById(prefix+'-numpad');
   if(!wrap) return;
-  wrap.innerHTML = '';
+  wrap.innerHTML='';
   [1,2,3,4,5,6,7,8,9,'.',0,'⌫'].forEach(k=>{
     const btn = document.createElement('button');
-    btn.className = 'pin-key' + (k==='⌫'?' del':'');
-    btn.textContent = k;
+    btn.className='pin-key'+(k==='⌫'?' del':'');
+    btn.textContent=k;
     btn.addEventListener('click',()=>handleAmt(prefix,dispId,String(k)));
     wrap.appendChild(btn);
   });
 }
 
-// ── AMOUNT HANDLER ──
-function getAmt(p){return p==='send'?sendAmtStr:p==='dep'?depAmtStr:p==='req'?reqAmtStr:wdAmtStr;}
-function setAmt(p,v){if(p==='send')sendAmtStr=v;else if(p==='dep')depAmtStr=v;else if(p==='req')reqAmtStr=v;else wdAmtStr=v;}
-function handleAmt(prefix, dispId, key){
-  let v = getAmt(prefix);
-  if(key==='⌫') v = v.length>1?v.slice(0,-1):'0';
-  else if(key==='.' && v.includes('.')) return;
-  else if(v==='0' && key!=='.') v=key;
-  else v+=key;
-  setAmt(prefix,v);
-  document.getElementById(dispId).textContent = v;
-}
-
-// ── PIN HANDLER ──
+// ── PIN LOGIC ──
 function handlePin(prefix, key){
   let pin = prefix==='login'?loginPin:signupPin;
   if(key==='⌫') pin=pin.slice(0,-1);
   else if(pin.length<4) pin+=key;
   if(prefix==='login') loginPin=pin; else signupPin=pin;
-  renderPinDots(prefix, pin);
+  renderDots(prefix,pin);
 }
-function renderPinDots(prefix,pin){
+function renderDots(prefix,pin){
   const dots = document.getElementById(prefix+'-pin-dots');
   if(!dots) return;
   dots.innerHTML='';
@@ -510,20 +775,33 @@ function renderPinDots(prefix,pin){
   }
 }
 
-// ── HASHTAG AVAILABILITY ──
+// ── AMT LOGIC ──
+function handleAmt(prefix, dispId, key){
+  let v = amtState[prefix]||'0';
+  if(key==='⌫') v=v.length>1?v.slice(0,-1):'0';
+  else if(key==='.'&&v.includes('.')) return;
+  else if(v==='0'&&key!=='.') v=key;
+  else if(v.includes('.')&&v.split('.')[1].length>=2) return;
+  else v+=key;
+  amtState[prefix]=v;
+  const el=document.getElementById(dispId);
+  if(el) el.textContent=v;
+}
+
+// ── TAG CHECK ──
 let tagTimer;
 function checkTagAvail(val){
   clearTimeout(tagTimer);
   const el=document.getElementById('tag-status');
   if(!val||val.length<2){el.textContent='';return;}
-  const tag = val.startsWith('#')?val.slice(1):val;
-  el.textContent='Checking...'; el.style.color='#94a3b8';
+  const tag=val.startsWith('#')?val.slice(1):val;
+  el.textContent='Checking...'; el.style.color='var(--grey-400)';
   tagTimer=setTimeout(()=>{
     fetch('/api/check-tag?tag='+encodeURIComponent(tag))
       .then(r=>r.json())
       .then(d=>{
-        if(d.available){el.textContent='✓ '+tag+' is available!';el.style.color='#4ade80';}
-        else{el.textContent='✗ #'+tag+' is taken';el.style.color='#f87171';}
+        if(d.available){el.textContent='✓ #'+tag+' is available!';el.style.color='var(--green-dark)';}
+        else{el.textContent='✗ #'+tag+' is taken';el.style.color='#dc2626';}
       }).catch(()=>{el.textContent='';});
   },500);
 }
@@ -540,22 +818,21 @@ async function doSignup(){
   const btn  =document.getElementById('signup-btn');
   err.style.display='none'; succ.style.display='none';
   if(!fname||!lname||!email||!tag||signupPin.length<4){
-    err.textContent='Please fill all fields and set a 4-digit PIN.';err.style.display='block';return;
+    err.textContent='Fill all fields and set a 4-digit PIN.';err.style.display='block';return;
   }
   if(tag.startsWith('#'))tag=tag.slice(1);
-  btn.textContent='Creating...'; btn.disabled=true;
+  btn.textContent='Creating...';btn.disabled=true;
   try{
-    const res=await fetch('/api/shotgun/signup',{method:'POST',headers:{'Content-Type':'application/json'},
+    const res=await fetch('/api/shotgun/signup',{method:'POST',
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({first_name:fname,last_name:lname,email,phone,hashtag:tag,pin:signupPin})});
     const d=await res.json();
-    if(res.ok && d.success){
+    if(res.ok&&d.success){
       succ.textContent='Account created! Welcome to Shotgun 🔫';succ.style.display='block';
-      setTimeout(()=>{ closeOverlay('overlay-signup'); loginUser(d.account); },1200);
-    } else {
-      err.textContent=d.error||'Something went wrong. Try again.';err.style.display='block';
-    }
-  } catch(e){err.textContent='Connection error. Try again.';err.style.display='block';}
-  btn.textContent='Create My Account →'; btn.disabled=false;
+      setTimeout(()=>{closeOverlay('overlay-signup');loginUser(d.account);},1200);
+    } else {err.textContent=d.error||'Something went wrong.';err.style.display='block';}
+  }catch(e){err.textContent='Connection error.';err.style.display='block';}
+  btn.textContent='Create My Account →';btn.disabled=false;
 }
 
 // ── LOGIN ──
@@ -565,54 +842,66 @@ async function doLogin(){
   const btn =document.getElementById('login-btn');
   err.style.display='none';
   if(!id||loginPin.length<4){err.textContent='Enter your #tag or email and PIN.';err.style.display='block';return;}
-  btn.textContent='Logging in...'; btn.disabled=true;
+  btn.textContent='Logging in...';btn.disabled=true;
   try{
-    const res=await fetch('/api/shotgun/login',{method:'POST',headers:{'Content-Type':'application/json'},
+    const res=await fetch('/api/shotgun/login',{method:'POST',
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({identifier:id,pin:loginPin})});
     const d=await res.json();
-    if(res.ok && d.success){ closeOverlay('overlay-login'); loginUser(d.account); }
-    else{ err.textContent=d.error||'Invalid credentials.'; err.style.display='block'; }
-  } catch(e){err.textContent='Connection error.'; err.style.display='block';}
-  btn.textContent='Log In →'; btn.disabled=false;
-  loginPin=''; renderPinDots('login','');
+    if(res.ok&&d.success){closeOverlay('overlay-login');loginUser(d.account);}
+    else{err.textContent=d.error||'Invalid credentials.';err.style.display='block';}
+  }catch(e){err.textContent='Connection error.';err.style.display='block';}
+  btn.textContent='Log In →';btn.disabled=false;
+  loginPin='';renderDots('login','');
 }
 
-// ── LOGGED IN STATE ──
+// ── LOGIN USER ──
 function loginUser(acct){
   currentUser=acct;
-  document.getElementById('dash-bal').textContent='$'+(acct.balance||0).toFixed(2);
+  document.getElementById('dash-bal').textContent='$'+(+(acct.balance||0)).toFixed(2);
   document.getElementById('dash-tag').textContent='#'+(acct.hashtag||'—');
-  if(acct.beat_v_enabled) document.getElementById('btv-badge').style.display='flex';
-  buildAmtNumpad('send','send-amt-disp','sendAmtStr');
-  buildAmtNumpad('dep','dep-amt-disp','depAmtStr');
-  buildAmtNumpad('req','req-amt-disp','reqAmtStr');
-  buildAmtNumpad('wd','wd-amt-disp','wdAmtStr');
+  document.getElementById('dash-greeting').textContent='Hey, #'+(acct.hashtag||acct.first_name||'there')+' 👊';
+  if(acct.beat_v_enabled){
+    document.getElementById('btv-badge').style.display='inline-flex';
+    document.getElementById('btv-action').style.display='block';
+    document.getElementById('btv-locked').style.display='none';
+  }
+  buildAmtPad('send','send-amt-disp');
+  buildAmtPad('dep','dep-amt-disp');
+  buildAmtPad('req','req-amt-disp');
+  buildAmtPad('wd','wd-amt-disp');
+  buildAmtPad('crypto','crypto-amt-disp');
   loadTxFeed();
   showScreen('dash');
 }
 
 // ── LOGOUT ──
-function doLogout(){ currentUser=null; signupPin=''; loginPin=''; showScreen('home'); }
+function doLogout(){currentUser=null;loginPin='';signupPin='';amtState={send:'0',dep:'0',req:'0',wd:'0',crypto:'0'};showScreen('home');}
 
 // ── TX FEED ──
 function loadTxFeed(){
-  if(!currentUser) return;
+  if(!currentUser)return;
   fetch('/api/shotgun/transactions?account_id='+currentUser.id)
     .then(r=>r.json()).then(txs=>{
       const feed=document.getElementById('tx-feed');
-      if(!txs||!txs.length){feed.innerHTML='<div style="padding:32px;text-align:center;color:#475569;font-size:13px;">No transactions yet 🔫</div>';return;}
+      const cnt=document.getElementById('tx-count');
+      if(!txs||!txs.length){
+        feed.innerHTML='<div style="padding:40px;text-align:center;color:var(--grey-400);font-size:13px;"><div style="font-size:32px;margin-bottom:10px;">🔫</div>No transactions yet</div>';
+        return;
+      }
+      if(cnt) cnt.textContent=txs.length+' total';
+      const isSend=tx=>tx.from_account_id===currentUser.id;
       feed.innerHTML=txs.slice(0,20).map(tx=>{
-        const isSend = tx.from_account_id===currentUser.id;
-        const icon = tx.status==='completed'?(isSend?LOGO.shoot:LOGO.who)
-                   : tx.status==='failed'?LOGO.dead
-                   : isSend?LOGO.shoot:LOGO.who;
-        const amt  = tx.status==='failed'?`-$5.00`:isSend?`-$${tx.amount.toFixed(2)}`:`+$${tx.net_amount.toFixed(2)}`;
-        const cls  = tx.status==='failed'||isSend?'neg':'pos';
+        const send=isSend(tx);
+        const icon=tx.status==='failed'?LOGO.dead:send?LOGO.shoot:LOGO.who;
+        const label=send?('To #'+(tx.to_hashtag||tx.to_name)):('From #'+(tx.from_hashtag||tx.from_name));
+        const amt=tx.status==='failed'?'-$5.00':send?('-$'+(+tx.amount).toFixed(2)):('+$'+(+(tx.net_amount||tx.amount)).toFixed(2));
+        const cls=tx.status==='failed'||send?'neg':'pos';
         return `<div class="tx-row">
           <div class="tx-icon"><img src="${icon}" alt="tx"></div>
           <div class="tx-info">
-            <div class="tx-name">${isSend?('#'+(tx.to_hashtag||tx.to_name)):('#'+(tx.from_hashtag||tx.from_name))}</div>
-            <div class="tx-time">${tx.note||tx.type||''} · ${new Date(tx.created_date||Date.now()).toLocaleDateString()}</div>
+            <div class="tx-name">${label}</div>
+            <div class="tx-time">${tx.note||tx.type||'transfer'} · ${new Date(tx.created_date||Date.now()).toLocaleDateString()}</div>
           </div>
           <div class="tx-amt ${cls}">${amt}</div>
         </div>`;
@@ -624,7 +913,7 @@ function loadTxFeed(){
 async function doSend(){
   const to=document.getElementById('send-to').value.trim();
   const note=document.getElementById('send-note').value.trim();
-  const amt=parseFloat(sendAmtStr)||0;
+  const amt=parseFloat(amtState.send)||0;
   const err=document.getElementById('send-err');
   err.style.display='none';
   if(!to||amt<=0){err.textContent='Enter a recipient and amount.';err.style.display='block';return;}
@@ -632,51 +921,49 @@ async function doSend(){
     body:JSON.stringify({from_account_id:currentUser.id,to_identifier:to,amount:amt,note})});
   const d=await res.json();
   if(res.ok&&d.success){
-    closeOverlay('overlay-send'); sendAmtStr='0';
+    closeOverlay('overlay-send');amtState.send='0';
     currentUser.balance=d.new_balance;
-    document.getElementById('dash-bal').textContent='$'+d.new_balance.toFixed(2);
-    loadTxFeed(); showToast('💥 Gottem!','Sent $'+amt.toFixed(2)+' to '+to,LOGO.gottem);
-  } else { err.textContent=d.error||'Failed.'; err.style.display='block'; }
-}
-
-// ── DEPOSIT ──
-async function doDeposit(){
-  const amt=parseFloat(depAmtStr)||0;
-  const err=document.getElementById('dep-err');
-  err.style.display='none';
-  if(amt<1){err.textContent='Minimum deposit is $1.';err.style.display='block';return;}
-  const res=await fetch('/api/shotgun/deposit',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({account_id:currentUser.id,amount:amt})});
-  const d=await res.json();
-  if(res.ok&&d.url){ window.location.href=d.url; }
-  else{ err.textContent=d.error||'Failed.'; err.style.display='block'; }
+    document.getElementById('dash-bal').textContent='$'+(+d.new_balance).toFixed(2);
+    loadTxFeed();showToast('Gottem! 🎯','Sent $'+amt.toFixed(2)+' to '+to,LOGO.gottem);
+  }else{err.textContent=d.error||'Failed.';err.style.display='block';}
 }
 
 // ── REQUEST ──
 async function doRequest(){
   const to=document.getElementById('req-to').value.trim();
   const note=document.getElementById('req-note').value.trim();
-  const amt=parseFloat(reqAmtStr)||0;
+  const amt=parseFloat(amtState.req)||0;
   const err=document.getElementById('req-err');
   err.style.display='none';
   if(!to||amt<=0){err.textContent='Enter a recipient and amount.';err.style.display='block';return;}
   const res=await fetch('/api/shotgun/request',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({from_account_id:currentUser.id,to_identifier:to,amount:amt,note})});
   const d=await res.json();
-  if(res.ok&&d.success){ closeOverlay('overlay-request'); reqAmtStr='0'; showToast('🎯 Request Sent','Waiting on '+to,LOGO.who); }
-  else{ err.textContent=d.error||'Failed.'; err.style.display='block'; }
+  if(res.ok&&d.success){closeOverlay('overlay-request');amtState.req='0';showToast('Request Sent 🎯','Waiting on '+to,LOGO.who);}
+  else{err.textContent=d.error||'Failed.';err.style.display='block';}
+}
+
+// ── DEPOSIT ──
+async function doDeposit(){
+  const amt=parseFloat(amtState.dep)||0;
+  const err=document.getElementById('dep-err');
+  err.style.display='none';
+  if(amt<1){err.textContent='Minimum deposit is $1.';err.style.display='block';return;}
+  const res=await fetch('/api/shotgun/deposit',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({account_id:currentUser.id,amount:amt})});
+  const d=await res.json();
+  if(res.ok&&d.url){window.location.href=d.url;}
+  else{err.textContent=d.error||'Failed.';err.style.display='block';}
 }
 
 // ── WITHDRAW ──
 function selectWithdraw(mode){
   withdrawMode=mode;
-  document.getElementById('wd-instant').style.borderColor = mode==='instant'?'var(--red-bright)':'var(--border)';
-  document.getElementById('wd-instant').style.background  = mode==='instant'?'rgba(192,57,43,.15)':'var(--card)';
-  document.getElementById('wd-ach').style.borderColor     = mode==='ach'?'var(--red-bright)':'var(--border)';
-  document.getElementById('wd-ach').style.background      = mode==='ach'?'rgba(192,57,43,.15)':'var(--card)';
+  document.getElementById('wd-instant').className='wd-option'+(mode==='instant'?' selected':'');
+  document.getElementById('wd-ach').className='wd-option'+(mode==='ach'?' selected':'');
 }
 async function doWithdraw(){
-  const amt=parseFloat(wdAmtStr)||0;
+  const amt=parseFloat(amtState.wd)||0;
   const err=document.getElementById('wd-err');
   err.style.display='none';
   if(amt<1){err.textContent='Minimum withdrawal is $1.';err.style.display='block';return;}
@@ -684,34 +971,58 @@ async function doWithdraw(){
     body:JSON.stringify({account_id:currentUser.id,amount:amt,method:withdrawMode})});
   const d=await res.json();
   if(res.ok&&d.success){
-    closeOverlay('overlay-withdraw'); wdAmtStr='0';
+    closeOverlay('overlay-withdraw');amtState.wd='0';
     currentUser.balance=d.new_balance;
-    document.getElementById('dash-bal').textContent='$'+d.new_balance.toFixed(2);
-    loadTxFeed(); showToast('🏦 Cashed Out','$'+amt.toFixed(2)+' on its way',null);
-  } else{ err.textContent=d.error||'Failed.'; err.style.display='block'; }
+    document.getElementById('dash-bal').textContent='$'+(+d.new_balance).toFixed(2);
+    loadTxFeed();showToast('Cash Out 🏦','$'+amt.toFixed(2)+' on its way',null);
+  }else{err.textContent=d.error||'Failed.';err.style.display='block';}
 }
 
+// ── CRYPTO CONVERT ──
+function selectCoin(coin, el){
+  selectedCoin=coin;
+  document.querySelectorAll('#coin-grid .wd-option').forEach(x=>x.classList.remove('selected'));
+  el.classList.add('selected');
+}
+async function doCryptoConvert(){
+  const amt=parseFloat(amtState.crypto)||0;
+  const err=document.getElementById('crypto-err');
+  err.style.display='none';
+  if(amt<1){err.textContent='Minimum conversion is $1.';err.style.display='block';return;}
+  const res=await fetch('/api/shotgun/crypto-convert',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({account_id:currentUser.id,amount:amt,coin:selectedCoin})});
+  const d=await res.json();
+  if(res.ok&&d.success){
+    closeOverlay('overlay-crypto');amtState.crypto='0';
+    currentUser.balance=d.new_balance;
+    document.getElementById('dash-bal').textContent='$'+(+d.new_balance).toFixed(2);
+    loadTxFeed();showToast('Converted! ₿','$'+amt.toFixed(2)+' → '+selectedCoin,LOGO.crypto);
+  }else{err.textContent=d.error||'Conversion failed.';err.style.display='block';}
+}
+
+// ── BEAT THE V INFO ──
+function showBtvInfo(){ openOverlay('overlay-beatv'); }
+
 // ── TOAST ──
-function showToast(title, msg, iconUrl){
+function showToast(title,msg,iconUrl){
   const t=document.createElement('div');
-  t.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#0f0208;border:1px solid rgba(192,57,43,.4);border-radius:16px;padding:14px 20px;display:flex;align-items:center;gap:12px;z-index:999;box-shadow:0 8px 32px rgba(0,0,0,.5);animation:slide-up .25s ease;min-width:240px;max-width:92vw;';
-  t.innerHTML=`${iconUrl?`<img src="${iconUrl}" style="height:32px;width:auto;" alt="">`:''}
-    <div><div style="font-size:14px;font-weight:800;color:#f8fafc;">${title}</div>
-    <div style="font-size:12px;color:#94a3b8;">${msg}</div></div>`;
+  t.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#fff;border:2px solid var(--green);border-radius:16px;padding:14px 20px;display:flex;align-items:center;gap:12px;z-index:999;box-shadow:0 8px 32px rgba(22,163,74,.2);animation:slide-up .22s ease;min-width:240px;max-width:92vw;';
+  t.innerHTML=`${iconUrl?`<img src="${iconUrl}" style="height:32px;width:auto;" alt="">`:'<span style="font-size:28px;">✅</span>'}
+    <div>
+      <div style="font-size:14px;font-weight:800;color:var(--black);">${title}</div>
+      <div style="font-size:12px;color:var(--grey-600);">${msg}</div>
+    </div>`;
   document.body.appendChild(t);
   setTimeout(()=>t.remove(),3500);
 }
 
 // ── INIT ──
 document.addEventListener('DOMContentLoaded',()=>{
-  buildNumpad('login'); buildNumpad('signup');
-  buildAmtNumpad('send','send-amt-disp');
-  buildAmtNumpad('dep','dep-amt-disp');
-  buildAmtNumpad('req','req-amt-disp');
-  buildAmtNumpad('wd','wd-amt-disp');
+  buildPinPad('login');
+  buildPinPad('signup');
   const hash=window.location.hash;
-  if(hash==='#signup') setTimeout(openSignup,200);
-  if(hash==='#login')  setTimeout(openLogin,200);
+  if(hash==='#signup')setTimeout(openSignup,200);
+  if(hash==='#login') setTimeout(openLogin,200);
 });
 </script>
 </body>
