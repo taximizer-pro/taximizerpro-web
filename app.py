@@ -235,35 +235,47 @@ def fill_form(tmpl_bytes, yr, c):
     clr(1, occ_sn)
     sf(1, occ_sn, "HELPER")
 
-    # ── SSN: two-pass flatten approach ──
-    # Clear the SSN widget (it was not filled in P1 loop, but clear anyway)
-    # Then stamp as flat text in pass 2.
+    # ── SSN: three-pass approach (blank widget → flatten → redact → stamp text) ──
+    # The comb field often renders its OWN text on top of any overlay.
+    # Fix: blank the widget in pass 1, flatten with garbage=4, then in pass 2
+    # use add_redact_annot to PERMANENTLY remove any remaining rendered text,
+    # then stamp clean digits as a new text annotation.
     p1 = doc[0]
-    ssn_field_names = {'2023':'f1_06[0]', '2024':'f1_06[0]', '2025':'f1_16[0]'}
+    ssn_field_names = {'2022':'f1_06[0]', '2023':'f1_06[0]', '2024':'f1_06[0]', '2025':'f1_16[0]'}
     ssn_fn = ssn_field_names.get(yr, 'f1_06[0]')
     ssn_rect_coords = None
     for w in p1.widgets():
         if w.field_name.split(".")[-1] == ssn_fn:
             r = w.rect
             ssn_rect_coords = (r.x0, r.y0, r.x1, r.y1)
-            w.field_value = ""  # ensure widget is blank
+            w.field_value = ""   # clear existing value in widget
+            w.text_color = (1,1,1)  # white text — invisible even if it renders
             w.update()
             break
 
-    # First save — writes all field data
+    # Pass 1 — write all field data with blanked SSN widget
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tf2:
         pass1_path = tf2.name
     doc.save(pass1_path, garbage=4, deflate=True, incremental=False)
     doc.close()
 
-    # Second pass — re-open, stamp SSN as flat text over blank comb area
+    # Pass 2 — permanently redact (erase) the entire SSN comb area, then stamp digits
     doc2 = fitz.open(pass1_path)
     if ssn and ssn_rect_coords:
         rx0, ry0, rx1, ry1 = ssn_rect_coords
-        sr = fitz.Rect(rx0, ry0, rx1, ry1)
-        doc2[0].draw_rect(sr, color=(1,1,1), fill=(1,1,1))
-        formatted_ssn = ssn  # raw digits only — comb field has no room for dashes
-        doc2[0].insert_text((rx0+3, ry1-2), formatted_ssn, fontname="helv", fontsize=8, color=(0,0,0))
+        pg = doc2[0]
+        # Expand rect slightly to catch any surrounding comb decoration
+        redact_rect = fitz.Rect(rx0 - 1, ry0 - 1, rx1 + 1, ry1 + 1)
+        # Add redaction annotation — white fill removes everything underneath
+        pg.add_redact_annot(redact_rect, fill=(1, 1, 1))
+        pg.apply_redactions()
+        # Now stamp clean SSN digits — spaced to simulate comb boxes
+        # Each box is roughly (rx1-rx0)/9 wide for a 9-digit SSN
+        box_w = (rx1 - rx0) / max(len(ssn), 9)
+        for idx_d, digit in enumerate(ssn):
+            x = rx0 + idx_d * box_w + box_w * 0.28
+            y = ry1 - 2.5
+            pg.insert_text((x, y), digit, fontname="helv", fontsize=8, color=(0, 0, 0))
     doc2.save(out_path, garbage=4, deflate=True, incremental=False)
     doc2.close()
     try: os.unlink(pass1_path)
