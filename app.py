@@ -552,7 +552,11 @@ def b44_headers():
     return {
         "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",
-        "User-Agent": "TaximizerPro/2.0 (compatible)"
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Origin": "https://taximizerpro.onrender.com",
+        "Referer": "https://taximizerpro.onrender.com/",
     }
 
 BASE44_HEADERS = b44_headers()  # static fallback — routes use b44_headers()
@@ -608,7 +612,7 @@ def api_generate(client_id):
         try:
             base44_url = f"https://app.base44.com/api/apps/{APP_ID}/entities/TaxClient/{client_id}"
             b44_req = urllib.request.Request(base44_url,
-                headers={"Authorization": f"Bearer {os.environ.get('BASE44_API_KEY','')}"})
+                headers=b44_headers())
             with urllib.request.urlopen(b44_req, timeout=10) as r:
                 c = json.loads(r.read())
         except:
